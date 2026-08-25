@@ -102,6 +102,12 @@ export function renderHistory() {
                 if (est.includes('pend')) badgeClass = 'badge-warning';
                 else if (est.includes('err') || est.includes('fall')) badgeClass = 'badge-danger';
 
+                let downloadUrl = urlDescarga;
+                const driveMatch = String(urlDescarga).match(/\/d\/([a-zA-Z0-9_-]+)/) || String(urlDescarga).match(/id=([a-zA-Z0-9_-]+)/);
+                if (driveMatch && driveMatch[1]) {
+                    downloadUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+                }
+
                 return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
                         <td class="font-bold text-slate-800">${id}</td>
@@ -122,7 +128,7 @@ export function renderHistory() {
                             </span>
                         </td>
                         <td class="text-right">
-                            <a href="${urlDescarga}" target="_blank" rel="noopener noreferrer" class="btn-intelfon text-xs py-1.5 px-3.5 inline-flex items-center space-x-1.5 shadow-xs">
+                            <a href="${downloadUrl}" target="_blank" download="${nombre}" class="btn-intelfon text-xs py-1.5 px-3.5 inline-flex items-center space-x-1.5 shadow-xs">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                 <span>Descargar</span>
                             </a>

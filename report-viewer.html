@@ -37,6 +37,13 @@
     <link rel="stylesheet" href="css/theme-intelfon.css">
 
     <style>
+        html, body {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            height: auto !important;
+            min-height: 100vh !important;
+            scroll-behavior: smooth;
+        }
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; }
@@ -49,7 +56,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen overflow-y-auto">
 
     <!-- BARRA SUPERIOR DE ACCIONES (NO IMPRIMIBLE) -->
     <header class="no-print sticky top-0 z-30 bg-slate-900 text-white shadow-lg border-b border-slate-800">
