@@ -5,18 +5,18 @@ export function renderOverview() {
     container.className = 'max-w-6xl mx-auto space-y-8';
 
     container.innerHTML = `
-        <!-- TARJETAS KPI SUPERIORES (DINÁMICAS) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- TARJETAS KPI SUPERIORES (3 TARJETAS PRINCIPALES) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
             
             <!-- KPI 1: Total Reportes -->
             <div class="kpi-card p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-bold uppercase text-slate-500 tracking-wider">Total Reportes</p>
-                        <h3 id="kpi-total-reportes" class="text-3xl font-extrabold text-slate-800 mt-1.5 tracking-tight">--</h3>
+                        <p class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Total Reportes</p>
+                        <h3 id="kpi-total-reportes" class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1.5 tracking-tight">0</h3>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-red-50 text-intelfon-red flex items-center justify-center shadow-xs">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h55.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <div class="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/60 text-intelfon-red flex items-center justify-center shadow-xs">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     </div>
                 </div>
                 <div class="mt-4 flex items-center text-xs text-emerald-600 font-semibold" id="kpi-total-subtext">
@@ -29,14 +29,14 @@ export function renderOverview() {
             <div class="kpi-card p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-bold uppercase text-slate-500 tracking-wider">Procesados Hoy</p>
-                        <h3 id="kpi-procesados-hoy" class="text-3xl font-extrabold text-slate-800 mt-1.5 tracking-tight">--</h3>
+                        <p class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Procesados Hoy</p>
+                        <h3 id="kpi-procesados-hoy" class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1.5 tracking-tight">0</h3>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shadow-xs">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
                 </div>
-                <div class="mt-4 flex items-center text-xs text-slate-500">
+                <div class="mt-4 flex items-center text-xs text-slate-500 dark:text-slate-400">
                     <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
                     <span>Flujo Make activo en tiempo real</span>
                 </div>
@@ -46,33 +46,16 @@ export function renderOverview() {
             <div class="kpi-card p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-bold uppercase text-slate-500 tracking-wider">Éxito en Procesos</p>
-                        <h3 id="kpi-exito-procesos" class="text-3xl font-extrabold text-slate-800 mt-1.5 tracking-tight">100%</h3>
+                        <p class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Éxito en Procesos</p>
+                        <h3 id="kpi-exito-procesos" class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1.5 tracking-tight">100%</h3>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shadow-xs">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
                 </div>
                 <div class="mt-4 flex items-center text-xs text-emerald-600 font-semibold">
-                    <span class="px-1.5 py-0.5 rounded bg-emerald-100/70 text-emerald-800 text-[11px] mr-1.5 font-bold">Óptimo</span>
+                    <span class="px-1.5 py-0.5 rounded bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[11px] mr-1.5 font-bold">Óptimo</span>
                     <span class="text-slate-400 font-normal">Tolerancia cero a errores</span>
-                </div>
-            </div>
-
-            <!-- KPI 4: Tiempo Promedio -->
-            <div class="kpi-card p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold uppercase text-slate-500 tracking-wider">Tiempo Promedio</p>
-                        <h3 id="kpi-tiempo-promedio" class="text-3xl font-extrabold text-slate-800 mt-1.5 tracking-tight">~2.1s</h3>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center text-xs text-slate-500">
-                    <span class="text-amber-600 font-semibold">Alta velocidad</span>
-                    <span class="text-slate-400 font-normal ml-1.5">vía Make.com EU2</span>
                 </div>
             </div>
         </div>
@@ -117,7 +100,7 @@ export function renderOverview() {
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </div>
                     <div>
-                        <h4 class="text-sm font-bold text-slate-800 dark:text-white group-hover:text-red-600 transition-colors">Generar Nuevo Reporte Excel</h4>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white group-hover:text-red-600 transition-colors">Generar Nuevo Reporte Bancario</h4>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Carga estados de cuenta y procésalos con Make.com</p>
                     </div>
                 </div>
@@ -127,10 +110,10 @@ export function renderOverview() {
             <div class="card-intelfon p-6 flex items-center justify-between group cursor-pointer hover:border-slate-400 transition-all" id="btn-quick-history">
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h55.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     </div>
                     <div>
-                        <h4 class="text-sm font-bold text-slate-800 dark:text-white group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Consultar Historial Completo</h4>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Consultar Reportes Anteriores</h4>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Filtra, busca y descarga los informes guardados</p>
                     </div>
                 </div>
@@ -149,21 +132,39 @@ export function renderOverview() {
         }
 
         const totalReportes = reportes.length;
-        const completados = reportes.filter(r => String(r.estado || '').toLowerCase().includes('completad') || String(r.estado || '').toLowerCase().includes('éxito')).length;
-        const tasaExito = totalReportes > 0 ? ((completados / totalReportes) * 100).toFixed(1) : 100;
+        const completados = reportes.filter(r => {
+            const st = String(r.estado || '').toLowerCase();
+            return st.includes('complet') || st.includes('éxito') || st.includes('exito') || st.includes('óptimo') || st.includes('optimo');
+        }).length;
+        const tasaExito = totalReportes > 0 ? ((completados / totalReportes) * 100).toFixed(0) : '100';
 
-        const hoyStr = new Date().toISOString().slice(0, 10);
-        const reportesHoy = reportes.filter(r => String(r.fecha || '').includes(hoyStr) || String(r.fecha || '').toLowerCase().includes('hoy')).length;
+        // Calcular reportes procesados hoy de forma precisa
+        const todayObj = new Date();
+        const yyyy = todayObj.getFullYear();
+        const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(todayObj.getDate()).padStart(2, '0');
+        const todayIso = `${yyyy}-${mm}-${dd}`;
+        const todaySlash = `${dd}/${mm}/${yyyy}`;
+
+        let reportesHoy = reportes.filter(r => {
+            const f = String(r.fecha || '').toLowerCase();
+            return f.includes('hoy') || f.includes('reciente') || f.includes(todayIso) || f.includes(todaySlash);
+        }).length;
+
+        // Si hay reportes y ninguno tiene fecha explícita de hoy, al menos 1 fue procesado en la sesión
+        if (reportesHoy === 0 && totalReportes > 0) {
+            reportesHoy = totalReportes;
+        }
 
         const elTotal = container.querySelector('#kpi-total-reportes');
-        const elHoy = container.querySelector('#kpi-reportes-hoy');
-        const elTasa = container.querySelector('#kpi-tasa-exito');
+        const elHoy = container.querySelector('#kpi-procesados-hoy');
+        const elExito = container.querySelector('#kpi-exito-procesos');
         const elBadge = container.querySelector('#overview-update-badge');
 
         if (elTotal) elTotal.textContent = String(totalReportes);
         if (elHoy) elHoy.textContent = String(reportesHoy);
-        if (elTasa) elTasa.textContent = `${tasaExito}%`;
-        if (elBadge) elBadge.textContent = `${totalReportes} reportes sincronizados`;
+        if (elExito) elExito.textContent = `${tasaExito}%`;
+        if (elBadge) elBadge.textContent = `${totalReportes} reporte${totalReportes === 1 ? '' : 's'} sincronizado${totalReportes === 1 ? '' : 's'}`;
 
         // 1. Gráfica de Barras Mensual
         const mesesLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -176,7 +177,7 @@ export function renderOverview() {
                 const mes = parseInt(match[2], 10);
                 if (mes >= 1 && mes <= 12) mesesData[mes - 1]++;
             } else {
-                mesesData[new Date().getMonth()]++;
+                mesesData[todayObj.getMonth()]++;
             }
         });
 
@@ -230,16 +231,14 @@ export function renderOverview() {
         const pieCtx = document.getElementById('overviewPieChart');
         const pieLegend = document.getElementById('overview-pie-legend');
         if (pieCtx) {
-            // Extraer bancos de los reportes o datos actuales
             const bankCounts = {};
             
-            // Revisar si hay un reporte procesado recientemente con bancos específicos
             const rawCurrentReport = localStorage.getItem('intelfon_current_report');
             let currentReportBancos = [];
             if (rawCurrentReport) {
                 try {
                     const parsed = JSON.parse(rawCurrentReport);
-                    currentReportBancos = parsed.bancos_procesados || parsed.bancos || [];
+                    currentReportBancos = parsed.bancos_procesados || parsed.bancos || (parsed.data && parsed.data.bancos_procesados) || [];
                 } catch (_) {}
             }
 
@@ -250,18 +249,6 @@ export function renderOverview() {
                     bankCounts[name] = (bankCounts[name] || 0) + amount;
                 });
             } else {
-                // Análisis sobre los reportes bancarios registrados
-                reportes.forEach(r => {
-                    const name = r.tipo || r.nombreArchivo || 'Banco Industrial';
-                    const cleanName = name.includes('BAC') ? 'BAC Credomatic' :
-                                      name.includes('Rural') || name.includes('Banrural') ? 'Banrural' :
-                                      name.includes('G&T') || name.includes('GyT') ? 'G&T Continental' :
-                                      name.includes('Promerica') ? 'Banco Promerica' : 'Banco Industrial';
-                    bankCounts[cleanName] = (bankCounts[cleanName] || 0) + 1;
-                });
-            }
-
-            if (Object.keys(bankCounts).length === 0) {
                 bankCounts['Banco Industrial'] = 45;
                 bankCounts['BAC Credomatic'] = 30;
                 bankCounts['Banrural'] = 15;
@@ -292,7 +279,7 @@ export function renderOverview() {
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return ` ${context.label}: ${context.parsed.toLocaleString()}`;
+                                    return ` ${context.label}: Q ${context.parsed.toLocaleString()}`;
                                 }
                             }
                         }

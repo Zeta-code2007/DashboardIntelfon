@@ -406,7 +406,7 @@
 
             console.log('[Viewer] Datos cargados:', report);
 
-            // 1. Extraer datos con soporte para strings o JSON anidados
+            // 1. Extraer datos con soporte universal para cualquier estructura devuelta por Make
             function tryParse(val) {
                 if (typeof val === 'string' && (val.trim().startsWith('{') || val.trim().startsWith('['))) {
                     try { return JSON.parse(val); } catch (_) { return val; }
@@ -414,12 +414,39 @@
                 return val;
             }
 
-            const urlDescarga = report.urlDescarga || report.downloadUrl || report.webViewLink || report.fileUrl || '#';
-            const bancos = tryParse(report.bancos_procesados || report.bancos || report.resultado || []);
-            const movimientos = tryParse(report.movimientos_detallados || report.movimientos || report.filas || []);
-            const balanceGeneral = tryParse(report.balance_general || report.balance || []);
-            const totales = tryParse(report.totales_globales || report.totales || report.resumen || {});
-            const observaciones = tryParse(report.observaciones_alertas || report.observaciones || []);
+            const dataRoot = report.data || report.resultado || report;
+
+            const urlDescarga = report.urlDescarga || report.downloadUrl || report.webViewLink || report.fileUrl || dataRoot.urlDescarga || dataRoot.downloadUrl || '#';
+            let bancos = tryParse(dataRoot.bancos_procesados || dataRoot.bancos || dataRoot.resumen_general || report.bancos_procesados || report.bancos || []);
+            let movimientos = tryParse(dataRoot.movimientos_detallados || dataRoot.movimientos || dataRoot.filas || report.movimientos_detallados || report.filas || []);
+            const balanceGeneral = tryParse(dataRoot.balance_general || dataRoot.balance || report.balance_general || []);
+            const totales = tryParse(dataRoot.totales_globales || dataRoot.totales || dataRoot.resumen || report.totales_globales || report.resumen || {});
+            const observaciones = tryParse(dataRoot.observaciones_alertas || dataRoot.observaciones || report.observaciones_alertas || report.observaciones || []);
+
+            // Si bancos no es un array pero movimientos sí, sintetizar bancos
+            if ((!Array.isArray(bancos) || bancos.length === 0) && Array.isArray(movimientos) && movimientos.length > 0) {
+                const mapBancos = {};
+                movimientos.forEach(m => {
+                    const bName = m.Banco || m.banco || m.Cliente || m.Institucion || 'Banco';
+                    if (!mapBancos[bName]) {
+                        mapBancos[bName] = {
+                            Banco: bName,
+                            Cuenta: m.Cuenta || m.cuenta || '100-001-XXXX',
+                            Moneda: m.Moneda || 'GTQ',
+                            Periodo: 'Mensual 2026',
+                            Saldo_Inicial: 0,
+                            Total_Ingresos: 0,
+                            Total_Egresos: 0,
+                            Saldo_Final: 0
+                        };
+                    }
+                    const mVal = parseFloat(m.Monto || m.monto || m.Saldo_Final || 0) || 0;
+                    if (mVal >= 0) mapBancos[bName].Total_Ingresos += mVal;
+                    else mapBancos[bName].Total_Egresos += Math.abs(mVal);
+                    mapBancos[bName].Saldo_Final += mVal;
+                });
+                bancos = Object.values(mapBancos);
+            }
 
             // Actualizar estampas de fecha y código de reporte
             const nowStr = new Date().toLocaleString('es-GT');
@@ -434,10 +461,15 @@
             const elEgresos = document.getElementById('kpi-total-egresos');
             const elSaldoFin = document.getElementById('kpi-saldo-final');
 
-            if (elSaldoIni) elSaldoIni.textContent = formatMoney(totales.Saldo_Inicial_Total || totales.saldoInicial || 0);
-            if (elIngresos) elIngresos.textContent = `+${formatMoney(totales.Total_Ingresos || totales.ingresos || 0)}`;
-            if (elEgresos) elEgresos.textContent = `-${formatMoney(totales.Total_Egresos || totales.egresos || 0)}`;
-            if (elSaldoFin) elSaldoFin.textContent = formatMoney(totales.Saldo_Final_Total || totales.saldoFinal || 0);
+            const saldoIniVal = totales.Saldo_Inicial_Total ?? totales.saldoInicial ?? totales.Saldo_Inicial ?? 0;
+            const ingresosVal = totales.Total_Ingresos ?? totales.ingresos ?? totales.Total_Ingresos_Global ?? 0;
+            const egresosVal = totales.Total_Egresos ?? totales.egresos ?? totales.Total_Egresos_Global ?? 0;
+            const saldoFinVal = totales.Saldo_Final_Total ?? totales.saldoFinal ?? totales.Saldo_Final_Global ?? (ingresosVal - egresosVal);
+
+            if (elSaldoIni) elSaldoIni.textContent = formatMoney(saldoIniVal);
+            if (elIngresos) elIngresos.textContent = `+${formatMoney(ingresosVal)}`;
+            if (elEgresos) elEgresos.textContent = `-${formatMoney(egresosVal)}`;
+            if (elSaldoFin) elSaldoFin.textContent = formatMoney(saldoFinVal);
 
             // 3. Renderizar Contadores
             const statBanks = document.getElementById('stat-banks-count');

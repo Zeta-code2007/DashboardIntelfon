@@ -170,15 +170,11 @@ export function renderGenerator() {
 
                     <!-- Acciones Principales -->
                     <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" id="btn-download-pdf-direct" class="btn-intelfon-primary text-xs py-2.5 px-4 flex items-center shadow-md bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <span>Descargar PDF Oficial</span>
+                        <button type="button" id="btn-download-excel" class="btn-intelfon-primary text-xs py-2.5 px-4 flex items-center shadow-md bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span>Descargar Archivo Excel (.xlsx)</span>
                         </button>
-                        <button type="button" id="btn-download-excel" class="btn-intelfon-secondary text-xs py-2.5 px-4 flex items-center shadow-xs border border-slate-300">
-                            <svg class="w-4 h-4 mr-1.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            <span>Descargar Excel (.xlsx)</span>
-                        </button>
-                        <button type="button" id="btn-view-full-report" class="btn-intelfon-secondary text-xs py-2.5 px-4 flex items-center shadow-xs border border-slate-300">
+                        <button type="button" id="btn-view-full-report" class="btn-intelfon-secondary text-xs py-2.5 px-4 flex items-center shadow-xs border border-slate-300 dark:border-slate-700">
                             <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             <span>Ver en Pantalla Completa</span>
                         </button>
@@ -327,33 +323,27 @@ export function renderGenerator() {
     let currentPreviewUrl = '';
     let lastProcessedData = null;
 
-    // Función para abrir el visor interactivo de código en nueva pestaña
-    function abrirVisorInteractivo(autoPrint = false) {
+    // Función para abrir el visor interactivo de código en nueva pestaña / pantalla completa
+    function abrirVisorInteractivo() {
+        if (!lastProcessedData) {
+            const saved = localStorage.getItem('intelfon_current_report');
+            if (saved) {
+                try { lastProcessedData = JSON.parse(saved); } catch (_) {}
+            }
+        }
         if (!lastProcessedData) {
             Toast.warning('Aún no se han recibido datos del reporte para previsualizar.');
             return;
         }
         localStorage.setItem('intelfon_current_report', JSON.stringify(lastProcessedData));
-        const win = window.open('report-viewer.html', '_blank');
-        if (autoPrint && win) {
-            win.addEventListener('load', () => {
-                setTimeout(() => win.print(), 800);
-            });
-        }
-    }
-
-    if (btnDownloadPdfDirect) {
-        btnDownloadPdfDirect.addEventListener('click', () => {
-            Toast.info('Abriendo vista de impresión y guardado en PDF...', 'Exportando PDF Oficial');
-            abrirVisorInteractivo(true);
-        });
+        window.open('report-viewer.html', '_blank');
     }
 
     if (btnViewFullReport) {
-        btnViewFullReport.addEventListener('click', () => abrirVisorInteractivo(false));
+        btnViewFullReport.addEventListener('click', () => abrirVisorInteractivo());
     }
     if (btnOpenInteractiveViewer) {
-        btnOpenInteractiveViewer.addEventListener('click', () => abrirVisorInteractivo(false));
+        btnOpenInteractiveViewer.addEventListener('click', () => abrirVisorInteractivo());
     }
 
     // Manejador de descarga directa de Excel (.xlsx)
@@ -820,6 +810,9 @@ export function renderGenerator() {
             const urlDescarga = data.urlDescarga || data.downloadUrl || data.webViewLink || data.fileUrl || data.url || data.link || '#';
             currentPreviewUrl = urlDescarga;
             lastProcessedData = data;
+            try {
+                localStorage.setItem('intelfon_current_report', JSON.stringify(data));
+            } catch (_) {}
 
             const filas = extractRows(data);
             console.log('[Generator] Filas extraídas:', filas);
