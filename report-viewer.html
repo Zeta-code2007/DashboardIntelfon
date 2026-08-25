@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RED INTELFON - Vista Previa de Reporte Financiero</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS v3 CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        intelfon: {
+                            red: '#DC2626',
+                            darkRed: '#B91C1C',
+                            dark: '#0F172A',
+                            light: '#F8FAFC'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Estilos Locales -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/theme-intelfon.css">
+
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .card-intelfon { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        }
+        .tab-btn.active {
+            color: #DC2626;
+            border-bottom-color: #DC2626;
+            background-color: #FEF2F2;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- BARRA SUPERIOR DE ACCIONES (NO IMPRIMIBLE) -->
+    <header class="no-print sticky top-0 z-30 bg-slate-900 text-white shadow-lg border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 rounded-xl bg-intelfon-red flex items-center justify-center font-extrabold text-white text-base shadow-md">
+                    RI
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-lg font-extrabold tracking-tight text-white">RED INTELFON</h1>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-intelfon-red/20 text-red-400 border border-intelfon-red/30">Visor de Reporte</span>
+                    </div>
+                    <p class="text-xs text-slate-400" id="report-timestamp">Generado en vivo</p>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex items-center space-x-3">
+                <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center shadow-xs border border-slate-700">
+                    <svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <span>Imprimir / PDF</span>
+                </button>
+
+                <button type="button" id="btn-download-direct" class="btn-intelfon-primary text-xs py-2 px-4 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Descargar Excel (.xlsx)</span>
+                </button>
+
+                <button type="button" onclick="window.close()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-400 text-slate-400 text-xs font-bold transition-all border border-slate-700" title="Cerrar pestaña">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL DEL INFORME -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- CABECERA DEL INFORME FINANCIERO -->
+        <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div class="space-y-1.5">
+                <div class="flex items-center space-x-2">
+                    <span class="badge-status badge-success">
+                        <span class="badge-status-dot"></span>
+                        Conciliación Completada
+                    </span>
+                    <span class="text-xs text-slate-400" id="report-origin">Archivo procesado</span>
+                </div>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight" id="report-main-title">Informe Financiero Bancario Consolidado</h2>
+                <p class="text-sm text-slate-500 max-w-2xl">Extracción automatizada de movimientos, saldos y consolidación contable por cuenta bancaria.</p>
+            </div>
+
+            <!-- Resumen Rápido -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 flex items-center space-x-6 text-sm">
+                <div>
+                    <p class="text-[11px] text-slate-400 font-bold uppercase">Bancos / Cuentas</p>
+                    <p class="text-xl font-extrabold text-slate-800" id="stat-banks-count">0</p>
+                </div>
+                <div class="w-px h-8 bg-slate-200"></div>
+                <div>
+                    <p class="text-[11px] text-slate-400 font-bold uppercase">Saldo Final Global</p>
+                    <p class="text-xl font-extrabold text-emerald-600" id="stat-final-balance">$0.00</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TARJETAS DE TOTALES GLOBALES (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-container">
+            <!-- Cargado dinámicamente -->
+        </div>
+
+        <!-- SECCIÓN DE PESTAÑAS INTERACTIVAS -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <!-- Barra de Pestañas -->
+            <div class="no-print flex items-center space-x-1 border-b border-slate-200 px-4 bg-slate-50/50 overflow-x-auto" id="tabs-bar">
+                <button type="button" data-tab="tab-consolidado" class="tab-btn active px-4 py-3.5 text-xs font-bold text-slate-600 border-b-2 border-transparent transition-all whitespace-nowrap flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Resumen Consolidado
+                </button>
+                <button type="button" data-tab="tab-movimientos" class="tab-btn px-4 py-3.5 text-xs font-bold text-slate-600 border-b-2 border-transparent transition-all whitespace-nowrap flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                    Movimientos Detallados
+                </button>
+                <button type="button" data-tab="tab-balance" class="tab-btn px-4 py-3.5 text-xs font-bold text-slate-600 border-b-2 border-transparent transition-all whitespace-nowrap flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Balance & Conciliación
+                </button>
+                <button type="button" data-tab="tab-observaciones" class="tab-btn px-4 py-3.5 text-xs font-bold text-slate-600 border-b-2 border-transparent transition-all whitespace-nowrap flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Observaciones y Alertas
+                </button>
+            </div>
+
+            <!-- CONTENIDO DE LAS PESTAÑAS -->
+            <div class="p-6">
+
+                <!-- PESTAÑA 1: RESUMEN CONSOLIDADO POR BANCO -->
+                <div id="tab-consolidado" class="tab-content space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="text-base font-extrabold text-slate-900">Resumen General de Cuentas Bancarias</h3>
+                        <div class="text-xs text-slate-400" id="consolidado-count">0 registros</div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="table-modern w-full text-left" id="table-consolidado">
+                            <thead>
+                                <tr>
+                                    <th>Banco</th>
+                                    <th>Cuenta</th>
+                                    <th>Moneda</th>
+                                    <th>Período</th>
+                                    <th>Saldo Inicial</th>
+                                    <th>Ingresos (+)</th>
+                                    <th>Egresos (-)</th>
+                                    <th>Saldo Final</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="tbody-consolidado">
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PESTAÑA 2: MOVIMIENTOS DETALLADOS -->
+                <div id="tab-movimientos" class="tab-content hidden space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="text-base font-extrabold text-slate-900">Detalle de Transacciones Bancarias</h3>
+                        <!-- Selector de Banco -->
+                        <div class="flex items-center space-x-2">
+                            <label class="text-xs text-slate-500 font-bold">Filtrar Banco:</label>
+                            <select id="select-bank-filter" class="input-intelfon text-xs py-1.5 px-3">
+                                <option value="all">Todos los bancos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200 max-h-[500px] overflow-y-auto">
+                        <table class="table-modern w-full text-left" id="table-movimientos">
+                            <thead class="sticky top-0 bg-slate-900 text-white z-10">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Banco / Cuenta</th>
+                                    <th>Referencia</th>
+                                    <th>Descripción</th>
+                                    <th>Moneda</th>
+                                    <th>Ingreso (+)</th>
+                                    <th>Egreso (-)</th>
+                                    <th>Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="tbody-movimientos">
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PESTAÑA 3: BALANCE & CONCILIACIÓN -->
+                <div id="tab-balance" class="tab-content hidden space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="text-base font-extrabold text-slate-900">Estado de Conciliación Contable</h3>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="table-modern w-full text-left" id="table-balance">
+                            <thead>
+                                <tr>
+                                    <th>Banco</th>
+                                    <th>Cuenta</th>
+                                    <th>Saldo Inicial</th>
+                                    <th>Ingresos</th>
+                                    <th>Egresos</th>
+                                    <th>Saldo Calculado</th>
+                                    <th>Saldo Reportado</th>
+                                    <th>Resultado</th>
+                                    <th>Observación</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="tbody-balance">
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PESTAÑA 4: OBSERVACIONES -->
+                <div id="tab-observaciones" class="tab-content hidden space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="text-base font-extrabold text-slate-900">Alertas y Observaciones Detectadas</h3>
+                    </div>
+
+                    <div class="space-y-3" id="observaciones-list">
+                        <!-- Dinámico -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Script de Renderizado Dinámico -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Cargar datos del localStorage
+            const rawData = localStorage.getItem('intelfon_current_report');
+            if (!rawData) {
+                alert('No se encontraron datos del reporte actual. Por favor genera un reporte desde el Dashboard.');
+                return;
+            }
+
+            let reportData;
+            try {
+                reportData = JSON.parse(rawData);
+            } catch (e) {
+                console.error('Error parseando datos del reporte:', e);
+                alert('Error al leer los datos del reporte.');
+                return;
+            }
+
+            // Normalización de datos
+            const data = reportData.resultado || reportData.data || reportData;
+            const urlDescarga = reportData.urlDescarga || data.urlDescarga || '';
+            const timestamp = new Date().toLocaleString('es-GT', { dateStyle: 'full', timeStyle: 'short' });
+            document.getElementById('report-timestamp').textContent = `Generado el ${timestamp}`;
+
+            // Helper de formato de moneda
+            function formatMoney(num, moneda = 'GTQ') {
+                if (num === null || num === undefined || num === '') return '-';
+                const n = typeof num === 'number' ? num : parseFloat(String(num).replace(/[^0-9.-]+/g, '')) || 0;
+                const prefix = moneda === 'USD' ? '$' : (moneda === 'EUR' ? '€' : 'Q');
+                return `${prefix}${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str).replace(/[&<>"']/g, m => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+                })[m]);
+            }
+
+            // 2. Extraer Bancos y Totales
+            const resumenGeneral = data.resumen_general || data.filas || [];
+            const bancosProcesados = data.bancos_procesados || [];
+            const balanceGeneral = data.balance_general || [];
+            const observaciones = data.observaciones || [];
+            const totalesGlobales = data.totales_globales || {};
+
+            // 3. Renderizar Estadísticas Rápidas
+            document.getElementById('stat-banks-count').textContent = resumenGeneral.length || bancosProcesados.length || '0';
+            const saldoFinal = totalesGlobales.Saldo_Final_Global ?? totalesGlobales.saldo_final ?? 0;
+            document.getElementById('stat-final-balance').textContent = formatMoney(saldoFinal);
+
+            // 4. Renderizar Tarjetas de Totales Globales
+            const kpiContainer = document.getElementById('kpi-container');
+            const kpis = [
+                {
+                    titulo: 'Saldo Inicial Global',
+                    valor: formatMoney(totalesGlobales.Saldo_Inicial_Global ?? 0),
+                    bg: 'bg-slate-100 text-slate-700',
+                    color: 'text-slate-800'
+                },
+                {
+                    titulo: 'Total Ingresos (+)',
+                    valor: formatMoney(totalesGlobales.Total_Ingresos_Global ?? 0),
+                    bg: 'bg-emerald-50 text-emerald-600',
+                    color: 'text-emerald-600'
+                },
+                {
+                    titulo: 'Total Egresos (-)',
+                    valor: formatMoney(totalesGlobales.Total_Egresos_Global ?? 0),
+                    bg: 'bg-red-50 text-intelfon-red',
+                    color: 'text-intelfon-red'
+                },
+                {
+                    titulo: 'Saldo Final Consolidado',
+                    valor: formatMoney(totalesGlobales.Saldo_Final_Global ?? 0),
+                    bg: 'bg-blue-50 text-blue-600',
+                    color: 'text-blue-700'
+                }
+            ];
+
+            kpiContainer.innerHTML = kpis.map(k => `
+                <div class="kpi-card p-5 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">${k.titulo}</p>
+                        <p class="text-2xl font-extrabold ${k.color} mt-1">${k.valor}</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl ${k.bg} flex items-center justify-center font-black text-lg shadow-2xs">
+                        $
+                    </div>
+                </div>
+            `).join('');
+
+            // 5. Renderizar Tabla de Resumen Consolidado
+            const tbodyConsolidado = document.getElementById('tbody-consolidado');
+            if (resumenGeneral.length === 0 && bancosProcesados.length === 0) {
+                tbodyConsolidado.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">No se encontraron registros de resumen bancario.</td></tr>`;
+            } else {
+                const filasParaConsolidado = resumenGeneral.length > 0 ? resumenGeneral : bancosProcesados;
+                document.getElementById('consolidado-count').textContent = `${filasParaConsolidado.length} cuentas procesadas`;
+                tbodyConsolidado.innerHTML = filasParaConsolidado.map(row => {
+                    const banco = row.Banco ?? row.banco ?? row.cliente ?? '-';
+                    const cuenta = row.Cuenta ?? row.cuenta ?? '-';
+                    const moneda = row.Moneda ?? row.moneda ?? 'GTQ';
+                    const periodo = (row.Fecha_Inicial && row.Fecha_Final) ? `${row.Fecha_Inicial} al ${row.Fecha_Final}` : (row.Periodo ?? '-');
+                    const saldoIni = formatMoney(row.Saldo_Inicial, moneda);
+                    const ingresos = formatMoney(row.Total_Ingresos, moneda);
+                    const egresos = formatMoney(row.Total_Egresos, moneda);
+                    const saldoFin = formatMoney(row.Saldo_Final, moneda);
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="font-extrabold text-slate-900">${escapeHtml(banco)}</td>
+                            <td class="font-mono text-xs text-slate-600">${escapeHtml(cuenta)}</td>
+                            <td><span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700">${escapeHtml(moneda)}</span></td>
+                            <td class="text-xs text-slate-500">${escapeHtml(periodo)}</td>
+                            <td class="font-semibold text-slate-700">${saldoIni}</td>
+                            <td class="font-bold text-emerald-600">+${ingresos}</td>
+                            <td class="font-bold text-red-600">-${egresos}</td>
+                            <td class="font-extrabold text-slate-900">${saldoFin}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // 6. Renderizar Movimientos Detallados
+            const tbodyMovimientos = document.getElementById('tbody-movimientos');
+            const bankFilter = document.getElementById('select-bank-filter');
+            let todosLosMovimientos = [];
+
+            bancosProcesados.forEach(banco => {
+                const nombreBanco = banco.Banco || 'Banco';
+                const cuentaBanco = banco.Cuenta || '';
+                const movimientos = banco.estado_cuenta || banco.Movimientos || [];
+                
+                // Añadir al filtro
+                const opt = document.createElement('option');
+                opt.value = nombreBanco;
+                opt.textContent = `${nombreBanco} (${cuentaBanco})`;
+                bankFilter.appendChild(opt);
+
+                movimientos.forEach(m => {
+                    todosLosMovimientos.push({
+                        ...m,
+                        bancoNombre: nombreBanco,
+                        cuentaNumero: cuentaBanco
+                    });
+                });
+            });
+
+            function renderMovimientos(movs) {
+                if (movs.length === 0) {
+                    tbodyMovimientos.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">No hay movimientos detallados disponibles.</td></tr>`;
+                    return;
+                }
+                tbodyMovimientos.innerHTML = movs.map(m => {
+                    const fecha = m.Fecha ?? '-';
+                    const ref = m.No_Referencia ?? m.Referencia ?? '-';
+                    const desc = m.Descripcion ?? m.Descripción ?? '-';
+                    const moneda = m.Moneda ?? 'GTQ';
+                    const ing = m.Ingreso ? `+${formatMoney(m.Ingreso, moneda)}` : '-';
+                    const egr = m.Egreso ? `-${formatMoney(m.Egreso, moneda)}` : '-';
+                    const saldo = formatMoney(m.Saldo_Resultante ?? m.Saldo, moneda);
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors text-xs">
+                            <td class="font-mono text-slate-500 whitespace-nowrap">${escapeHtml(fecha)}</td>
+                            <td class="font-bold text-slate-800 whitespace-nowrap">${escapeHtml(m.bancoNombre)} <span class="text-slate-400 font-normal">(${escapeHtml(m.cuentaNumero)})</span></td>
+                            <td class="font-mono text-slate-600">${escapeHtml(ref)}</td>
+                            <td class="font-medium text-slate-700">${escapeHtml(desc)}</td>
+                            <td><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">${escapeHtml(moneda)}</span></td>
+                            <td class="font-bold text-emerald-600 whitespace-nowrap">${ing !== '-' ? ing : ''}</td>
+                            <td class="font-bold text-red-600 whitespace-nowrap">${egr !== '-' ? egr : ''}</td>
+                            <td class="font-extrabold text-slate-900 whitespace-nowrap">${saldo}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            renderMovimientos(todosLosMovimientos);
+
+            bankFilter.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (val === 'all') {
+                    renderMovimientos(todosLosMovimientos);
+                } else {
+                    renderMovimientos(todosLosMovimientos.filter(m => m.bancoNombre === val));
+                }
+            });
+
+            // 7. Renderizar Balance General
+            const tbodyBalance = document.getElementById('tbody-balance');
+            if (balanceGeneral.length === 0) {
+                tbodyBalance.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-400">No se encontraron balances detallados.</td></tr>`;
+            } else {
+                tbodyBalance.innerHTML = balanceGeneral.map(b => {
+                    const banco = b.Banco ?? '-';
+                    const cuenta = b.Cuenta ?? '-';
+                    const moneda = b.Moneda ?? 'GTQ';
+                    const saldoIni = formatMoney(b.Saldo_Inicial, moneda);
+                    const ingresos = formatMoney(b.Total_Ingresos, moneda);
+                    const egresos = formatMoney(b.Total_Egresos, moneda);
+                    const saldoCalc = formatMoney(b.Saldo_Calculado, moneda);
+                    const saldoFin = formatMoney(b.Saldo_Final, moneda);
+                    const res = b.Resultado_Conciliacion ?? 'Cuadrado';
+                    const obs = b.Observacion ?? 'Conciliación correcta';
+
+                    const isCuadrado = String(res).toLowerCase().includes('cuadrad') || String(res).toLowerCase().includes('exact') || String(res).toLowerCase().includes('optimo');
+                    const badgeClass = isCuadrado ? 'badge-success' : 'badge-danger';
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="font-bold text-slate-900">${escapeHtml(banco)}</td>
+                            <td class="font-mono text-xs text-slate-600">${escapeHtml(cuenta)}</td>
+                            <td class="font-medium text-slate-700">${saldoIni}</td>
+                            <td class="font-bold text-emerald-600">+${ingresos}</td>
+                            <td class="font-bold text-red-600">-${egresos}</td>
+                            <td class="font-bold text-slate-800">${saldoCalc}</td>
+                            <td class="font-extrabold text-slate-900">${saldoFin}</td>
+                            <td>
+                                <span class="badge-status ${badgeClass}">
+                                    <span class="badge-status-dot"></span>
+                                    ${escapeHtml(res)}
+                                </span>
+                            </td>
+                            <td class="text-xs text-slate-500">${escapeHtml(obs)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // 8. Renderizar Observaciones
+            const obsContainer = document.getElementById('observaciones-list');
+            if (observaciones.length === 0) {
+                obsContainer.innerHTML = `
+                    <div class="p-6 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 flex items-center space-x-3">
+                        <svg class="w-6 h-6 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div>
+                            <p class="font-extrabold text-sm">Sin inconsistencias detectadas</p>
+                            <p class="text-xs text-emerald-700 mt-0.5">Todos los estados de cuenta, movimientos y conciliaciones cuadraron con éxito.</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                obsContainer.innerHTML = observaciones.map(o => {
+                    const banco = typeof o === 'object' ? (o.Banco || 'General') : 'Observación';
+                    const campo = typeof o === 'object' ? (o.Campo || '') : '';
+                    const detalle = typeof o === 'object' ? (o.Detalle || JSON.stringify(o)) : String(o);
+
+                    return `
+                        <div class="p-4 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 flex items-start space-x-3">
+                            <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-extrabold text-xs uppercase tracking-wider text-amber-800">${escapeHtml(banco)}</span>
+                                    ${campo ? `<span class="px-1.5 py-0.5 bg-amber-200/60 rounded text-[10px] font-bold text-amber-900">${escapeHtml(campo)}</span>` : ''}
+                                </div>
+                                <p class="text-xs text-amber-800 mt-1">${escapeHtml(detalle)}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // 9. Manejo de Pestañas
+            const tabButtons = document.querySelectorAll('#tabs-bar .tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.add('hidden'));
+
+                    btn.classList.add('active');
+                    const targetId = btn.getAttribute('data-tab');
+                    const targetContent = document.getElementById(targetId);
+                    if (targetContent) {
+                        targetContent.classList.remove('hidden');
+                    }
+                });
+            });
+
+            // 10. Botón de Descarga Directa de Excel (.xlsx)
+            const btnDownload = document.getElementById('btn-download-direct');
+            btnDownload.addEventListener('click', () => {
+                if (!urlDescarga || urlDescarga === '#') {
+                    alert('El enlace de descarga del archivo Excel no está disponible en este momento.');
+                    return;
+                }
+
+                // Convertir enlace de Google Drive a descarga directa directa
+                let downloadUrl = urlDescarga;
+                const driveMatch = urlDescarga.match(/\/d\/([a-zA-Z0-9_-]+)/) || urlDescarga.match(/id=([a-zA-Z0-9_-]+)/);
+                if (driveMatch && driveMatch[1]) {
+                    downloadUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+                }
+
+                // Crear enlace temporal de descarga forzada
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = 'ReporteFinancieroIntelfon.xlsx';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+        });
+    </script>
+</body>
+</html>

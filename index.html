@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RED INTELFON - Dashboard de Reportes</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS v3 CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Estilos Locales -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/theme-intelfon.css">
+
+    <!-- Configuración personalizada de colores para Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        intelfon: {
+                            red: '#DC2626',
+                            darkRed: '#B91C1C',
+                            dark: '#0F172A',
+                            light: '#F8FAFC'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-900 font-sans antialiased flex h-screen overflow-hidden">
+
+    <!-- OVERLAY / BACKDROP PARA DISPOSITIVOS MÓVILES -->
+    <div id="sidebar-backdrop"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 opacity-0 pointer-events-none transition-opacity lg:hidden">
+    </div>
+
+    <!-- SIDEBAR LATERAL DESPLEGABLE / COLAPSABLE -->
+    <aside id="sidebar"
+        class="fixed inset-y-0 left-0 z-40 lg:static bg-gray-900 text-white flex flex-col justify-between shadow-xl border-r border-gray-800 -translate-x-full lg:translate-x-0">
+        <div>
+            <!-- Header Sidebar: Logo & Botón Colapsar -->
+            <div
+                class="sidebar-header h-20 flex items-center justify-between px-5 border-b border-gray-800 bg-gray-950/70">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <img src="assets/logo-intelfon.png" alt="RED INTELFON"
+                        class="h-9 w-auto flex-shrink-0 error-fallback"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div
+                        class="w-9 h-9 bg-intelfon-red rounded-lg hidden items-center justify-center font-bold text-white flex-shrink-0 text-sm shadow-md">
+                        RI</div>
+                    <span
+                        class="sidebar-brand-name text-base font-extrabold tracking-wide text-white whitespace-nowrap transition-opacity duration-200">
+                        RED <span class="text-intelfon-red">INTELFON</span>
+                    </span>
+                </div>
+
+                <!-- Botón de Alternancia (Toggle Desktop) -->
+                <button type="button" id="btn-toggle-sidebar" class="sidebar-toggle-btn hidden lg:inline-flex"
+                    title="Expandir/Contraer menú">
+                    <svg class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Menú de Navegación -->
+            <nav class="mt-6 px-3.5 space-y-1.5" id="sidebar-nav">
+                <button data-view="overview" class="nav-btn active w-full flex items-center px-4 py-3 text-sm"
+                    title="Inicio / Overview">
+                    <svg class="w-5 h-5 mr-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                        </path>
+                    </svg>
+                    <span class="sidebar-text truncate">Inicio / Overview</span>
+                </button>
+
+                <button data-view="generator" class="nav-btn w-full flex items-center px-4 py-3 text-sm"
+                    title="Generar Reporte Excel">
+                    <svg class="w-5 h-5 mr-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="sidebar-text truncate">Generar Reporte</span>
+                </button>
+
+                <button data-view="history" class="nav-btn w-full flex items-center px-4 py-3 text-sm"
+                    title="Reportes Anteriores">
+                    <svg class="w-5 h-5 mr-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h55.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    <span class="sidebar-text truncate">Reportes Anteriores</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Footer Sidebar -->
+        <div class="p-4 border-t border-gray-800 text-xs text-gray-400 bg-gray-950/40">
+            <div class="sidebar-footer-content flex items-center justify-between">
+                <div>
+                    <p class="font-semibold text-gray-300">RED INTELFON</p>
+                    <p class="text-[11px] text-gray-500">Analítica & Automatización</p>
+                </div>
+                <span
+                    class="px-2 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-gray-300 border border-gray-700">v2.4</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL DE CONTENIDO -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        <!-- Header Superior de Estado -->
+        <header
+            class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 shadow-xs z-10">
+            <div class="flex items-center space-x-4">
+                <!-- Botón Menú Hamburguesa Móvil -->
+                <button type="button" id="btn-mobile-sidebar"
+                    class="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                    title="Abrir menú">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+
+                <div>
+                    <h1 id="page-title" class="text-xl md:text-2xl font-extrabold text-slate-800 tracking-tight">Inicio
+                        / Overview</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">Gestión automatizada de reportes bancarios y
+                        análisis con Make.com</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <span
+                    class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                    <span class="w-2 h-2 mr-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    Sistema en Línea
+                </span>
+            </div>
+        </header>
+
+        <!-- Contenedor Dinámico de Vistas -->
+        <main id="app-content" class="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/80">
+            <!-- Las vistas (overview, generator, history) se renderizan aquí dinámicamente -->
+        </main>
+    </div>
+
+    <!-- Script Principal (Módulo ES6) -->
+    <script type="module" src="./js/app.js"></script>
+</body>
+
+</html>
