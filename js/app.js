@@ -1,10 +1,10 @@
-import { renderOverview } from './views/overview.js?v=3.3';
-import { renderGenerator } from './views/generator.js?v=3.3';
-import { renderHistory } from './views/history.js?v=3.3';
-import { renderLogin } from './views/login.js?v=3.3';
-import { renderUsers } from './views/users.js?v=3.3';
-import { AuthService } from './services/authService.js?v=3.3';
-import { Toast } from './services/toastService.js?v=3.3';
+import { renderOverview } from './views/overview.js?v=3.4';
+import { renderGenerator } from './views/generator.js?v=3.4';
+import { renderHistory } from './views/history.js?v=3.4';
+import { renderLogin } from './views/login.js?v=3.4';
+import { renderUsers } from './views/users.js?v=3.4';
+import { AuthService } from './services/authService.js?v=3.4';
+import { Toast } from './services/toastService.js?v=3.4';
 
 document.addEventListener('DOMContentLoaded', () => {
     const appContent = document.getElementById('app-content');
