@@ -4,55 +4,101 @@ const USERS_DB_KEY = 'intelfon_registered_users_db';
 
 /**
  * Base de Datos y Servicio de Autenticación de RED INTELFON
- * Almacena y administra usuarios registrados con persistencia en localStorage.
+ * Almacena y administra usuarios registrados con control RBAC y persistencia permanente en localStorage.
  */
 export const AuthService = {
     /**
-     * Inicializa la base de datos de usuarios con el usuario Administrador por defecto si está vacía.
+     * Inicializa la base de datos de usuarios con el usuario Master "intelfon" si está vacía.
      */
     _getUsersDB() {
         const stored = localStorage.getItem(USERS_DB_KEY);
+        let users = [];
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed;
+                    users = parsed;
                 }
             } catch (_) {}
         }
 
-        // Usuario inicial por defecto
-        const defaultUsers = [
-            {
-                id: 'USR-001',
-                name: 'Administrador INTELFON',
-                email: String(CONFIG.AUTH.defaultUser).toLowerCase(),
-                username: String(CONFIG.AUTH.defaultUsername).toLowerCase(),
-                password: String(CONFIG.AUTH.defaultPassword),
+        // Asegurar que el Usuario Master "intelfon" siempre exista como único Master
+        const masterUsername = String(CONFIG.AUTH.masterUsername || 'intelfon').toLowerCase();
+        const masterEmail = String(CONFIG.AUTH.masterEmail || 'admin@intelfon.com').toLowerCase();
+        const masterPass = String(CONFIG.AUTH.defaultPassword || 'intelfon2026');
+
+        const masterIndex = users.findIndex(u => 
+            String(u.username || '').toLowerCase() === masterUsername || 
+            String(u.email || '').toLowerCase() === masterEmail
+        );
+
+        if (masterIndex === -1) {
+            // Insertar Master al inicio
+            users.unshift({
+                id: 'USR-MASTER',
+                name: 'Master INTELFON',
+                username: masterUsername,
+                email: masterEmail,
+                password: masterPass,
                 role: 'Super Admin',
+                isMaster: true,
                 createdAt: new Date().toISOString()
-            }
-        ];
-        localStorage.setItem(USERS_DB_KEY, JSON.stringify(defaultUsers));
-        return defaultUsers;
+            });
+            localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+        } else {
+            // Asegurar que mantenga atributos de Master
+            users[masterIndex].role = 'Super Admin';
+            users[masterIndex].isMaster = true;
+            users[masterIndex].username = masterUsername;
+            localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+        }
+
+        return users;
     },
 
     /**
-     * Registra un nuevo usuario en la base de datos local.
+     * Guarda la base de datos completa de usuarios.
+     * @param {Array} users 
+     */
+    _saveUsersDB(users) {
+        localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
+    },
+
+    /**
+     * Verifica si un usuario es el Master Admin "intelfon".
+     * @param {Object} user 
+     * @returns {boolean}
+     */
+    isMasterAdmin(user = null) {
+        const current = user || this.getUser();
+        if (!current) return false;
+        const uName = String(current.username || '').toLowerCase().trim();
+        const uEmail = String(current.email || '').toLowerCase().trim();
+        const uRole = String(current.role || '').toLowerCase().trim();
+
+        return uName === 'intelfon' || 
+               uEmail === 'admin@intelfon.com' || 
+               uRole === 'super admin' || 
+               !!current.isMaster;
+    },
+
+    /**
+     * Registra un nuevo usuario en la base de datos local (solo analista/usuario regular).
      * @param {string} name - Nombre completo
      * @param {string} email - Correo electrónico
      * @param {string} password - Contraseña
+     * @param {string} role - Rol opcional (por defecto 'Analista')
      * @returns {Promise<{success: boolean, message?: string, user?: Object}>}
      */
-    async register(name, email, password) {
+    async register(name, email, password, role = 'Analista') {
         const cleanName = String(name || '').trim();
         const cleanEmail = String(email || '').trim().toLowerCase();
         const cleanPass = String(password || '').trim();
 
         if (!cleanName || cleanName.length < 2) {
-            return { success: false, message: 'Por favor ingresa tu nombre completo.' };
+            return { success: false, message: 'Por favor ingresa un nombre válido.' };
         }
-        if (!cleanEmail || !cleanEmail.includes('@') && cleanEmail.length < 3) {
+        if (!cleanEmail || (!cleanEmail.includes('@') && cleanEmail.length < 3)) {
             return { success: false, message: 'Por favor ingresa un correo o usuario válido.' };
         }
         if (!cleanPass || cleanPass.length < 4) {
@@ -61,38 +107,29 @@ export const AuthService = {
 
         const users = this._getUsersDB();
 
-        // Verificar si el usuario ya existe
+        // Verificar si el usuario o username ya existe
         const existing = users.find(u => 
-            u.email.toLowerCase() === cleanEmail || 
-            (u.username && u.username.toLowerCase() === cleanEmail)
+            String(u.email || '').toLowerCase() === cleanEmail || 
+            String(u.username || '').toLowerCase() === cleanEmail
         );
 
         if (existing) {
-            return { success: false, message: 'Este correo o usuario ya se encuentra registrado.' };
+            return { success: false, message: 'Este correo o nombre de usuario ya está registrado.' };
         }
 
         const newUser = {
             id: `USR-${Date.now().toString().slice(-4)}`,
             name: cleanName,
-            email: cleanEmail,
+            email: cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@intelfon.com`,
             username: cleanEmail.split('@')[0],
             password: cleanPass,
-            role: 'Analista',
+            role: role === 'Super Admin' ? 'Analista' : role, // Solo 'intelfon' es Super Admin
+            isMaster: false,
             createdAt: new Date().toISOString()
         };
 
         users.push(newUser);
-        localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-
-        // Iniciar sesión automáticamente tras el registro
-        const sessionPayload = JSON.stringify({
-            name: newUser.name,
-            email: newUser.email,
-            role: newUser.role,
-            avatar: 'assets/logo-intelfon.png',
-            loginTime: new Date().toISOString()
-        });
-        localStorage.setItem(CONFIG.AUTH.sessionKey, sessionPayload);
+        this._saveUsersDB(users);
 
         return {
             success: true,
@@ -112,9 +149,8 @@ export const AuthService = {
         const cleanPass = String(password || '').trim();
 
         const users = this._getUsersDB();
-        console.log('[AuthService] Intentando login con:', cleanUser, '| Usuarios en DB:', users);
 
-        // Buscar coincidencia flexible: por email, por username o por nombre
+        // Buscar coincidencia flexible: por username, email o nombre
         const matchedUser = users.find(u => {
             const uEmail = String(u.email || '').toLowerCase().trim();
             const uUsername = String(u.username || '').toLowerCase().trim();
@@ -128,17 +164,21 @@ export const AuthService = {
         });
 
         if (!matchedUser) {
-            console.warn('[AuthService] No se encontró coincidencia para:', cleanUser);
             return {
                 success: false,
-                message: 'Usuario o contraseña incorrectos. Verifica tus datos o crea una cuenta.'
+                message: 'Credenciales inválidas. Verifica tu usuario y contraseña.'
             };
         }
 
+        const isMaster = this.isMasterAdmin(matchedUser);
+
         const userData = {
+            id: matchedUser.id,
             name: matchedUser.name,
             email: matchedUser.email,
-            role: matchedUser.role || 'Usuario',
+            username: matchedUser.username,
+            role: matchedUser.role || 'Analista',
+            isMaster: isMaster,
             avatar: 'assets/logo-intelfon.png',
             loginTime: new Date().toISOString()
         };
@@ -202,5 +242,25 @@ export const AuthService = {
      */
     getAllUsers() {
         return this._getUsersDB();
+    },
+
+    /**
+     * Elimina un usuario por correo o id (protege al Master Admin).
+     * @param {string} emailOrId 
+     * @returns {boolean}
+     */
+    deleteUser(emailOrId) {
+        let users = this._getUsersDB();
+        const target = users.find(u => u.email === emailOrId || u.id === emailOrId || u.username === emailOrId);
+        
+        if (!target) return false;
+        if (this.isMasterAdmin(target)) {
+            console.warn('[AuthService] No se puede eliminar al usuario Master Admin.');
+            return false;
+        }
+
+        users = users.filter(u => u.id !== target.id && u.email !== target.email);
+        this._saveUsersDB(users);
+        return true;
     }
 };

@@ -1,10 +1,10 @@
-import { renderOverview } from './views/overview.js?v=3.1';
-import { renderGenerator } from './views/generator.js?v=3.1';
-import { renderHistory } from './views/history.js?v=3.1';
-import { renderLogin } from './views/login.js?v=3.1';
-import { renderUsers } from './views/users.js?v=3.1';
-import { AuthService } from './services/authService.js?v=3.1';
-import { Toast } from './services/toastService.js?v=3.1';
+import { renderOverview } from './views/overview.js?v=3.2';
+import { renderGenerator } from './views/generator.js?v=3.2';
+import { renderHistory } from './views/history.js?v=3.2';
+import { renderLogin } from './views/login.js?v=3.2';
+import { renderUsers } from './views/users.js?v=3.2';
+import { AuthService } from './services/authService.js?v=3.2';
+import { Toast } from './services/toastService.js?v=3.2';
 
 document.addEventListener('DOMContentLoaded', () => {
     const appContent = document.getElementById('app-content');
@@ -75,8 +75,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sidebarBackdrop) sidebarBackdrop.classList.remove('hidden');
 
         const currentUser = user || AuthService.getUser();
+        const isMaster = AuthService.isMasterAdmin(currentUser);
+
         if (currentUser && userDisplayName) {
-            userDisplayName.textContent = currentUser.name || 'Admin INTELFON';
+            userDisplayName.textContent = currentUser.name || (isMaster ? 'Master INTELFON' : 'Analista');
+        }
+
+        // RBAC: Ocultar pestaña 'Gestión de Usuarios' si no es Master Admin ("intelfon")
+        const navBtnUsers = document.querySelector('.nav-btn[data-view="users"]');
+        if (navBtnUsers) {
+            if (isMaster) {
+                navBtnUsers.classList.remove('hidden');
+                navBtnUsers.style.display = 'flex';
+            } else {
+                navBtnUsers.classList.add('hidden');
+                navBtnUsers.style.display = 'none';
+            }
         }
 
         // Cargar vista inicial
@@ -146,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================================================
-    // Enrutador y Renderizado de Vistas
+    // Enrutador y Renderizado de Vistas con Guard RBAC
     // =========================================================================
     const views = {
         overview: {
@@ -162,14 +176,22 @@ document.addEventListener('DOMContentLoaded', () => {
             render: renderHistory
         },
         users: {
-            title: 'Gestión de Usuarios',
-            render: renderUsers
+            title: 'Gestión de Usuarios (Master)',
+            render: renderUsers,
+            masterOnly: true
         }
     };
 
     function loadView(viewName) {
         const view = views[viewName];
         if (!view) return;
+
+        // Middleware Guard RBAC: Proteger ruta 'users'
+        if (view.masterOnly && !AuthService.isMasterAdmin()) {
+            Toast.warning('Acceso denegado. Solo el Usuario Master (intelfon) tiene acceso a Gestión de Usuarios.', 'Permiso Insuficiente');
+            loadView('overview');
+            return;
+        }
 
         pageTitle.textContent = view.title;
 

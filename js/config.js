@@ -21,8 +21,9 @@ export const CONFIG = {
 
     // Credenciales maestras de acceso para demostración / administración
     AUTH: {
-        defaultUser: 'admin@intelfon.com',
-        defaultUsername: 'admin',
+        masterUsername: 'intelfon',
+        masterEmail: 'admin@intelfon.com',
+        defaultUser: 'intelfon',
         defaultPassword: 'intelfon2026',
         sessionKey: 'intelfon_auth_session'
     }

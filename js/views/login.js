@@ -50,7 +50,7 @@ export function renderLogin(onLoginSuccess) {
             </div>
 
             <!-- FORMULARIO 1: INICIAR SESIÓN -->
-            <form id="form-login" class="space-y-4" autocomplete="on">
+            <form id="form-login" class="space-y-4" autocomplete="off">
                 <div class="space-y-1.5">
                     <label for="login-user" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Usuario o Correo</label>
                     <div class="relative">
@@ -61,9 +61,9 @@ export function renderLogin(onLoginSuccess) {
                             type="text"
                             id="login-user"
                             required
-                            placeholder="admin@intelfon.com"
+                            placeholder="intelfon"
                             class="w-full pl-10 pr-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
-                            value="admin@intelfon.com"
+                            value="intelfon"
                         >
                     </div>
                 </div>
@@ -108,7 +108,7 @@ export function renderLogin(onLoginSuccess) {
             </form>
 
             <!-- FORMULARIO 2: CREAR CUENTA (Oculto por defecto) -->
-            <form id="form-register" class="hidden space-y-4" autocomplete="on">
+            <form id="form-register" class="hidden space-y-4" autocomplete="off">
                 <div class="space-y-1.5">
                     <label for="reg-name" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Nombre Completo</label>
                     <div class="relative">
@@ -119,23 +119,23 @@ export function renderLogin(onLoginSuccess) {
                             type="text"
                             id="reg-name"
                             required
-                            placeholder="Ej. Juan Pérez"
+                            placeholder="Ej. Ana Morales"
                             class="w-full pl-10 pr-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                         >
                     </div>
                 </div>
 
                 <div class="space-y-1.5">
-                    <label for="reg-email" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Correo Electrónico</label>
+                    <label for="reg-email" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Correo Electrónico o Usuario</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                         </div>
                         <input
-                            type="email"
+                            type="text"
                             id="reg-email"
                             required
-                            placeholder="usuario@intelfon.com"
+                            placeholder="analista@intelfon.com"
                             class="w-full pl-10 pr-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                         >
                     </div>
@@ -151,7 +151,7 @@ export function renderLogin(onLoginSuccess) {
                             type="password"
                             id="reg-password"
                             required
-                            placeholder="Crea una contraseña segura"
+                            placeholder="Crea una contraseña"
                             class="w-full pl-10 pr-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all font-mono"
                         >
                     </div>
@@ -166,25 +166,27 @@ export function renderLogin(onLoginSuccess) {
                 </button>
             </form>
 
-            <!-- Lista Dinámica de Cuentas Registradas en la DB Local -->
-            <div class="space-y-2 pt-1 border-t border-slate-800/80">
-                <div class="flex items-center justify-between text-[11px]">
-                    <span class="font-bold text-slate-400">Cuentas Guardadas en la DB:</span>
-                    <span id="registered-count-badge" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">1 usuario</span>
-                </div>
-                <div id="registered-users-list" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                    <!-- Se llena dinámicamente con AuthService.getAllUsers() -->
-                </div>
+            <!-- Acceso Rápido Master Demo (Exclusivo para la cuenta Master intelfon) -->
+            <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Acceso Master Admin:</span>
+                <button type="button" id="btn-fill-master" class="text-red-400 hover:text-red-300 font-bold hover:underline">
+                    Autocompletar (intelfon)
+                </button>
             </div>
 
             <!-- Footer Corporativo -->
-            <div class="text-center pt-1">
-                <p class="text-[11px] text-slate-600">RED INTELFON &copy; 2026 • Plataforma Segura</p>
+            <div class="text-center text-[11px] text-slate-500 space-y-1">
+                <p>© 2026 RED INTELFON. Todos los derechos reservados.</p>
+                <div class="flex items-center justify-center space-x-2 text-slate-600 text-[10px]">
+                    <span>Seguridad SSL 256-bit</span>
+                    <span>•</span>
+                    <span>Acceso Bancario Protegido</span>
+                </div>
             </div>
         </div>
     `;
 
-    // Referencias
+    // Referencias DOM
     const tabLogin = container.querySelector('#tab-mode-login');
     const tabRegister = container.querySelector('#tab-mode-register');
     const formLogin = container.querySelector('#form-login');
@@ -193,8 +195,7 @@ export function renderLogin(onLoginSuccess) {
     const alertText = container.querySelector('#alert-text');
     const alertIcon = container.querySelector('#alert-icon');
     const btnSwitchToRegister = container.querySelector('#btn-switch-to-register');
-    const registeredUsersList = container.querySelector('#registered-users-list');
-    const registeredCountBadge = container.querySelector('#registered-count-badge');
+    const btnFillMaster = container.querySelector('#btn-fill-master');
 
     const inputLoginUser = container.querySelector('#login-user');
     const inputLoginPass = container.querySelector('#login-password');
@@ -205,53 +206,21 @@ export function renderLogin(onLoginSuccess) {
     const inputRegEmail = container.querySelector('#reg-email');
     const inputRegPass = container.querySelector('#reg-password');
 
-    // Función para renderizar chips de usuarios registrados
-    function renderRegisteredUsers() {
-        const users = AuthService.getAllUsers();
-        if (registeredCountBadge) {
-            registeredCountBadge.textContent = `${users.length} cuenta${users.length === 1 ? '' : 's'}`;
-        }
-
-        if (!registeredUsersList) return;
-        registeredUsersList.innerHTML = users.map(u => `
-            <button
-                type="button"
-                data-user-email="${u.email}"
-                data-user-pass="${u.password}"
-                class="btn-user-chip px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-red-950/60 border border-slate-800 hover:border-red-800 text-[11px] text-slate-300 hover:text-white transition-all flex items-center space-x-1.5 truncate max-w-full"
-                title="Hacer clic para autocompletar: ${u.email}"
-            >
-                <span class="w-1.5 h-1.5 rounded-full ${u.role === 'Super Admin' ? 'bg-red-500' : 'bg-blue-400'}"></span>
-                <span class="font-semibold truncate">${u.name}</span>
-                <span class="text-slate-500 font-mono text-[10px]">(${u.email.split('@')[0]})</span>
-            </button>
-        `).join('');
-
-        // Añadir listeners a cada chip
-        registeredUsersList.querySelectorAll('.btn-user-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                const email = chip.getAttribute('data-user-email');
-                const pass = chip.getAttribute('data-user-pass');
-                setMode('login');
-                inputLoginUser.value = email;
-                inputLoginPass.value = pass;
-                authAlert.classList.add('hidden');
-            });
-        });
-    }
-
-    renderRegisteredUsers();
-
     function showAlert(msg, isSuccess = false) {
-        alertText.textContent = msg;
-        authAlert.classList.remove('hidden', 'bg-red-950/80', 'border-red-800/80', 'text-red-200', 'bg-emerald-950/80', 'border-emerald-800/80', 'text-emerald-200');
+        authAlert.classList.remove('hidden', 'bg-red-950/80', 'text-red-200', 'border-red-800', 'bg-emerald-950/80', 'text-emerald-200', 'border-emerald-800');
         if (isSuccess) {
-            authAlert.classList.add('bg-emerald-950/80', 'border-emerald-800/80', 'text-emerald-200');
-            alertIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>`;
+            authAlert.classList.add('bg-emerald-950/80', 'text-emerald-200', 'border', 'border-emerald-800');
+            alertIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
+            alertIcon.classList.add('text-emerald-400');
+            alertIcon.classList.remove('text-red-400');
         } else {
-            authAlert.classList.add('bg-red-950/80', 'border-red-800/80', 'text-red-200');
-            alertIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>`;
+            authAlert.classList.add('bg-red-950/80', 'text-red-200', 'border', 'border-red-800', 'animate-shake');
+            alertIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>';
+            alertIcon.classList.add('text-red-400');
+            alertIcon.classList.remove('text-emerald-400');
+            setTimeout(() => authAlert.classList.remove('animate-shake'), 400);
         }
+        alertText.textContent = msg;
     }
 
     function setMode(mode) {
@@ -275,6 +244,16 @@ export function renderLogin(onLoginSuccess) {
         btnSwitchToRegister.addEventListener('click', () => setMode('register'));
     }
 
+    // Autocompletar solo para el Master Admin intelfon
+    if (btnFillMaster) {
+        btnFillMaster.addEventListener('click', () => {
+            setMode('login');
+            inputLoginUser.value = CONFIG.AUTH.masterUsername;
+            inputLoginPass.value = CONFIG.AUTH.defaultPassword;
+            authAlert.classList.add('hidden');
+        });
+    }
+
     // Toggle Password Visibility
     let showLoginPass = false;
     btnToggleLoginPass.addEventListener('click', () => {
@@ -287,22 +266,29 @@ export function renderLogin(onLoginSuccess) {
         e.preventDefault();
         const btn = formLogin.querySelector('button[type="submit"]');
         btn.disabled = true;
-        btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white inline mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Iniciar Sesión`;
+        btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white inline mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Validando...`;
 
-        await new Promise(r => setTimeout(r, 250));
-        const res = await AuthService.login(inputLoginUser.value, inputLoginPass.value, inputLoginRemember.checked);
+        const userOrEmail = inputLoginUser.value.trim();
+        const password = inputLoginPass.value.trim();
+        const remember = inputLoginRemember.checked;
 
-        if (res.success) {
-            showAlert('¡Acceso concedido! Entrando...', true);
-            container.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+        const result = await AuthService.login(userOrEmail, password, remember);
+
+        if (result.success) {
+            showAlert(`¡Bienvenido, ${result.user.name}!`, true);
             setTimeout(() => {
-                container.remove();
-                if (typeof onLoginSuccess === 'function') onLoginSuccess(res.user);
-            }, 300);
+                container.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    container.remove();
+                    if (typeof onLoginSuccess === 'function') {
+                        onLoginSuccess(result.user);
+                    }
+                }, 200);
+            }, 500);
         } else {
+            showAlert(result.message || 'Usuario o contraseña incorrectos.');
             btn.disabled = false;
-            btn.textContent = 'Iniciar Sesión';
-            showAlert(res.message || 'Credenciales inválidas.');
+            btn.innerHTML = `<span>Iniciar Sesión</span>`;
         }
     });
 
@@ -313,20 +299,27 @@ export function renderLogin(onLoginSuccess) {
         btn.disabled = true;
         btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white inline mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Creando cuenta...`;
 
-        await new Promise(r => setTimeout(r, 250));
-        const res = await AuthService.register(inputRegName.value, inputRegEmail.value, inputRegPass.value);
+        const name = inputRegName.value.trim();
+        const email = inputRegEmail.value.trim();
+        const password = inputRegPass.value.trim();
 
-        if (res.success) {
-            showAlert('¡Cuenta creada con éxito! Entrando...', true);
-            container.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+        const result = await AuthService.register(name, email, password);
+
+        if (result.success) {
+            showAlert(`Cuenta creada con éxito. Iniciando sesión...`, true);
             setTimeout(() => {
-                container.remove();
-                if (typeof onLoginSuccess === 'function') onLoginSuccess(res.user);
-            }, 300);
+                container.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    container.remove();
+                    if (typeof onLoginSuccess === 'function') {
+                        onLoginSuccess(result.user);
+                    }
+                }, 200);
+            }, 600);
         } else {
+            showAlert(result.message || 'Error al registrar usuario.');
             btn.disabled = false;
-            btn.textContent = 'Crear Cuenta y Entrar';
-            showAlert(res.message || 'No se pudo crear la cuenta.');
+            btn.innerHTML = `<span>Crear Cuenta y Entrar</span>`;
         }
     });
 
