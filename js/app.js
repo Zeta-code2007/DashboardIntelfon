@@ -1,6 +1,6 @@
-import { renderOverview } from './views/overview.js';
-import { renderGenerator } from './views/generator.js';
-import { renderHistory } from './views/history.js';
+import { renderOverview } from './views/overview.js?v=2.5';
+import { renderGenerator } from './views/generator.js?v=2.5';
+import { renderHistory } from './views/history.js?v=2.5';
 
 document.addEventListener('DOMContentLoaded', () => {
     const appContent = document.getElementById('app-content');
