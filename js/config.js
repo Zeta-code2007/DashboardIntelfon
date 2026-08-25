@@ -17,5 +17,13 @@ export const CONFIG = {
         darkGray: '#1F2937',
         lightGray: '#F3F4F6',
         accentBorder: '#E5E7EB'
+    },
+
+    // Credenciales maestras de acceso para demostración / administración
+    AUTH: {
+        defaultUser: 'admin@intelfon.com',
+        defaultUsername: 'admin',
+        defaultPassword: 'intelfon2026',
+        sessionKey: 'intelfon_auth_session'
     }
 };

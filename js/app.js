@@ -1,6 +1,8 @@
 import { renderOverview } from './views/overview.js?v=2.5';
 import { renderGenerator } from './views/generator.js?v=2.5';
 import { renderHistory } from './views/history.js?v=2.5';
+import { renderLogin } from './views/login.js?v=2.5';
+import { AuthService } from './services/authService.js?v=2.5';
 
 document.addEventListener('DOMContentLoaded', () => {
     const appContent = document.getElementById('app-content');
@@ -8,9 +10,66 @@ document.addEventListener('DOMContentLoaded', () => {
     const navButtons = document.querySelectorAll('.nav-btn');
 
     const sidebar = document.getElementById('sidebar');
+    const mainLayout = document.getElementById('main-layout');
     const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
     const btnMobileSidebar = document.getElementById('btn-mobile-sidebar');
     const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const btnLogout = document.getElementById('btn-logout');
+    const userDisplayName = document.getElementById('user-display-name');
+
+    // =========================================================================
+    // Control de Autenticación
+    // =========================================================================
+    function checkAuthentication() {
+        if (!AuthService.isAuthenticated()) {
+            showLoginScreen();
+        } else {
+            showDashboardScreen();
+        }
+    }
+
+    function showLoginScreen() {
+        if (sidebar) sidebar.classList.add('hidden');
+        if (mainLayout) mainLayout.classList.add('hidden');
+        if (sidebarBackdrop) sidebarBackdrop.classList.add('hidden');
+
+        // Limpiar cualquier vista de login previa
+        const existingLogin = document.getElementById('login-modal-container');
+        if (existingLogin) existingLogin.remove();
+
+        const loginElement = renderLogin((user) => {
+            showDashboardScreen(user);
+        });
+        loginElement.id = 'login-modal-container';
+        document.body.appendChild(loginElement);
+    }
+
+    function showDashboardScreen(user) {
+        const existingLogin = document.getElementById('login-modal-container');
+        if (existingLogin) existingLogin.remove();
+
+        if (sidebar) sidebar.classList.remove('hidden');
+        if (mainLayout) mainLayout.classList.remove('hidden');
+        if (sidebarBackdrop) sidebarBackdrop.classList.remove('hidden');
+
+        const currentUser = user || AuthService.getUser();
+        if (currentUser && userDisplayName) {
+            userDisplayName.textContent = currentUser.name || 'Admin INTELFON';
+        }
+
+        // Cargar vista inicial
+        loadView('overview');
+    }
+
+    // Botón de Cerrar Sesión
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                AuthService.logout();
+                showLoginScreen();
+            }
+        });
+    }
 
     // =========================================================================
     // Manejo del Sidebar Colapsable (Desktop & Mobile)
@@ -117,6 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Carga inicial
-    loadView('overview');
+    // Iniciar verificación de autenticación
+    checkAuthentication();
 });
