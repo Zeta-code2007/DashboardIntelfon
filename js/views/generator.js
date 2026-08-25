@@ -1,4 +1,5 @@
 import { enviarArchivoAMake } from '../services/makeService.js';
+import { Toast } from '../services/toastService.js?v=2.9';
 
 /**
  * Función auxiliar para sanitizar cadenas y prevenir inyecciones HTML.
@@ -169,13 +170,17 @@ export function renderGenerator() {
 
                     <!-- Acciones Principales -->
                     <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" id="btn-view-full-report" class="btn-intelfon-primary text-xs py-2.5 px-4 flex items-center shadow-md">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                            <span>Ver Vista Previa en Nueva Pestaña</span>
+                        <button type="button" id="btn-download-pdf-direct" class="btn-intelfon-primary text-xs py-2.5 px-4 flex items-center shadow-md bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span>Descargar PDF Oficial</span>
                         </button>
                         <button type="button" id="btn-download-excel" class="btn-intelfon-secondary text-xs py-2.5 px-4 flex items-center shadow-xs border border-slate-300">
-                            <svg class="w-4 h-4 mr-1.5 text-intelfon-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            <span>Descargar Archivo Excel (.xlsx)</span>
+                            <svg class="w-4 h-4 mr-1.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span>Descargar Excel (.xlsx)</span>
+                        </button>
+                        <button type="button" id="btn-view-full-report" class="btn-intelfon-secondary text-xs py-2.5 px-4 flex items-center shadow-xs border border-slate-300">
+                            <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            <span>Ver en Pantalla Completa</span>
                         </button>
                     </div>
                 </div>
@@ -303,6 +308,7 @@ export function renderGenerator() {
     const btnSubmitText = container.querySelector('#btn-submit-text');
 
     const resultsPanel = container.querySelector('#results-panel');
+    const btnDownloadPdfDirect = container.querySelector('#btn-download-pdf-direct');
     const btnViewFullReport = container.querySelector('#btn-view-full-report');
     const btnOpenInteractiveViewer = container.querySelector('#btn-open-interactive-viewer');
     const btnDownloadExcel = container.querySelector('#btn-download-excel');
@@ -322,20 +328,32 @@ export function renderGenerator() {
     let lastProcessedData = null;
 
     // Función para abrir el visor interactivo de código en nueva pestaña
-    function abrirVisorInteractivo() {
+    function abrirVisorInteractivo(autoPrint = false) {
         if (!lastProcessedData) {
-            alert('Aún no se han recibido datos del reporte para previsualizar.');
+            Toast.warning('Aún no se han recibido datos del reporte para previsualizar.');
             return;
         }
         localStorage.setItem('intelfon_current_report', JSON.stringify(lastProcessedData));
-        window.open('report-viewer.html', '_blank');
+        const win = window.open('report-viewer.html', '_blank');
+        if (autoPrint && win) {
+            win.addEventListener('load', () => {
+                setTimeout(() => win.print(), 800);
+            });
+        }
+    }
+
+    if (btnDownloadPdfDirect) {
+        btnDownloadPdfDirect.addEventListener('click', () => {
+            Toast.info('Abriendo vista de impresión y guardado en PDF...', 'Exportando PDF Oficial');
+            abrirVisorInteractivo(true);
+        });
     }
 
     if (btnViewFullReport) {
-        btnViewFullReport.addEventListener('click', abrirVisorInteractivo);
+        btnViewFullReport.addEventListener('click', () => abrirVisorInteractivo(false));
     }
     if (btnOpenInteractiveViewer) {
-        btnOpenInteractiveViewer.addEventListener('click', abrirVisorInteractivo);
+        btnOpenInteractiveViewer.addEventListener('click', () => abrirVisorInteractivo(false));
     }
 
     // Manejador de descarga directa de Excel (.xlsx)
@@ -343,7 +361,7 @@ export function renderGenerator() {
         btnDownloadExcel.addEventListener('click', (e) => {
             e.preventDefault();
             if (!currentPreviewUrl || currentPreviewUrl === '#') {
-                alert('El archivo no cuenta con un enlace de descarga disponible en este momento.');
+                Toast.error('El archivo no cuenta con un enlace de descarga disponible en este momento.');
                 return;
             }
             let directUrl = currentPreviewUrl;
@@ -351,6 +369,7 @@ export function renderGenerator() {
             if (driveMatch && driveMatch[1]) {
                 directUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
             }
+            Toast.success('Iniciando descarga directa de archivo Excel...', 'Descarga Excel');
             const a = document.createElement('a');
             a.href = directUrl;
             a.download = 'ReporteFinancieroIntelfon.xlsx';

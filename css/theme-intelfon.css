@@ -410,3 +410,131 @@
     z-index: 10;
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
+
+/* ==========================================================================
+   TOAST NOTIFICATIONS PROGRESS ANIMATION
+   ========================================================================== */
+@keyframes toastProgress {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0);
+    }
+}
+
+/* Shake Animation for Auth Errors */
+@keyframes shakeAnimation {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+    animation: shakeAnimation 0.4s ease-in-out;
+}
+
+/* ==========================================================================
+   DARK MODE SYSTEM
+   ========================================================================== */
+html.dark {
+    color-scheme: dark;
+}
+
+html.dark body {
+    background-color: #0B0F19;
+    color: #F8FAFC;
+}
+
+html.dark .card-intelfon {
+    background-color: #111827;
+    border-color: #1F2937;
+    color: #F8FAFC;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+}
+
+html.dark .kpi-card {
+    background-color: #111827;
+    border-color: #1F2937;
+    color: #F8FAFC;
+}
+
+html.dark .kpi-card h3 {
+    color: #FFFFFF;
+}
+
+html.dark header {
+    background-color: #111827 !important;
+    border-color: #1F2937 !important;
+}
+
+html.dark header h1 {
+    color: #FFFFFF !important;
+}
+
+html.dark main {
+    background-color: #0B0F19 !important;
+}
+
+html.dark .table-modern {
+    background-color: #111827;
+}
+
+html.dark .table-modern thead th {
+    background-color: #1E293B;
+    color: #94A3B8;
+    border-bottom-color: #334155;
+}
+
+html.dark .table-modern tbody td {
+    color: #E2E8F0;
+    border-bottom-color: #1F2937;
+}
+
+html.dark .table-modern tbody tr:hover {
+    background-color: #1E293B;
+}
+
+/* ==========================================================================
+   ESTILOS CORPORATIVOS DE IMPRESIÓN Y PDF CON MEMBRETE
+   ========================================================================== */
+@media print {
+    @page {
+        margin: 1.2cm;
+        size: A4 portrait;
+    }
+
+    body {
+        background: white !important;
+        color: #0F172A !important;
+        font-size: 10pt;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    .card-intelfon {
+        box-shadow: none !important;
+        border: 1px solid #CBD5E1 !important;
+        page-break-inside: avoid;
+    }
+
+    /* Marca de agua institucional */
+    .watermark-intelfon {
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 80pt;
+        font-weight: 900;
+        color: rgba(220, 38, 38, 0.04);
+        pointer-events: none;
+        z-index: 0;
+        letter-spacing: 0.2em;
+    }
+}

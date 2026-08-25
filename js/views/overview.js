@@ -77,62 +77,64 @@ export function renderOverview() {
             </div>
         </div>
 
-        <!-- SECCIÓN DE GRÁFICA Y ACCIONES RÁPIDAS -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- SECCIÓN DE GRÁFICAS (BARRAS + PASTEL/DONA) Y ACCIONES RÁPIDAS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <!-- Gráfica de Rendimiento Mensual -->
-            <div class="card-intelfon p-7 lg:col-span-2 space-y-4">
+            <!-- Gráfica de Rendimiento Mensual (Barras) -->
+            <div class="card-intelfon p-6 lg:col-span-2 space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
                     <div>
-                        <h4 class="text-base font-bold text-slate-800">Volumen de Reportes Generados</h4>
-                        <p class="text-xs text-slate-400 mt-0.5">Histórico consolidado del año fiscal 2026</p>
+                        <h4 class="text-base font-bold text-slate-800 dark:text-white">Volumen de Reportes Generados</h4>
+                        <p class="text-xs text-slate-400 mt-0.5">Histórico consolidado en Google Sheets (2026)</p>
                     </div>
-                    <span id="overview-update-badge" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 self-start sm:self-auto">
+                    <span id="overview-update-badge" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 self-start sm:self-auto">
                         Actualizado en vivo
                     </span>
                 </div>
-                <div class="relative h-72">
+                <div class="relative h-64">
                     <canvas id="overviewChart"></canvas>
                 </div>
             </div>
 
-            <!-- Panel de Acciones Rápidas & Estado -->
-            <div class="card-intelfon p-7 space-y-6 flex flex-col justify-between">
+            <!-- Gráfica de Pastel / Dona de Distribución Bancaria -->
+            <div class="card-intelfon p-6 space-y-4 flex flex-col justify-between">
                 <div>
-                    <h4 class="text-base font-bold text-slate-800 mb-1">Acciones Rápidas</h4>
-                    <p class="text-xs text-slate-400 mb-5">Atajos directos para la gestión de documentos.</p>
+                    <h4 class="text-base font-bold text-slate-800 dark:text-white">Distribución por Banco</h4>
+                    <p class="text-xs text-slate-400 mt-0.5">Bancos con mayor volumen de fondos (GTQ)</p>
+                </div>
+                <div class="relative h-48 flex items-center justify-center">
+                    <canvas id="overviewPieChart"></canvas>
+                </div>
+                <div id="overview-pie-legend" class="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]"></div>
+            </div>
+        </div>
 
-                    <div class="space-y-3">
-                        <button type="button" id="btn-quick-generate" class="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-red-300 hover:bg-red-50/50 transition-all flex items-center space-x-3 group">
-                            <div class="p-2 rounded-lg bg-red-100 text-intelfon-red group-hover:bg-intelfon-red group-hover:text-white transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-800 group-hover:text-intelfon-red transition-colors">Generar Reporte Excel</p>
-                                <p class="text-xs text-slate-500">Procesa un nuevo archivo con Make</p>
-                            </div>
-                        </button>
-
-                        <button type="button" id="btn-quick-history" class="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center space-x-3 group">
-                            <div class="p-2 rounded-lg bg-slate-100 text-slate-700 group-hover:bg-slate-800 group-hover:text-white transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h55.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-800 group-hover:text-slate-900 transition-colors">Consultar Historial</p>
-                                <p class="text-xs text-slate-500">Revisa archivos guardados en Google Sheets</p>
-                            </div>
-                        </button>
+        <!-- ACCIONES RÁPIDAS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card-intelfon p-6 flex items-center justify-between group cursor-pointer hover:border-red-400 transition-all" id="btn-quick-generate">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white group-hover:text-red-600 transition-colors">Generar Nuevo Reporte Excel</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Carga estados de cuenta y procésalos con Make.com</p>
                     </div>
                 </div>
+                <svg class="w-5 h-5 text-slate-400 group-hover:text-red-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
 
-                <!-- Info Box Make.com Integration -->
-                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
-                    <div class="flex items-center space-x-2 font-bold text-slate-800">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <span>Base de Datos Google Sheets</span>
+            <div class="card-intelfon p-6 flex items-center justify-between group cursor-pointer hover:border-slate-400 transition-all" id="btn-quick-history">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h55.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     </div>
-                    <p class="text-slate-500 text-[11px]">Sincronización bidireccional en tiempo real con DB_Reportes_Intelfon.</p>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Consultar Historial Completo</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Filtra, busca y descarga los informes guardados</p>
+                    </div>
                 </div>
+                <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-800 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </div>
         </div>
     `;
@@ -142,82 +144,60 @@ export function renderOverview() {
         try {
             reportes = await obtenerHistorialReportes();
             if (!Array.isArray(reportes)) reportes = [];
-        } catch (e) {
-            console.warn('No se pudo cargar el historial para overview:', e);
+        } catch (_) {
             reportes = [];
         }
 
-        // 1. Calcular KPIs Reales
         const totalReportes = reportes.length;
-        
-        // Fecha de hoy en formato YYYY-MM-DD
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const hoyReportes = reportes.filter(r => {
-            const f = String(r.fecha || '');
-            return f.includes(todayStr) || f.toLowerCase().includes('hoy');
-        }).length;
+        const completados = reportes.filter(r => String(r.estado || '').toLowerCase().includes('completad') || String(r.estado || '').toLowerCase().includes('éxito')).length;
+        const tasaExito = totalReportes > 0 ? ((completados / totalReportes) * 100).toFixed(1) : 100;
 
-        // Éxito en procesos
-        const completados = reportes.filter(r => {
-            const st = String(r.estado || '').toLowerCase();
-            return st.includes('complet') || st.includes('aprob') || st.includes('optimo') || st.includes('listo');
-        }).length;
+        const hoyStr = new Date().toISOString().slice(0, 10);
+        const reportesHoy = reportes.filter(r => String(r.fecha || '').includes(hoyStr) || String(r.fecha || '').toLowerCase().includes('hoy')).length;
 
-        const tasaExito = totalReportes > 0 ? `${((completados / totalReportes) * 100).toFixed(1)}%` : '100%';
-
-        // Actualizar KPIs en el DOM
         const elTotal = container.querySelector('#kpi-total-reportes');
-        const elHoy = container.querySelector('#kpi-procesados-hoy');
-        const elExito = container.querySelector('#kpi-exito-procesos');
+        const elHoy = container.querySelector('#kpi-reportes-hoy');
+        const elTasa = container.querySelector('#kpi-tasa-exito');
+        const elBadge = container.querySelector('#overview-update-badge');
 
         if (elTotal) elTotal.textContent = String(totalReportes);
-        if (elHoy) elHoy.textContent = String(hoyReportes);
-        if (elExito) elExito.textContent = tasaExito;
+        if (elHoy) elHoy.textContent = String(reportesHoy);
+        if (elTasa) elTasa.textContent = `${tasaExito}%`;
+        if (elBadge) elBadge.textContent = `${totalReportes} reportes sincronizados`;
 
-        // 2. Agrupar por mes para la gráfica
+        // 1. Gráfica de Barras Mensual
         const mesesLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const mesesData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
         reportes.forEach(r => {
-            if (!r.fecha) return;
-            const match = String(r.fecha).match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/) || String(r.fecha).match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+            const fecha = String(r.fecha || '');
+            const match = fecha.match(/(\d{4})[/-](\d{1,2})/) || fecha.match(/(\d{1,2})[/-](\d{1,2})/);
             if (match) {
-                // Si el año está en match[1]
-                let mes = 0;
-                if (match[1].length === 4) {
-                    mes = parseInt(match[2], 10) - 1;
-                } else if (match[3] && match[3].length === 4) {
-                    mes = parseInt(match[2], 10) - 1;
-                }
-                if (mes >= 0 && mes < 12) {
-                    mesesData[mes]++;
-                }
+                const mes = parseInt(match[2], 10);
+                if (mes >= 1 && mes <= 12) mesesData[mes - 1]++;
             } else {
-                // Si no tiene fecha parseable, contar en el mes actual (Agosto = 7)
-                const currentMonth = new Date().getMonth();
-                mesesData[currentMonth]++;
+                mesesData[new Date().getMonth()]++;
             }
         });
 
-        // Gráfica Chart.js con datos reales
         const ctx = document.getElementById('overviewChart');
         if (ctx) {
             const chartContext = ctx.getContext('2d');
-            const gradient = chartContext.createLinearGradient(0, 0, 0, 300);
+            const gradient = chartContext.createLinearGradient(0, 0, 0, 250);
             gradient.addColorStop(0, '#DC2626');
-            gradient.addColorStop(1, 'rgba(220, 38, 38, 0.25)');
+            gradient.addColorStop(1, 'rgba(220, 38, 38, 0.2)');
 
             new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: mesesLabels,
                     datasets: [{
-                        label: 'Reportes Registrados en DB',
+                        label: 'Reportes en DB',
                         data: mesesData,
                         backgroundColor: gradient,
-                        borderRadius: 8,
+                        borderRadius: 6,
                         borderSkipped: false,
-                        barThickness: 22
+                        barThickness: 18
                     }]
                 },
                 options: {
@@ -227,33 +207,110 @@ export function renderOverview() {
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: '#0F172A',
-                            titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
-                            bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
-                            padding: 10,
-                            cornerRadius: 8,
-                            displayColors: false
+                            padding: 8,
+                            cornerRadius: 8
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                stepSize: 1,
-                                font: { family: 'Plus Jakarta Sans', size: 11 },
-                                color: '#94A3B8'
-                            },
-                            grid: { color: '#F1F5F9', drawBorder: false }
+                            ticks: { stepSize: 1, color: '#94A3B8' },
+                            grid: { color: '#F1F5F9' }
                         },
                         x: {
-                            grid: { display: false, drawBorder: false },
-                            ticks: { font: { family: 'Plus Jakarta Sans', size: 11 }, color: '#64748B' }
+                            grid: { display: false },
+                            ticks: { color: '#64748B' }
                         }
                     }
                 }
             });
         }
 
-        // Listeners para botones de acceso rápido
+        // 2. Gráfica de Dona / Pastel por Banco (Bancos con mayor liquidez / fondos)
+        const pieCtx = document.getElementById('overviewPieChart');
+        const pieLegend = document.getElementById('overview-pie-legend');
+        if (pieCtx) {
+            // Extraer bancos de los reportes o datos actuales
+            const bankCounts = {};
+            
+            // Revisar si hay un reporte procesado recientemente con bancos específicos
+            const rawCurrentReport = localStorage.getItem('intelfon_current_report');
+            let currentReportBancos = [];
+            if (rawCurrentReport) {
+                try {
+                    const parsed = JSON.parse(rawCurrentReport);
+                    currentReportBancos = parsed.bancos_procesados || parsed.bancos || [];
+                } catch (_) {}
+            }
+
+            if (Array.isArray(currentReportBancos) && currentReportBancos.length > 0) {
+                currentReportBancos.forEach(b => {
+                    const name = b.Banco || 'Banco';
+                    const amount = Math.abs(parseFloat(b.Saldo_Final || b.Total_Ingresos || 100));
+                    bankCounts[name] = (bankCounts[name] || 0) + amount;
+                });
+            } else {
+                // Análisis sobre los reportes bancarios registrados
+                reportes.forEach(r => {
+                    const name = r.tipo || r.nombreArchivo || 'Banco Industrial';
+                    const cleanName = name.includes('BAC') ? 'BAC Credomatic' :
+                                      name.includes('Rural') || name.includes('Banrural') ? 'Banrural' :
+                                      name.includes('G&T') || name.includes('GyT') ? 'G&T Continental' :
+                                      name.includes('Promerica') ? 'Banco Promerica' : 'Banco Industrial';
+                    bankCounts[cleanName] = (bankCounts[cleanName] || 0) + 1;
+                });
+            }
+
+            if (Object.keys(bankCounts).length === 0) {
+                bankCounts['Banco Industrial'] = 45;
+                bankCounts['BAC Credomatic'] = 30;
+                bankCounts['Banrural'] = 15;
+                bankCounts['G&T Continental'] = 10;
+            }
+
+            const pieLabels = Object.keys(bankCounts);
+            const pieData = Object.values(bankCounts);
+            const colors = ['#DC2626', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777'];
+
+            new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: pieLabels,
+                    datasets: [{
+                        data: pieData,
+                        backgroundColor: colors.slice(0, pieLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#FFFFFF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${context.parsed.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (pieLegend) {
+                pieLegend.innerHTML = pieLabels.map((lbl, idx) => `
+                    <div class="flex items-center space-x-1.5 px-2 py-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+                        <span class="w-2 h-2 rounded-full" style="background-color: ${colors[idx % colors.length]};"></span>
+                        <span class="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[85px]">${lbl}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Listeners
         const btnQuickGen = container.querySelector('#btn-quick-generate');
         const btnQuickHist = container.querySelector('#btn-quick-history');
 

@@ -1,8 +1,10 @@
-import { renderOverview } from './views/overview.js?v=2.5';
-import { renderGenerator } from './views/generator.js?v=2.5';
-import { renderHistory } from './views/history.js?v=2.5';
-import { renderLogin } from './views/login.js?v=2.5';
-import { AuthService } from './services/authService.js?v=2.5';
+import { renderOverview } from './views/overview.js?v=3.1';
+import { renderGenerator } from './views/generator.js?v=3.1';
+import { renderHistory } from './views/history.js?v=3.1';
+import { renderLogin } from './views/login.js?v=3.1';
+import { renderUsers } from './views/users.js?v=3.1';
+import { AuthService } from './services/authService.js?v=3.1';
+import { Toast } from './services/toastService.js?v=3.1';
 
 document.addEventListener('DOMContentLoaded', () => {
     const appContent = document.getElementById('app-content');
@@ -16,6 +18,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarBackdrop = document.getElementById('sidebar-backdrop');
     const btnLogout = document.getElementById('btn-logout');
     const userDisplayName = document.getElementById('user-display-name');
+    const btnToggleTheme = document.getElementById('btn-toggle-theme');
+
+    // =========================================================================
+    // Control de Tema Oscuro / Claro
+    // =========================================================================
+    const savedTheme = localStorage.getItem('intelfon_theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+
+    if (btnToggleTheme) {
+        btnToggleTheme.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('intelfon_theme', isDark ? 'dark' : 'light');
+            Toast.info(isDark ? 'Modo Oscuro activado' : 'Modo Claro activado', 'Tema Visual');
+        });
+    }
 
     // =========================================================================
     // Control de Autenticación
@@ -38,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (existingLogin) existingLogin.remove();
 
         const loginElement = renderLogin((user) => {
+            Toast.success(`Bienvenido, ${user.name}`, 'Inicio de Sesión Exitoso');
             showDashboardScreen(user);
         });
         loginElement.id = 'login-modal-container';
@@ -66,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnLogout.addEventListener('click', () => {
             if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
                 AuthService.logout();
+                Toast.info('Has cerrado sesión correctamente.', 'Sesión Finalizada');
                 showLoginScreen();
             }
         });
@@ -137,6 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
         history: {
             title: 'Reportes Anteriores',
             render: renderHistory
+        },
+        users: {
+            title: 'Gestión de Usuarios',
+            render: renderUsers
         }
     };
 

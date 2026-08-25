@@ -113,6 +113,16 @@
                     </svg>
                     <span class="sidebar-text truncate">Reportes Anteriores</span>
                 </button>
+
+                <button data-view="users" class="nav-btn w-full flex items-center px-4 py-3 text-sm"
+                    title="Gestión de Usuarios">
+                    <svg class="w-5 h-5 mr-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    <span class="sidebar-text truncate">Gestión de Usuarios</span>
+                </button>
             </nav>
         </div>
 
@@ -169,6 +179,12 @@
             </div>
 
             <div class="flex items-center space-x-3">
+                <!-- Selector Dark/Light Mode -->
+                <button type="button" id="btn-toggle-theme" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Cambiar Tema (Oscuro/Claro)">
+                    <svg id="theme-sun-icon" class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <svg id="theme-moon-icon" class="w-4 h-4 block dark:hidden text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+
                 <span
                     class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
                     <span class="w-2 h-2 mr-2 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -184,7 +200,7 @@
     </div>
 
     <!-- Script Principal (Módulo ES6) -->
-    <script type="module" src="./js/app.js?v=2.5"></script>
+    <script type="module" src="./js/app.js?v=3.1"></script>
 </body>
 
 </html>
