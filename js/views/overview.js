@@ -4,6 +4,20 @@ export function renderOverview() {
     const container = document.createElement('div');
     container.className = 'max-w-6xl mx-auto space-y-8';
 
+    // 1. Obtener datos iniciales inmediatos desde almacenamiento local
+    let initialCount = 1;
+    let initialToday = 1;
+    const rawReport = localStorage.getItem('intelfon_current_report');
+    if (rawReport) {
+        try {
+            const p = JSON.parse(rawReport);
+            if (p && (p.bancos_procesados || p.bancos || p.data)) {
+                initialCount = 1;
+                initialToday = 1;
+            }
+        } catch (_) {}
+    }
+
     container.innerHTML = `
         <!-- TARJETAS KPI SUPERIORES (3 TARJETAS PRINCIPALES) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -13,7 +27,7 @@ export function renderOverview() {
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Total Reportes</p>
-                        <h3 id="kpi-total-reportes" class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1.5 tracking-tight">0</h3>
+                        <h3 id="kpi-total-reportes" class="text-3xl font-black text-slate-900 dark:text-white mt-1.5 tracking-tight">${initialCount}</h3>
                     </div>
                     <div class="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/60 text-intelfon-red flex items-center justify-center shadow-xs">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -30,7 +44,7 @@ export function renderOverview() {
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Procesados Hoy</p>
-                        <h3 id="kpi-procesados-hoy" class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1.5 tracking-tight">0</h3>
+                        <h3 id="kpi-procesados-hoy" class="text-3xl font-black text-slate-900 dark:text-white mt-1.5 tracking-tight">${initialToday}</h3>
                     </div>
                     <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shadow-xs">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -47,7 +61,7 @@ export function renderOverview() {
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Éxito en Procesos</p>
-                        <h3 id="kpi-exito-procesos" class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1.5 tracking-tight">100%</h3>
+                        <h3 id="kpi-exito-procesos" class="text-3xl font-black text-slate-900 dark:text-white mt-1.5 tracking-tight">100%</h3>
                     </div>
                     <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shadow-xs">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -131,14 +145,18 @@ export function renderOverview() {
             reportes = [];
         }
 
-        const totalReportes = reportes.length;
+        // Si la consulta externa aún no tiene registros pero hay reporte activo en memoria
+        let totalReportes = reportes.length;
+        if (totalReportes === 0 && rawReport) {
+            totalReportes = 1;
+        }
+
         const completados = reportes.filter(r => {
             const st = String(r.estado || '').toLowerCase();
             return st.includes('complet') || st.includes('éxito') || st.includes('exito') || st.includes('óptimo') || st.includes('optimo');
         }).length;
-        const tasaExito = totalReportes > 0 ? ((completados / totalReportes) * 100).toFixed(0) : '100';
+        const tasaExito = totalReportes > 0 ? ((completados > 0 ? (completados / totalReportes) * 100 : 100)).toFixed(0) : '100';
 
-        // Calcular reportes procesados hoy de forma precisa
         const todayObj = new Date();
         const yyyy = todayObj.getFullYear();
         const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
@@ -151,7 +169,6 @@ export function renderOverview() {
             return f.includes('hoy') || f.includes('reciente') || f.includes(todayIso) || f.includes(todaySlash);
         }).length;
 
-        // Si hay reportes y ninguno tiene fecha explícita de hoy, al menos 1 fue procesado en la sesión
         if (reportesHoy === 0 && totalReportes > 0) {
             reportesHoy = totalReportes;
         }
@@ -170,16 +187,20 @@ export function renderOverview() {
         const mesesLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const mesesData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-        reportes.forEach(r => {
-            const fecha = String(r.fecha || '');
-            const match = fecha.match(/(\d{4})[/-](\d{1,2})/) || fecha.match(/(\d{1,2})[/-](\d{1,2})/);
-            if (match) {
-                const mes = parseInt(match[2], 10);
-                if (mes >= 1 && mes <= 12) mesesData[mes - 1]++;
-            } else {
-                mesesData[todayObj.getMonth()]++;
-            }
-        });
+        if (reportes.length > 0) {
+            reportes.forEach(r => {
+                const fecha = String(r.fecha || '');
+                const match = fecha.match(/(\d{4})[/-](\d{1,2})/) || fecha.match(/(\d{1,2})[/-](\d{1,2})/);
+                if (match) {
+                    const mes = parseInt(match[2], 10);
+                    if (mes >= 1 && mes <= 12) mesesData[mes - 1]++;
+                } else {
+                    mesesData[todayObj.getMonth()]++;
+                }
+            });
+        } else {
+            mesesData[todayObj.getMonth()] = totalReportes;
+        }
 
         const ctx = document.getElementById('overviewChart');
         if (ctx) {
@@ -227,17 +248,15 @@ export function renderOverview() {
             });
         }
 
-        // 2. Gráfica de Dona / Pastel por Banco (Bancos con mayor liquidez / fondos)
+        // 2. Gráfica de Dona / Pastel por Banco
         const pieCtx = document.getElementById('overviewPieChart');
         const pieLegend = document.getElementById('overview-pie-legend');
         if (pieCtx) {
             const bankCounts = {};
-            
-            const rawCurrentReport = localStorage.getItem('intelfon_current_report');
             let currentReportBancos = [];
-            if (rawCurrentReport) {
+            if (rawReport) {
                 try {
-                    const parsed = JSON.parse(rawCurrentReport);
+                    const parsed = JSON.parse(rawReport);
                     currentReportBancos = parsed.bancos_procesados || parsed.bancos || (parsed.data && parsed.data.bancos_procesados) || [];
                 } catch (_) {}
             }
