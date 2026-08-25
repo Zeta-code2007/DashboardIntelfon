@@ -210,69 +210,23 @@ export function renderGenerator() {
                 </div>
             </div>
 
-            <!-- TARJETA 2: BANNER Y VISOR INTERACTIVO -->
+            <!-- TARJETA 2: BANNER DEL VISOR INTERACTIVO EN PANTALLA COMPLETA -->
             <div id="document-preview-section" class="card-intelfon p-8 space-y-6">
-                <!-- Banner Destacado del Visor de Código -->
                 <div class="p-6 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 text-white rounded-2xl flex flex-col md:flex-row items-center justify-between gap-5 shadow-lg border border-slate-800">
                     <div class="space-y-1.5 text-center md:text-left">
                         <div class="flex items-center justify-center md:justify-start space-x-2">
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-intelfon-red text-white">
                                 Visor Web Interactivo
                             </span>
-                            <span class="text-xs text-slate-400 font-medium">• Generado en Código</span>
+                            <span class="text-xs text-slate-400 font-medium">• Conciliación en Vivo</span>
                         </div>
                         <h4 class="text-xl font-extrabold text-white tracking-tight">Informe Completo de Conciliación y Movimientos</h4>
-                        <p class="text-xs text-slate-300 max-w-xl">Abre el visor en una nueva pestaña para consultar todas las transacciones, balances por cuenta bancaria, resúmenes periódicos y observaciones sin depender de visores externos.</p>
+                        <p class="text-xs text-slate-300 max-w-xl">Abre el visor en pantalla completa para consultar todas las transacciones, balances por cuenta bancaria, gráficas y bitácora de auditoría.</p>
                     </div>
-                    <button type="button" id="btn-open-interactive-viewer" class="btn-intelfon-primary text-xs py-3 px-6 whitespace-nowrap shadow-lg flex items-center space-x-2 font-bold">
+                    <button type="button" id="btn-open-interactive-viewer" class="btn-intelfon-primary text-xs py-3 px-6 whitespace-nowrap shadow-lg flex items-center space-x-2 font-bold cursor-pointer">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                        <span>Abrir Informe en Nueva Pestaña</span>
+                        <span>Abrir Informe en Pantalla Completa</span>
                     </button>
-                </div>
-
-                <!-- Visor Google Drive Opcional con Botones -->
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-100 pt-5">
-                    <div>
-                        <h5 class="text-sm font-bold text-slate-700">Visor de Archivo Original (Google Drive)</h5>
-                        <p class="text-xs text-slate-400">Si tu archivo en Drive tiene permisos públicos, puedes visualizarlo directamente abajo.</p>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <button type="button" id="btn-reload-preview" class="btn-intelfon-secondary text-xs py-1.5 px-3" title="Recargar visor">
-                            <svg class="w-3.5 h-3.5 mr-1.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            <span>Recargar Visor</span>
-                        </button>
-                        <a id="btn-open-external" href="#" target="_blank" rel="noopener noreferrer" class="btn-intelfon-secondary text-xs py-1.5 px-3" title="Abrir en Google Drive">
-                            <svg class="w-3.5 h-3.5 mr-1.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                            <span>Abrir en Google Drive</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- CONTENEDOR DEL VISOR IFRAME -->
-                <div class="excel-preview-container">
-                    <div id="preview-loader" class="excel-preview-loader">
-                        <div class="p-5 bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col items-center space-y-3 max-w-xs text-center">
-                            <div class="w-12 h-12 rounded-xl bg-red-50 text-intelfon-red flex items-center justify-center">
-                                <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-extrabold text-slate-800">Cargando visor...</p>
-                                <p class="text-xs text-slate-400 mt-0.5">Sincronizando con Drive</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Iframe Embebido -->
-                    <iframe
-                        id="excel-preview-frame"
-                        class="excel-preview-iframe opacity-0"
-                        src=""
-                        title="Vista Previa de Reporte Excel"
-                        allow="autoplay"
-                    ></iframe>
                 </div>
             </div>
 
@@ -314,10 +268,6 @@ export function renderGenerator() {
 
     // Referencias de la sección de Vista Previa del Documento
     const documentPreviewSection = container.querySelector('#document-preview-section');
-    const btnOpenExternal = container.querySelector('#btn-open-external');
-    const btnReloadPreview = container.querySelector('#btn-reload-preview');
-    const previewLoader = container.querySelector('#preview-loader');
-    const excelPreviewFrame = container.querySelector('#excel-preview-frame');
 
     let selectedFile = null;
     let currentPreviewUrl = '';
@@ -703,47 +653,13 @@ export function renderGenerator() {
         }
     }
 
-    // Configuración y carga del visor interactivo del documento
+    // Configuración y muestra de la sección del visor interactivo en pantalla completa
     function loadDocumentPreview(urlDescarga) {
-        if (!urlDescarga || urlDescarga === '#') {
-            documentPreviewSection.classList.add('hidden');
-            excelPreviewFrame.src = '';
-            currentPreviewUrl = '';
-            return;
+        currentPreviewUrl = urlDescarga || '';
+        if (documentPreviewSection) {
+            documentPreviewSection.classList.remove('hidden');
         }
-
-        const previewEmbedUrl = getEmbedPreviewUrl(urlDescarga);
-        currentPreviewUrl = previewEmbedUrl;
-
-        // Configurar botón "Abrir en nueva pestaña"
-        btnOpenExternal.href = urlDescarga;
-        btnOpenExternal.classList.remove('pointer-events-none', 'opacity-50');
-
-        // Mostrar estado de carga en el iframe
-        previewLoader.classList.remove('hidden', 'opacity-0');
-        excelPreviewFrame.classList.add('opacity-0');
-
-        // Inyectar URL en el iframe
-        excelPreviewFrame.src = previewEmbedUrl;
-
-        // Mostrar sección del documento
-        documentPreviewSection.classList.remove('hidden');
-
-        // Manejador de evento al completar la carga del iframe
-        excelPreviewFrame.onload = () => {
-            previewLoader.classList.add('hidden', 'opacity-0');
-            excelPreviewFrame.classList.remove('opacity-0');
-        };
     }
-
-    // Botón para recargar el iframe en caso de demora
-    btnReloadPreview.addEventListener('click', () => {
-        if (currentPreviewUrl) {
-            previewLoader.classList.remove('hidden', 'opacity-0');
-            excelPreviewFrame.classList.add('opacity-0');
-            excelPreviewFrame.src = currentPreviewUrl;
-        }
-    });
 
     // Event listener del formulario y botón de procesamiento
     form.addEventListener('submit', async (e) => {
