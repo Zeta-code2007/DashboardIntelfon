@@ -107,7 +107,7 @@ export function renderGenerator() {
                 <!-- DROPZONE / ÁREA DE CARGA DE ARCHIVO -->
                 <div class="space-y-2">
                     <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">Archivo Excel</label>
-                    <div id="dropzone" class="dropzone group">
+                    <div id="dropzone" class="dropzone-intelfon group">
                         <input type="file" id="file-input" class="hidden" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
                         
                         <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">

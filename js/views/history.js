@@ -1,6 +1,25 @@
 import { obtenerHistorialReportes } from '../services/historyService.js';
 import { Toast } from '../services/toastService.js?v=3.2';
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[character]));
+}
+
+function safeDownloadUrl(value) {
+    try {
+        const url = new URL(String(value || ''), window.location.href);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '#';
+    } catch (_) {
+        return '#';
+    }
+}
+
 export function renderHistory() {
     const container = document.createElement('div');
     container.className = 'max-w-6xl mx-auto space-y-6';
@@ -207,7 +226,7 @@ export function renderHistory() {
                 if (est.includes('pend')) badgeClass = 'badge-warning';
                 else if (est.includes('err') || est.includes('fall')) badgeClass = 'badge-danger';
 
-                let downloadUrl = urlDescarga;
+                let downloadUrl = safeDownloadUrl(urlDescarga);
                 const driveMatch = String(urlDescarga).match(/\/d\/([a-zA-Z0-9_-]+)/) || String(urlDescarga).match(/id=([a-zA-Z0-9_-]+)/);
                 if (driveMatch && driveMatch[1]) {
                     downloadUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
@@ -216,23 +235,23 @@ export function renderHistory() {
                 return `
                     <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-900/60 transition-colors">
                         <td class="font-extrabold text-slate-800 dark:text-white font-mono text-xs text-red-600 dark:text-red-400">
-                            ${id}
+                            ${escapeHtml(id)}
                         </td>
                         <td class="text-slate-500 dark:text-slate-400 text-xs font-medium">
-                            ${fecha}
+                            ${escapeHtml(fecha)}
                         </td>
                         <td class="font-semibold text-slate-800 dark:text-slate-200 flex items-center space-x-2">
                             <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <span class="truncate max-w-[280px]">${nombre}</span>
+                            <span class="truncate max-w-[280px]">${escapeHtml(nombre)}</span>
                         </td>
                         <td>
                             <span class="badge-status ${badgeClass}">
                                 <span class="badge-status-dot"></span>
-                                ${estado}
+                                ${escapeHtml(estado)}
                             </span>
                         </td>
                         <td class="text-right">
-                            <a href="${downloadUrl}" target="_blank" download="${nombre}" class="btn-intelfon text-xs py-1.5 px-3.5 inline-flex items-center space-x-1.5 shadow-xs cursor-pointer">
+                            <a href="${escapeHtml(downloadUrl)}" target="_blank" rel="noopener noreferrer" download="${escapeHtml(nombre)}" class="btn-intelfon text-xs py-1.5 px-3.5 inline-flex items-center space-x-1.5 shadow-xs cursor-pointer">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                 <span>Descargar Excel</span>
                             </a>

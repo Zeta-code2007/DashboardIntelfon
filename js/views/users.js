@@ -1,6 +1,16 @@
 import { AuthService } from '../services/authService.js';
 import { Toast } from '../services/toastService.js';
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[character]));
+}
+
 /**
  * Renderiza la vista de Gestión y Administración de Usuarios de RED INTELFON.
  * Restringido exclusivamente al usuario Master ("intelfon").
@@ -128,21 +138,21 @@ export function renderUsers() {
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-900/60 transition-colors">
                     <td class="font-bold text-slate-800 dark:text-white flex items-center space-x-3">
                         <div class="w-8 h-8 rounded-full ${isMasterRow ? 'bg-gradient-to-br from-red-600 to-red-800' : 'bg-slate-700'} text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                            ${(u.name || 'U').charAt(0).toUpperCase()}
+                            ${escapeHtml((u.name || 'U').charAt(0).toUpperCase())}
                         </div>
                         <div>
-                            <span>${u.name}</span>
+                            <span>${escapeHtml(u.name)}</span>
                             ${isMasterRow ? '<span class="ml-1.5 text-[10px] text-red-500 font-extrabold">(Principal)</span>' : ''}
                         </div>
                     </td>
-                    <td class="text-slate-500 dark:text-slate-400 font-mono text-xs">${u.email || u.username}</td>
+                    <td class="text-slate-500 dark:text-slate-400 font-mono text-xs">${escapeHtml(u.email || u.username)}</td>
                     <td>${roleBadge}</td>
                     <td class="text-slate-400 text-xs">${dateStr}</td>
                     <td class="text-right">
                         ${isMasterRow ? `
                             <span class="text-slate-400 text-xs italic font-semibold">Master Protegido</span>
                         ` : `
-                            <button type="button" data-delete-id="${u.id || u.email}" class="btn-delete-user px-2.5 py-1 rounded-lg text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 transition-colors font-semibold cursor-pointer">
+                            <button type="button" data-delete-id="${escapeHtml(u.id || u.email)}" class="btn-delete-user px-2.5 py-1 rounded-lg text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/60 transition-colors font-semibold cursor-pointer">
                                 Eliminar
                             </button>
                         `}

@@ -324,7 +324,7 @@ function money(v, currency = 'GTQ') {
 }
 const pct = v => `${v >= 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
 const cls = v => v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
-const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>'; '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 const fmtDate = iso => { if (!iso) return '—'; const parts = iso.split(/[-/]/); return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : iso; };
 const periodLabel = (a, b) => a === b ? fmtDate(a) : `${fmtDate(a)} – ${fmtDate(b)}`;
 const round2 = v => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
@@ -478,7 +478,9 @@ function initDataEngine() {
       initial: round2(banksArray.reduce((s, b) => s + b.initial, 0)),
       final: round2(banksArray.reduce((s, b) => s + b.final, 0)),
       change: round2(banksArray.reduce((s, b) => s + (b.final - b.initial), 0)),
-      changePct: 0,
+      changePct: banksArray.reduce((sum, bank) => sum + bank.initial, 0) !== 0
+        ? round2((banksArray.reduce((sum, bank) => sum + bank.change, 0) / Math.abs(banksArray.reduce((sum, bank) => sum + bank.initial, 0))) * 100)
+        : 0,
       credits: round2(banksArray.reduce((s, b) => s + b.credits, 0)),
       debits: round2(banksArray.reduce((s, b) => s + b.debits, 0)),
       netFlow: round2(banksArray.reduce((s, b) => s + (b.credits - b.debits), 0))
@@ -527,6 +529,11 @@ function buildFiltered(startDate, endDate) {
   const maxNet = daily.length ? daily.reduce((a, b) => b.net > a.net ? b : a) : null;
   const minNet = daily.length ? daily.reduce((a, b) => b.net < a.net ? b : a) : null;
 
+  const filteredCredits = round2(daily.reduce((sum, day) => sum + day.credits, 0));
+  const filteredDebits = round2(daily.reduce((sum, day) => sum + day.debits, 0));
+  const filteredNetFlow = round2(filteredCredits - filteredDebits);
+  const filteredFinal = round2(BASE_DATA.totals.initial + filteredNetFlow);
+
   return {
     meta: {
       ...BASE_DATA.meta,
@@ -534,7 +541,17 @@ function buildFiltered(startDate, endDate) {
       latestMovement: inRange.length ? fmtDate(inRange[inRange.length - 1].date) : BASE_DATA.meta.latestMovement,
       movementCount: inRange.length || BASE_DATA.meta.movementCount
     },
-    totals: { ...BASE_DATA.totals },
+    totals: {
+      ...BASE_DATA.totals,
+      final: filteredFinal,
+      change: filteredNetFlow,
+      changePct: BASE_DATA.totals.initial !== 0
+        ? round2((filteredNetFlow / Math.abs(BASE_DATA.totals.initial)) * 100)
+        : 0,
+      credits: filteredCredits,
+      debits: filteredDebits,
+      netFlow: filteredNetFlow
+    },
     highlights: { maxCredit, maxDebit, maxNet, minNet },
     banks: BASE_DATA.banks,
     accounts: BASE_DATA.accounts,
