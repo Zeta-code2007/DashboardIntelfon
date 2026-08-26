@@ -43,6 +43,7 @@
   .date-apply:hover,.date-reset:hover{background:#41516A}
   .date-reset{min-width:30px;padding-left:8px;padding-right:8px}
   .tabs{display:flex;gap:9px;margin:22px 0 16px;flex-wrap:wrap}
+  body.embedded-overview .tabs{display:none}
   .tab{background:#222832;border:1px solid #394252;color:#C5CEDA}
   .tab.active{background:#DC2626;color:#FFFFFF;border-color:#DC2626}
   .section{display:none}.section.active{display:block;animation:sectionIn .28s ease both}
@@ -83,7 +84,7 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;color:#AEB8C6;font-size:12px}.legend span{display:flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:3px}
   .note{margin-top:18px;padding:13px 15px;border-radius:13px;background:#1E2530;border:1px dashed #465164;color:#AAB5C5;font-size:12px;line-height:1.5}
   .footer{display:flex;justify-content:space-between;gap:15px;color:#7F8A9B;font-size:11px;margin-top:20px;padding:0 4px;flex-wrap:wrap}
-  .bank-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+  .bank-detail-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
   .bank-card{background:#242A34;border:1px solid #3B4350;border-radius:18px;padding:16px;position:relative;overflow:hidden}
   .bank-card:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--bank,#DC2626)}
   .bank-card .bank-title{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:850}
@@ -107,9 +108,9 @@
   .empty-state{text-align:center;padding:40px 20px;color:#94A0B2;font-size:14px}
   .empty-state svg{width:48px;height:48px;margin:0 auto 12px;color:#64748B}
 
-  @media(max-width:900px){.cover-grid{grid-template-columns:1fr}.cover-bank-strip{justify-content:flex-start}}
-  @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.insights{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:820px){.date-filter{width:100%;border-radius:14px}.date-filter input[type="date"]{width:118px}.app{padding:14px}.hero{flex-direction:column}.hero-actions{justify-content:flex-start}.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.grid-equal{grid-template-columns:1fr}.insights{grid-template-columns:1fr}canvas{height:280px}}
+  @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.insights{grid-template-columns:repeat(2,1fr)}.bank-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:820px){.date-filter{width:100%;border-radius:14px}.date-filter input[type="date"]{width:118px}.app{padding:14px}.hero{flex-direction:column}.hero-actions{justify-content:flex-start}.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.grid-equal{grid-template-columns:1fr}.insights{grid-template-columns:1fr}.bank-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}canvas{height:280px}}
+  @media(max-width:520px){.bank-detail-grid{grid-template-columns:1fr}}
   @media print{body{background:#fff;color:#111}.executive-cover{background:#fff!important;color:#111!important;border:1px solid #d7d7d7;box-shadow:none}.executive-cover:before{display:none}.cover-copy,.cover-badges span{color:#444!important}.cover-badges span{background:#fff;border-color:#ddd}.cover-logo{box-shadow:none;border-color:#ddd;background:#fff;color:#111}.app{max-width:none;padding:0}.hero,.card,.kpi,.bank-card,.insight{box-shadow:none}.hero-actions,.tabs{display:none!important}.section{display:block!important;page-break-inside:avoid;margin-bottom:20px}.hero,.card,.kpi,.bank-card,.insight{background:#fff;color:#111;border-color:#ddd}.sub,.desc,.hint,.small,.note,.footer{color:#555!important}.table-wrap{border-color:#ddd}table,td{background:#fff!important;color:#111!important}th{background:#eee!important;color:#111!important}.meta span{background:#f5f5f5;color:#333;border-color:#ddd}}
 </style>
 </head>
@@ -297,6 +298,10 @@
 // ===========================================================================
 // MOTOR DE EXTRACCIÓN Y CONCILIACIÓN DINÁMICA
 // ===========================================================================
+
+if (window.self !== window.top && window.location.hash === '#resumen') {
+  document.body.classList.add('embedded-overview');
+}
 
 let RAW_TRANSACTIONS = [];
 let BASE_DATA = {

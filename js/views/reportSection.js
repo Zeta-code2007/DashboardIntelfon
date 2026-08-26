@@ -29,7 +29,7 @@ export function renderReportSection(target, title, options = {}) {
     viewer.className = 'overview-report-viewer';
     viewer.title = title;
     const compactParam = options.compact ? '&compact=1' : '';
-    viewer.src = `report-viewer.html?v=4.2${compactParam}#${target}`;
+    viewer.src = `report-viewer.html?v=4.4${compactParam}#${target}`;
     viewer.loading = 'eager';
     container.appendChild(viewer);
 
