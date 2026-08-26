@@ -331,32 +331,67 @@ const periodLabel = (a, b) => a === b ? fmtDate(a) : `${fmtDate(a)} – ${fmtDat
 const round2 = v => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
 const txKey = (bankKey, account) => `${bankKey}|${account}`;
 
+function parseJsonValue(value) {
+  if (typeof value !== 'string') return value;
+  const text = value.trim();
+  if (!text) return value;
+  try { return JSON.parse(text); } catch (_) { return value; }
+}
+
+function normalizedKey(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+}
+
+function getField(record, ...names) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return undefined;
+  const fields = Object.entries(record);
+  for (const name of names) {
+    const match = fields.find(([key]) => normalizedKey(key) === normalizedKey(name));
+    if (match) return parseJsonValue(match[1]);
+  }
+  return undefined;
+}
+
+function unwrapPayload(value, depth = 0) {
+  const parsed = parseJsonValue(value);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || depth > 5) return parsed;
+  for (const key of ['data', 'resultado', 'result', 'response', 'body', 'payload']) {
+    const nested = getField(parsed, key);
+    if (nested && typeof nested === 'object') return unwrapPayload(nested, depth + 1);
+  }
+  return parsed;
+}
+
+function asArray(value) {
+  const parsed = parseJsonValue(value);
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === 'object') {
+    const values = Object.values(parsed);
+    if (values.length && values.every(item => item && typeof item === 'object')) return values;
+  }
+  return [];
+}
+
 function parseRawReport() {
   const saved = localStorage.getItem('intelfon_current_report');
   if (!saved) return null;
 
   try {
-    const raw = JSON.parse(saved);
-    const parsed = raw.data && typeof raw.data === 'object' ? raw.data : raw;
+    const original = parseJsonValue(JSON.parse(saved));
+    const raw = unwrapPayload(original);
+    const outerFileName = getField(original, 'fileName', 'filename', 'nombreArchivo');
+    const outerDownloadUrl = getField(original, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
+    const bancosList = asArray(getField(raw, 'bancos_procesados', 'bancos', 'cuentas', 'accounts', 'resumen_general'));
+    const resumenList = asArray(getField(raw, 'resumen_general', 'resumen', 'filas'));
+    const totalesObj = unwrapPayload(getField(raw, 'totales_globales', 'totales', 'balance_general')) || {};
 
-    let bancosList = parsed.bancos_procesados || parsed.bancos || parsed.resumen_general || [];
-    if (typeof bancosList === 'string') {
-      try { bancosList = JSON.parse(bancosList); } catch (_) { bancosList = []; }
-    }
+    downloadExcelUrl = getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link') || outerDownloadUrl || '#';
 
-    let resumenList = parsed.resumen_general || [];
-    if (typeof resumenList === 'string') {
-      try { resumenList = JSON.parse(resumenList); } catch (_) { resumenList = []; }
-    }
-
-    let totalesObj = parsed.totales_globales || {};
-    if (typeof totalesObj === 'string') {
-      try { totalesObj = JSON.parse(totalesObj); } catch (_) { totalesObj = {}; }
-    }
-
-    downloadExcelUrl = parsed.urlDescarga || parsed.downloadUrl || parsed.webViewLink || parsed.fileUrl || '#';
-
-    return { bancosList, resumenList, totalesObj, fileName: parsed.fileName || 'ReporteFinanciero.xlsx' };
+    return { bancosList, resumenList, totalesObj, fileName: getField(raw, 'fileName', 'filename', 'nombreArchivo') || outerFileName || 'ReporteFinanciero.xlsx' };
   } catch (e) {
     console.error('Error parseando reporte guardado:', e);
     return null;
@@ -382,18 +417,19 @@ function initDataEngine() {
   }
 
   const { bancosList, resumenList, totalesObj, fileName } = parsed;
-  const currency = bancosList[0]?.Moneda || 'GTQ';
+  const currency = getField(bancosList[0], 'Moneda', 'currency') || 'GTQ';
 
   const accountsMap = [];
   const banksMap = {};
 
   bancosList.forEach((b, idx) => {
-    const bName = b.Banco || b.banco || `Banco ${idx + 1}`;
-    const accNum = b.Cuenta || b.cuenta || `CTA-${idx + 1}`;
-    const sIni = parseFloat(b.Saldo_Inicial ?? b.saldo_inicial ?? 0);
-    const cIng = parseFloat(b.Total_Ingresos ?? b.total_ingresos ?? b.creditos ?? 0);
-    const dEgr = parseFloat(b.Total_Egresos ?? b.total_egresos ?? b.debitos ?? 0);
-    const sFin = parseFloat(b.Saldo_Final ?? b.saldo_final ?? (sIni + cIng - dEgr));
+    const bName = getField(b, 'Banco', 'banco', 'bank', 'bankName') || `Banco ${idx + 1}`;
+    const accNum = getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber') || `CTA-${idx + 1}`;
+    const sIni = parseFloat(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance') ?? 0) || 0;
+    const cIng = parseFloat(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income') ?? 0) || 0;
+    const dEgr = parseFloat(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses') ?? 0) || 0;
+    const sFinValue = getField(b, 'Saldo_Final', 'saldo_final', 'saldoFinal', 'finalBalance');
+    const sFin = parseFloat(sFinValue ?? (sIni + cIng - dEgr)) || 0;
 
     accountsMap.push({
       bankKey: bName,
@@ -426,10 +462,10 @@ function initDataEngine() {
     banksMap[bName].accountsCount += 1;
 
     // Extraer transacciones reales si vienen en el payload
-    const movs = b.estado_cuenta || b.Movimientos || b.movimientos || [];
-    if (Array.isArray(movs)) {
+    const movs = asArray(getField(b, 'estado_cuenta', 'estado cuenta', 'Movimientos', 'movimientos', 'transactions', 'transacciones'));
+    if (movs.length) {
       movs.forEach((m, mIdx) => {
-        let d = m.Fecha || m.fecha || '2026-08-01';
+        let d = String(getField(m, 'Fecha', 'fecha', 'date') || '2026-08-01');
         if (d.includes('/')) {
           const parts = d.split('/');
           if (parts.length === 3) d = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
@@ -440,9 +476,9 @@ function initDataEngine() {
           bank: bName,
           account: accNum,
           date: d,
-          debit: parseFloat(m.Egreso ?? m.Debito ?? m.debito ?? 0),
-          credit: parseFloat(m.Ingreso ?? m.Credito ?? m.credito ?? 0),
-          balance: parseFloat(m.Saldo_Resultante ?? m.Saldo ?? m.saldo ?? sFin)
+          debit: parseFloat(getField(m, 'Egreso', 'Debito', 'debito', 'debit', 'debits') ?? 0) || 0,
+          credit: parseFloat(getField(m, 'Ingreso', 'Credito', 'credito', 'credit', 'credits') ?? 0) || 0,
+          balance: parseFloat(getField(m, 'Saldo_Resultante', 'Saldo', 'saldo', 'balance') ?? sFin) || 0
         });
       });
     }
