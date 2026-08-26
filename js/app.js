@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // Control de Tema Oscuro / Claro
     // =========================================================================
-    const savedTheme = localStorage.getItem('intelfon_theme') || 'light';
+    const savedTheme = localStorage.getItem('intelfon_theme') || 'dark';
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark');
     } else {

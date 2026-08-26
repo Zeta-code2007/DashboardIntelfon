@@ -476,6 +476,17 @@ html.dark main {
     background-color: #0B0F19 !important;
 }
 
+html.dark #tipo-reporte {
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
+    border-color: #334155 !important;
+}
+
+html.dark #tipo-reporte option {
+    background-color: #0F172A;
+    color: #F8FAFC;
+}
+
 html.dark .table-modern {
     background-color: #111827;
 }
