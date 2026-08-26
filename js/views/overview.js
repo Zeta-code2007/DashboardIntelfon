@@ -1,17 +1,22 @@
 import { obtenerHistorialReportes } from '../services/historyService.js';
 
+let chartInstanceBar = null;
+let chartInstancePie = null;
+
 export function renderOverview() {
     const container = document.createElement('div');
     container.className = 'max-w-6xl mx-auto space-y-8';
 
-    // 1. Obtener datos iniciales inmediatos desde almacenamiento local
-    let initialCount = 1;
-    let initialToday = 1;
+    // 1. Obtener datos reales desde almacenamiento local
+    let initialCount = 0;
+    let initialToday = 0;
+    let initialSuccess = '100%';
     const rawReport = localStorage.getItem('intelfon_current_report');
     if (rawReport) {
         try {
             const p = JSON.parse(rawReport);
-            if (p && (p.bancos_procesados || p.bancos || p.data)) {
+            const data = p.data || p;
+            if (data && (data.bancos_procesados || data.bancos || data.resumen_general)) {
                 initialCount = 1;
                 initialToday = 1;
             }
@@ -19,7 +24,7 @@ export function renderOverview() {
     }
 
     container.innerHTML = `
-        <!-- TARJETAS KPI SUPERIORES (3 TARJETAS PRINCIPALES) -->
+        <!-- TARJETAS KPI SUPERIORES -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
             
             <!-- KPI 1: Total Reportes -->
@@ -61,7 +66,7 @@ export function renderOverview() {
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Éxito en Procesos</p>
-                        <h3 id="kpi-exito-procesos" class="text-3xl font-black text-slate-900 dark:text-white mt-1.5 tracking-tight">100%</h3>
+                        <h3 id="kpi-exito-procesos" class="text-3xl font-black text-slate-900 dark:text-white mt-1.5 tracking-tight">${initialSuccess}</h3>
                     </div>
                     <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shadow-xs">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -74,7 +79,7 @@ export function renderOverview() {
             </div>
         </div>
 
-        <!-- SECCIÓN DE GRÁFICAS (BARRAS + PASTEL/DONA) Y ACCIONES RÁPIDAS -->
+        <!-- SECCIÓN DE GRÁFICAS -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <!-- Gráfica de Rendimiento Mensual (Barras) -->
@@ -97,7 +102,7 @@ export function renderOverview() {
             <div class="card-intelfon p-6 space-y-4 flex flex-col justify-between">
                 <div>
                     <h4 class="text-base font-bold text-slate-800 dark:text-white">Distribución por Banco</h4>
-                    <p class="text-xs text-slate-400 mt-0.5">Bancos con mayor volumen de fondos (GTQ)</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Bancos con fondos operados en el reporte</p>
                 </div>
                 <div class="relative h-48 flex items-center justify-center">
                     <canvas id="overviewPieChart"></canvas>
@@ -145,7 +150,6 @@ export function renderOverview() {
             reportes = [];
         }
 
-        // Si la consulta externa aún no tiene registros pero hay reporte activo en memoria
         let totalReportes = reportes.length;
         if (totalReportes === 0 && rawReport) {
             totalReportes = 1;
@@ -204,12 +208,15 @@ export function renderOverview() {
 
         const ctx = document.getElementById('overviewChart');
         if (ctx) {
+            if (chartInstanceBar) {
+                chartInstanceBar.destroy();
+            }
             const chartContext = ctx.getContext('2d');
             const gradient = chartContext.createLinearGradient(0, 0, 0, 250);
             gradient.addColorStop(0, '#DC2626');
-            gradient.addColorStop(1, 'rgba(220, 38, 38, 0.2)');
+            gradient.addColorStop(1, 'rgba(220, 38, 38, 0.15)');
 
-            new Chart(ctx, {
+            chartInstanceBar = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: mesesLabels,
@@ -248,10 +255,14 @@ export function renderOverview() {
             });
         }
 
-        // 2. Gráfica de Dona / Pastel por Banco
+        // 2. Gráfica de Dona / Pastel por Banco (Dinámica real)
         const pieCtx = document.getElementById('overviewPieChart');
         const pieLegend = document.getElementById('overview-pie-legend');
         if (pieCtx) {
+            if (chartInstancePie) {
+                chartInstancePie.destroy();
+            }
+
             const bankCounts = {};
             let currentReportBancos = [];
             if (rawReport) {
@@ -263,56 +274,57 @@ export function renderOverview() {
 
             if (Array.isArray(currentReportBancos) && currentReportBancos.length > 0) {
                 currentReportBancos.forEach(b => {
-                    const name = b.Banco || 'Banco';
-                    const amount = Math.abs(parseFloat(b.Saldo_Final || b.Total_Ingresos || 100));
+                    const name = b.Banco || b.banco || 'Banco';
+                    const amount = Math.abs(parseFloat(b.Saldo_Final || b.Total_Ingresos || 1));
                     bankCounts[name] = (bankCounts[name] || 0) + amount;
                 });
-            } else {
-                bankCounts['Banco Industrial'] = 45;
-                bankCounts['BAC Credomatic'] = 30;
-                bankCounts['Banrural'] = 15;
-                bankCounts['G&T Continental'] = 10;
             }
 
             const pieLabels = Object.keys(bankCounts);
             const pieData = Object.values(bankCounts);
-            const colors = ['#DC2626', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777'];
+            const colors = ['#DC2626', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777', '#0891B2'];
 
-            new Chart(pieCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: pieLabels,
-                    datasets: [{
-                        data: pieData,
-                        backgroundColor: colors.slice(0, pieLabels.length),
-                        borderWidth: 2,
-                        borderColor: '#FFFFFF'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return ` ${context.label}: Q ${context.parsed.toLocaleString()}`;
+            if (pieLabels.length > 0) {
+                chartInstancePie = new Chart(pieCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: pieLabels,
+                        datasets: [{
+                            data: pieData,
+                            backgroundColor: colors.slice(0, pieLabels.length),
+                            borderWidth: 2,
+                            borderColor: '#FFFFFF'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.label}: Q ${context.parsed.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
 
-            if (pieLegend) {
-                pieLegend.innerHTML = pieLabels.map((lbl, idx) => `
-                    <div class="flex items-center space-x-1.5 px-2 py-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
-                        <span class="w-2 h-2 rounded-full" style="background-color: ${colors[idx % colors.length]};"></span>
-                        <span class="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[85px]">${lbl}</span>
-                    </div>
-                `).join('');
+                if (pieLegend) {
+                    pieLegend.innerHTML = pieLabels.map((lbl, idx) => `
+                        <div class="flex items-center space-x-1.5 px-2 py-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+                            <span class="w-2 h-2 rounded-full" style="background-color: ${colors[idx % colors.length]};"></span>
+                            <span class="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[85px]">${lbl}</span>
+                        </div>
+                    `).join('');
+                }
+            } else {
+                if (pieLegend) {
+                    pieLegend.innerHTML = '<span class="text-slate-400 text-xs">Sin reporte procesado aún</span>';
+                }
             }
         }
 

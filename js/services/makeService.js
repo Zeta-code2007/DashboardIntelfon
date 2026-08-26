@@ -23,15 +23,11 @@ export async function enviarArchivoAMake(file, tipoReporte) {
         throw new Error('El archivo seleccionado debe ser un archivo Excel válido con extensión .xlsx (los formatos .csv o .xls no son soportados por el escenario en Make).');
     }
 
-    // Preparar carga multipart/form-data
-    // Se agregan múltiples alias de campos ('file', 'data', 'filename') para garantizar
-    // que el módulo de CustomWebHook en Make capture tanto {{70.data}} como {{70.name}}
+    // Preparar carga multipart/form-data estándar
     const formData = new FormData();
     formData.append('file', file, file.name);
-    formData.append('data', file, file.name);
     formData.append('filename', file.name);
-    formData.append('name', file.name);
-    formData.append('tipoReporte', tipoReporte || 'Ventas');
+    formData.append('tipoReporte', tipoReporte || 'bancario');
 
     let response;
     try {
