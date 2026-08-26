@@ -45,7 +45,8 @@
   .tabs{display:flex;gap:9px;margin:22px 0 16px;flex-wrap:wrap}
   .tab{background:#222832;border:1px solid #394252;color:#C5CEDA}
   .tab.active{background:#DC2626;color:#FFFFFF;border-color:#DC2626}
-  .section{display:none}.section.active{display:block}
+  .section{display:none}.section.active{display:block;animation:sectionIn .28s ease both}
+  @keyframes sectionIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   .kpis{display:grid;grid-template-columns:repeat(6,minmax(160px,1fr));gap:14px}
   .kpi{background:linear-gradient(180deg,#262B36,#20252F);border:1px solid #3A4250;border-radius:18px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.12)}
   .kpi .label{font-size:12px;color:#AEB8C8;text-transform:uppercase;letter-spacing:.07em;font-weight:800}
@@ -54,9 +55,12 @@
   .positive{color:#6EE7B7!important}.negative{color:#FDA4AF!important}.neutral{color:#93C5FD!important}
   .grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-top:16px}
   .grid-equal{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
-  .card{background:linear-gradient(180deg,#242A34,#1E232C);border:1px solid #39414F;border-radius:20px;padding:20px;box-shadow:var(--shadow)}
+  .card{background:linear-gradient(180deg,#242A34,#1E232C);border:1px solid #39414F;border-radius:20px;padding:20px;box-shadow:var(--shadow);position:relative}
   .card h2{font-size:17px;margin:0 0 4px}.card .desc{font-size:12px;color:#94A0B2;margin-bottom:16px}
-  canvas{width:100%;height:330px;display:block}
+  canvas{width:100%;height:330px;display:block;cursor:crosshair}
+  .chart-tooltip{position:absolute;z-index:5;display:flex;flex-direction:column;gap:4px;min-width:160px;max-width:230px;padding:10px 12px;border:1px solid #536174;border-radius:10px;background:rgba(15,23,42,.96);box-shadow:0 12px 28px rgba(0,0,0,.28);color:#CBD5E1;font-size:11px;line-height:1.35;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .14s ease,transform .14s ease}
+  .chart-tooltip.visible{opacity:1;transform:translateY(0)}
+  .chart-tooltip strong{color:#F8FAFC;font-size:12px}
   .bank-list{display:grid;gap:10px}
   .bank-row{display:grid;grid-template-columns:14px 1fr auto;gap:11px;align-items:center;padding:12px;border:1px solid #3B4453;background:#292F3A;border-radius:14px}
   .dot{width:10px;height:10px;border-radius:50%}
@@ -452,8 +456,8 @@ function initDataEngine() {
     accounts: b.accountsCount
   }));
 
-  const minDate = RAW_TRANSACTIONS.length ? RAW_TRANSACTIONS.reduce((m, t) => !m || t.date < m ? t.date : m, '') : '2026-08-01';
-  const maxDate = RAW_TRANSACTIONS.length ? RAW_TRANSACTIONS.reduce((m, t) => !m || t.date > m ? t.date : m, '') : '2026-08-31';
+  const minDate = RAW_TRANSACTIONS.length ? RAW_TRANSACTIONS.reduce((m, t) => !m || t.date < m ? t.date : m, '') : '';
+  const maxDate = RAW_TRANSACTIONS.length ? RAW_TRANSACTIONS.reduce((m, t) => !m || t.date > m ? t.date : m, '') : '';
 
   BASE_DATA = {
     meta: {
@@ -555,6 +559,15 @@ function renderHeader() {
     } else {
       logosContainer.innerHTML = '<div class="cover-logo">RED INTELFON</div>';
     }
+  }
+
+  const bankFilter = document.getElementById('bankFilter');
+  if (bankFilter) {
+    const currentValue = bankFilter.value;
+    bankFilter.innerHTML = '<option value="ALL">Todos los bancos</option>' + DATA.banks
+      .map(bank => `<option value="${esc(bank.key)}">${esc(bank.name)}</option>`)
+      .join('');
+    bankFilter.value = DATA.banks.some(bank => bank.key === currentValue) ? currentValue : 'ALL';
   }
 }
 
@@ -761,14 +774,35 @@ if (btnResetDate) {
 }
 
 // Pestañas
-document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+function activateTab(targetName) {
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+  const btn = document.querySelector(`.tab[data-target="${targetName}"]`);
+  if (!btn) return;
   btn.classList.add('active');
-  const target = document.getElementById(btn.dataset.target);
+  const target = document.getElementById(targetName);
   if (target) target.classList.add('active');
   setTimeout(drawAll, 80);
+}
+
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+  const parentViews = {
+    resumen: 'overview',
+    bancos: 'bank-detail',
+    flujo: 'daily-flow',
+    cuentas: 'account-detail'
+  };
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'intelfon-navigate', view: parentViews[btn.dataset.target] }, '*');
+    activateTab(btn.dataset.target);
+    return;
+  }
+  activateTab(btn.dataset.target);
+  history.replaceState(null, '', `#${btn.dataset.target}`);
 }));
+
+const initialTab = window.location.hash.replace('#', '');
+if (initialTab) activateTab(initialTab);
 
 // Canvas Gráficas
 function fitCanvas(canvas) {
@@ -794,6 +828,32 @@ function text(ctx, t, x, y, opt = {}) {
   ctx.textAlign = opt.align || 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(t, x, y);
+}
+
+function chartTooltip(canvas, getHit) {
+  let tip = canvas.parentElement.querySelector('.chart-tooltip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.className = 'chart-tooltip';
+    canvas.parentElement.appendChild(tip);
+  }
+
+  canvas._chartHitTest = getHit;
+  if (canvas._chartInteractive) return;
+  canvas._chartInteractive = true;
+  canvas.addEventListener('pointermove', event => {
+    const rect = canvas.getBoundingClientRect();
+    const hit = canvas._chartHitTest(event.clientX - rect.left, event.clientY - rect.top);
+    if (!hit) {
+      tip.classList.remove('visible');
+      return;
+    }
+    tip.innerHTML = hit.html;
+    tip.style.left = `${Math.min(Math.max(hit.x, 8), rect.width - tip.offsetWidth - 8)}px`;
+    tip.style.top = `${Math.max(8, hit.y - tip.offsetHeight - 12)}px`;
+    tip.classList.add('visible');
+  });
+  canvas.addEventListener('pointerleave', () => tip.classList.remove('visible'));
 }
 
 function drawGroupedBars(id, labels, s1, s2, c1, c2) {
@@ -828,6 +888,17 @@ function drawGroupedBars(id, labels, s1, s2, c1, c2) {
     roundedRect(ctx, cx + 3, T + ph - h2, bw, h2, 6, c2);
     text(ctx, lab, cx, h - B / 2 + 15, { size: 10, color: '#B8C2D1', align: 'center', weight: 700 });
   });
+
+  chartTooltip(canvas, (px, py) => {
+    const group = pw / labels.length;
+    const index = Math.floor((px - L) / group);
+    if (index < 0 || index >= labels.length || py < T || py > T + ph) return null;
+    return {
+      x: L + group * (index + 0.5),
+      y: T + ph - Math.max(ph * Math.max(s1[index] || 0, s2[index] || 0) / max, 8),
+      html: `<strong>${esc(labels[index])}</strong><span style="color:${c1}">Saldo inicial: ${money(s1[index])}</span><span style="color:${c2}">Saldo final: ${money(s2[index])}</span>`
+    };
+  });
 }
 
 function drawNetBars() {
@@ -861,6 +932,17 @@ function drawNetBars() {
     roundedRect(ctx, cx - bw / 2, y, bw, barh, 7, v >= 0 ? '#34D399' : '#FB7185');
     text(ctx, labels[i], cx, h - 18, { size: 10, color: '#B8C2D1', align: 'center', weight: 700 });
     text(ctx, money(v), cx, v >= 0 ? Math.max(T + 10, y - 10) : Math.min(h - B - 5, y + barh + 12), { size: 10, color: v >= 0 ? '#6EE7B7' : '#FDA4AF', align: 'center', weight: 700 });
+  });
+
+  chartTooltip(canvas, (px, py) => {
+    const group = pw / vals.length;
+    const index = Math.floor((px - L) / group);
+    if (index < 0 || index >= vals.length || py < T || py > T + ph) return null;
+    return {
+      x: L + group * (index + 0.5),
+      y: mid - (ph / 2) * Math.abs(vals[index]) / max,
+      html: `<strong>${esc(labels[index])}</strong><span style="color:${vals[index] >= 0 ? '#6EE7B7' : '#FDA4AF'}">Flujo neto: ${money(vals[index])}</span>`
+    };
   });
 }
 
@@ -914,6 +996,17 @@ function drawDaily() {
   DATA.daily.forEach((d, i) => {
     if (i % 2 === 0 || DATA.daily.length < 12) text(ctx, d.label, x(i), h - 18, { size: 9, color: '#9BA6B6', align: 'center', weight: 600 });
   });
+
+  chartTooltip(canvas, (px, py) => {
+    const index = Math.round((px - L) / (pw / (DATA.daily.length - 1 || 1)));
+    if (index < 0 || index >= DATA.daily.length || py < T || py > T + ph) return null;
+    const day = DATA.daily[index];
+    return {
+      x: x(index),
+      y: Math.min(y(day.credits), y(day.debits)),
+      html: `<strong>${esc(day.label)}</strong><span style="color:#34D399">Créditos: ${money(day.credits)}</span><span style="color:#FB7185">Débitos: ${money(day.debits)}</span><span>Flujo neto: ${money(day.net)}</span>`
+    };
+  });
 }
 
 function drawAll() {
@@ -965,6 +1058,9 @@ if (btnDownloadXlsx) {
 
 // Inicialización dinámica
 document.addEventListener('DOMContentLoaded', () => {
+  if (new URLSearchParams(window.location.search).get('compact') === '1') {
+    document.querySelector('.tabs')?.remove();
+  }
   initDataEngine();
 });
 </script>

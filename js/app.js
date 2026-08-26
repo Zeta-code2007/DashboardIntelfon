@@ -1,8 +1,9 @@
-import { renderOverview } from './views/overview.js?v=4.0';
+import { renderOverview } from './views/overview.js?v=4.1';
 import { renderGenerator } from './views/generator.js?v=4.0';
 import { renderHistory } from './views/history.js?v=4.0';
 import { renderLogin } from './views/login.js?v=4.0';
 import { renderUsers } from './views/users.js?v=4.0';
+import { renderReportSection } from './views/reportSection.js?v=4.2';
 import { AuthService } from './services/authService.js?v=4.0';
 import { Toast } from './services/toastService.js?v=4.0';
 
@@ -175,6 +176,18 @@ document.addEventListener('DOMContentLoaded', () => {
             title: 'Reportes Anteriores',
             render: renderHistory
         },
+        'bank-detail': {
+            title: 'Detalle por banco',
+            render: () => renderReportSection('bancos', 'Detalle por banco')
+        },
+        'daily-flow': {
+            title: 'Flujo diario',
+            render: () => renderReportSection('flujo', 'Flujo diario')
+        },
+        'account-detail': {
+            title: 'Detalle de cuentas',
+            render: () => renderReportSection('cuentas', 'Detalle de cuentas')
+        },
         users: {
             title: 'Gestión de Usuarios (Master)',
             render: renderUsers,
@@ -217,6 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
             closeMobileSidebar();
         }
     }
+
+    window.addEventListener('message', (event) => {
+        if (!event.data || event.data.type !== 'intelfon-navigate') return;
+        if (typeof event.data.view === 'string') loadView(event.data.view);
+    });
 
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {

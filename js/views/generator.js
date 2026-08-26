@@ -201,6 +201,10 @@ export function renderGenerator() {
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             <span>Descargar Archivo Excel (.xlsx)</span>
                         </button>
+                        <button type="button" id="btn-transfer-overview" class="btn-intelfon-secondary text-xs py-2.5 px-4 flex items-center shadow-xs border border-slate-300 dark:border-slate-700">
+                            <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16m-7-7l7 7-7 7"></path></svg>
+                            <span>Transferir datos al Overview</span>
+                        </button>
                         <button type="button" id="btn-view-full-report" class="btn-intelfon-secondary text-xs py-2.5 px-4 flex items-center shadow-xs border border-slate-300 dark:border-slate-700">
                             <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                             <span>Ver en Pantalla Completa</span>
@@ -331,6 +335,7 @@ export function renderGenerator() {
     const btnSubmitText = container.querySelector('#btn-submit-text');
 
     const resultsPanel = container.querySelector('#results-panel');
+    const btnTransferOverview = container.querySelector('#btn-transfer-overview');
     const btnViewFullReport = container.querySelector('#btn-view-full-report');
     const btnOpenInteractiveViewer = container.querySelector('#btn-open-interactive-viewer');
     const btnDownloadExcel = container.querySelector('#btn-download-excel');
@@ -365,6 +370,35 @@ export function renderGenerator() {
         window.open('report-viewer.html', '_blank');
     }
 
+    function transferirAlOverview() {
+        if (!lastProcessedData) {
+            const saved = localStorage.getItem('intelfon_current_report');
+            if (saved) {
+                try { lastProcessedData = JSON.parse(saved); } catch (_) {}
+            }
+        }
+        if (!lastProcessedData) {
+            Toast.warning('Primero debes generar o procesar un archivo para transferir datos al Overview.');
+            return;
+        }
+
+        try {
+            localStorage.setItem('intelfon_current_report', JSON.stringify(lastProcessedData));
+            const navBtn = document.querySelector('.nav-btn[data-view="overview"]');
+            if (navBtn) {
+                navBtn.click();
+                Toast.success('Datos transferidos al Overview correctamente.', 'Overview Actualizado');
+            } else {
+                Toast.info('El archivo ya quedó disponible para el Overview.', 'Transferencia Guardada');
+            }
+        } catch (_) {
+            Toast.error('No se pudo transferir el reporte al Overview.', 'Error de almacenamiento');
+        }
+    }
+
+    if (btnTransferOverview) {
+        btnTransferOverview.addEventListener('click', transferirAlOverview);
+    }
     if (btnViewFullReport) {
         btnViewFullReport.addEventListener('click', () => abrirVisorInteractivo());
     }
