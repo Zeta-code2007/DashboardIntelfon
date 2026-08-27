@@ -319,6 +319,14 @@ let BASE_DATA = {
 let DATA = null;
 let downloadExcelUrl = '#';
 
+window.addEventListener('storage', event => {
+  if (event.key === 'intelfon_current_report') initDataEngine();
+});
+window.addEventListener('focus', () => initDataEngine());
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) initDataEngine();
+});
+
 const PALETTE = ['#DC2626', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
 
 function money(v, currency = 'GTQ') {
@@ -611,6 +619,7 @@ function initDataEngine() {
 
 function buildFiltered(startDate, endDate) {
   if (!BASE_DATA.banks.length) return BASE_DATA;
+  if (!RAW_TRANSACTIONS.length) return BASE_DATA;
 
   const inRange = RAW_TRANSACTIONS.filter(t => t.date >= startDate && t.date <= endDate);
 

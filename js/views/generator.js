@@ -827,6 +827,10 @@ export function renderGenerator() {
         progressBar.className = 'bg-intelfon-red h-full w-0 transition-all duration-500';
         progressBar.style.width = '25%';
 
+        // El nuevo procesamiento reemplaza completamente al reporte anterior.
+        localStorage.removeItem('intelfon_current_report');
+        lastProcessedData = null;
+
         btnSubmit.disabled = true;
         btnSubmit.classList.add('opacity-75', 'cursor-not-allowed');
         btnSubmitIcon.innerHTML = `
