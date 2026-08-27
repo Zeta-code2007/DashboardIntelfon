@@ -363,8 +363,8 @@ function canonicalKey(value) {
 }
 
 function isSyntheticAccount(record) {
-  const bank = canonicalKey(getField(record, 'Banco', 'banco', 'bank', 'bankName'));
-  const account = canonicalKey(getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber'));
+  const bank = canonicalKey(getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'nombre_banco', 'Entidad_Bancaria'));
+  const account = canonicalKey(getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'numero_cuenta', 'No_Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta'));
   const syntheticNames = new Set(['global', 'total', 'totales', 'consolidado', 'consolidada', 'resumen']);
   return syntheticNames.has(bank)
     || syntheticNames.has(account)
@@ -417,7 +417,8 @@ function asArray(value) {
   if (parsed && typeof parsed === 'object') {
     const values = Object.values(parsed);
     if (values.length && values.every(item => item && typeof item === 'object')) return values;
-    if (getField(parsed, 'Banco', 'banco', 'bank', 'Cuenta', 'cuenta', 'account')) return [parsed];
+    if (getField(parsed, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Entidad_Bancaria')
+      || getField(parsed, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'No_Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta')) return [parsed];
   }
   return [];
 }
@@ -452,8 +453,8 @@ function mergeAccountRecords(...sources) {
   sources.flatMap(asArray).forEach((record, index) => {
     if (!record || typeof record !== 'object' || Array.isArray(record)) return;
     if (isSyntheticAccount(record)) return;
-    const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName');
-    const account = getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber');
+    const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'nombre_banco', 'Entidad_Bancaria');
+    const account = getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'numero_cuenta', 'No_Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta');
     if (!bank || !account) return;
     const bankName = String(bank).trim();
     const accountName = String(account).trim();
@@ -494,7 +495,7 @@ function parseRawReport() {
     const raw = unwrapPayload(original);
     const outerFileName = getField(original, 'fileName', 'filename', 'nombreArchivo');
     const outerDownloadUrl = getField(original, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
-    const bancosSources = collectFields(original, ['bancos_procesados', 'bancos', 'cuentas', 'accounts']);
+    const bancosSources = collectFields(original, ['bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias']);
     const resumenSources = collectFields(original, ['resumen_general', 'filas']);
     const balanceSources = collectFields(original, ['balance_general', 'balance', 'account_balances']);
     const bancosList = mergeAccountRecords(...bancosSources, ...balanceSources, ...resumenSources);
@@ -539,8 +540,8 @@ function initDataEngine() {
   const transactionKeys = new Set();
 
   bancosList.forEach((b, idx) => {
-    const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName') || `Banco ${idx + 1}`).trim();
-    const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber') || `CTA-${idx + 1}`).trim();
+    const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'nombre_banco', 'Entidad_Bancaria') || `Banco ${idx + 1}`).trim();
+    const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'numero_cuenta', 'No_Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta') || `CTA-${idx + 1}`).trim();
     const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
     const cIng = numberValue(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income'));
     const dEgr = numberValue(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses'));
