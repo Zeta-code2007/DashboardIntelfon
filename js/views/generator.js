@@ -173,6 +173,10 @@ export function renderGenerator() {
                     </span>
                     <span id="btn-submit-text">Generar y Procesar Datos</span>
                 </button>
+                <button type="button" id="btn-clear-dashboard" class="btn-intelfon-secondary w-full py-3 text-sm flex items-center justify-center space-x-2 border border-slate-300 dark:border-slate-700">
+                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <span>Limpiar dashboard</span>
+                </button>
             </form>
         </div>
 
@@ -336,6 +340,7 @@ export function renderGenerator() {
 
     const resultsPanel = container.querySelector('#results-panel');
     const btnTransferOverview = container.querySelector('#btn-transfer-overview');
+    const btnClearDashboard = container.querySelector('#btn-clear-dashboard');
     const btnViewFullReport = container.querySelector('#btn-view-full-report');
     const btnOpenInteractiveViewer = container.querySelector('#btn-open-interactive-viewer');
     const btnDownloadExcel = container.querySelector('#btn-download-excel');
@@ -398,6 +403,21 @@ export function renderGenerator() {
 
     if (btnTransferOverview) {
         btnTransferOverview.addEventListener('click', transferirAlOverview);
+    }
+    if (btnClearDashboard) {
+        btnClearDashboard.addEventListener('click', () => {
+            if (!confirm('¿Deseas limpiar los datos actuales del dashboard? Esta acción no elimina el archivo original.')) return;
+            localStorage.removeItem('intelfon_current_report');
+            selectedFile = null;
+            lastProcessedData = null;
+            currentPreviewUrl = '';
+            clearFileSelection();
+            resultsPanel.classList.add('hidden');
+            documentPreviewSection.classList.add('hidden');
+            excelPreviewFrame.src = '';
+            hideError();
+            Toast.success('Dashboard limpiado. Ya puedes generar un nuevo reporte.', 'Dashboard limpio');
+        });
     }
     if (btnViewFullReport) {
         btnViewFullReport.addEventListener('click', () => abrirVisorInteractivo());

@@ -26,6 +26,8 @@
   .sub{color:var(--muted);font-size:14px;line-height:1.55}
   .hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative;z-index:1;justify-content:stretch}
   .hero-actions button{width:100%;min-height:40px;white-space:nowrap}
+  .btn-clear-dashboard{background:#374151;border-color:#64748B;color:#F8FAFC}
+  .btn-clear-dashboard:hover{background:#4B5563;border-color:#94A3B8}
   button,.select{border:1px solid #465064;background:#2C3340;color:var(--text);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:all 0.2s}
   button:hover{background:#374151}
   .btn-primary-red{background:linear-gradient(135deg,#DC2626,#B91C1C);border-color:#EF4444;color:#FFFFFF}
@@ -162,6 +164,7 @@
       <button type="button" class="btn-excel" id="btn-download-xlsx-direct">📥 Descargar Excel (.xlsx)</button>
       <button type="button" onclick="window.print()">🖨️ Imprimir</button>
       <button type="button" onclick="toggleFullscreen()">⛶ Pantalla Completa</button>
+      <button type="button" class="btn-clear-dashboard" id="btn-clear-dashboard">🧹 Limpiar dashboard</button>
     </div>
   </header>
 
@@ -1161,6 +1164,16 @@ if (btnDownloadXlsx) {
       directUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
     }
     window.open(directUrl, '_blank');
+  });
+}
+
+const btnClearDashboard = document.getElementById('btn-clear-dashboard');
+if (btnClearDashboard) {
+  btnClearDashboard.addEventListener('click', () => {
+    if (!confirm('¿Deseas limpiar todos los datos del dashboard? Esta acción no elimina el archivo original.')) return;
+    localStorage.removeItem('intelfon_current_report');
+    downloadExcelUrl = '#';
+    initDataEngine();
   });
 }
 
