@@ -41,9 +41,11 @@ export function renderReportSection(target, title, options = {}) {
     }
 
     viewer.src = getViewerUrl();
+    const refreshViewer = () => { viewer.src = getViewerUrl(); };
     window.addEventListener('storage', event => {
-        if (event.key === 'intelfon_current_report') viewer.src = getViewerUrl();
+        if (event.key === 'intelfon_current_report') refreshViewer();
     });
+    window.addEventListener('focus', refreshViewer);
     viewer.loading = 'eager';
     container.appendChild(viewer);
 
