@@ -1,5 +1,5 @@
 import { renderOverview } from './views/overview.js?v=4.2';
-import { renderGenerator } from './views/generator.js?v=4.0';
+import { renderGenerator } from './views/generator.js?v=4.1';
 import { renderHistory } from './views/history.js?v=4.0';
 import { renderLogin } from './views/login.js?v=4.0';
 import { renderUsers } from './views/users.js?v=4.0';

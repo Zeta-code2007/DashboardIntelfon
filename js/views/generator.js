@@ -108,7 +108,7 @@ export function renderGenerator() {
                 <div class="space-y-2">
                     <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">Archivo Excel</label>
                     <div id="dropzone" class="dropzone-intelfon group">
-                        <input type="file" id="file-input" class="hidden" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                        <input type="file" id="file-input" class="hidden" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
                         
                         <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
                             <div class="w-16 h-16 rounded-2xl bg-red-50 text-intelfon-red flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
@@ -120,7 +120,7 @@ export function renderGenerator() {
                                 <p class="text-sm font-bold text-slate-700">
                                     <span class="text-intelfon-red hover:underline">Haz clic para buscar</span> o arrastra tu archivo aquí
                                 </p>
-                                <p class="text-xs text-slate-400 font-medium">Solo archivos Microsoft Excel (.xlsx) de hasta 20MB</p>
+                                <p class="text-xs text-slate-400 font-medium">De 1 a 10 archivos Microsoft Excel (.xlsx), hasta 20MB cada uno</p>
                             </div>
                         </div>
                     </div>
@@ -355,7 +355,7 @@ export function renderGenerator() {
     const previewLoader = container.querySelector('#preview-loader');
     const excelPreviewFrame = container.querySelector('#excel-preview-frame');
 
-    let selectedFile = null;
+    let selectedFiles = [];
     let currentPreviewUrl = '';
     let lastProcessedData = null;
     let currentRunId = null;
@@ -418,7 +418,7 @@ export function renderGenerator() {
         btnClearDashboard.addEventListener('click', () => {
             if (!confirm('¿Deseas limpiar los datos actuales del dashboard? Esta acción no elimina el archivo original.')) return;
             purgeReportState();
-            selectedFile = null;
+            selectedFiles = [];
             lastProcessedData = null;
             currentPreviewUrl = '';
             clearFileSelection();
@@ -476,33 +476,43 @@ export function renderGenerator() {
     btnCloseError.addEventListener('click', hideError);
 
     // Selección de archivo
-    function handleFileSelection(file) {
-        if (!file) return;
-
-        // Validar formato estricto .xlsx
-        const nameLower = file.name.toLowerCase();
-        if (!nameLower.endsWith('.xlsx')) {
-            showError('Formato no válido', `El archivo "${file.name}" no es compatible. El flujo de Make requiere estrictamente un archivo Excel en formato .xlsx (no compatible con CSV o XLS binario).`);
+    function handleFileSelection(files) {
+        const selected = Array.from(files || []);
+        if (!selected.length) return;
+        if (selected.length > 10) {
+            showError('Demasiados archivos', 'Puedes seleccionar un máximo de 10 archivos Excel por ejecución.');
             clearFileSelection();
             return;
         }
 
-        const maxSizeBytes = 20 * 1024 * 1024; // 20 MB
-        if (file.size > maxSizeBytes) {
-            showError('Archivo demasiado grande', `El archivo seleccionado (${formatFileSize(file.size)}) supera el límite máximo permitido de 20 MB.`);
+        const invalidFile = selected.find(file => !file.name.toLowerCase().endsWith('.xlsx'));
+        if (invalidFile) {
+            showError('Formato no válido', `El archivo "${invalidFile.name}" no es compatible. Solo se permiten archivos .xlsx.`);
             clearFileSelection();
             return;
         }
 
-        selectedFile = file;
-        fileNameDisplay.textContent = file.name;
-        fileSizeDisplay.textContent = formatFileSize(file.size);
+        const maxSizeBytes = 20 * 1024 * 1024;
+        const oversizedFile = selected.find(file => file.size > maxSizeBytes);
+        if (oversizedFile) {
+            showError('Archivo demasiado grande', `El archivo "${oversizedFile.name}" (${formatFileSize(oversizedFile.size)}) supera el límite de 20 MB.`);
+            clearFileSelection();
+            return;
+        }
+
+        selectedFiles = selected;
+        fileNameDisplay.textContent = selected.length === 1
+            ? selected[0].name
+            : `${selected.length} archivos seleccionados`;
+        fileSizeDisplay.textContent = selected.length === 1
+            ? formatFileSize(selected[0].size)
+            : `${formatFileSize(selected.reduce((total, file) => total + file.size, 0))} en total`;
         fileInfoContainer.classList.remove('hidden');
         hideError();
     }
 
     function clearFileSelection() {
-        selectedFile = null;
+        selectedFiles = [];
         fileInput.value = '';
         fileInfoContainer.classList.add('hidden');
         fileNameDisplay.textContent = '';
@@ -513,7 +523,7 @@ export function renderGenerator() {
 
     fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            handleFileSelection(e.target.files[0]);
+            handleFileSelection(e.target.files);
         }
     });
 
@@ -534,7 +544,7 @@ export function renderGenerator() {
         e.preventDefault();
         dropzone.classList.remove('dropzone-active');
         if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFileSelection(e.dataTransfer.files[0]);
+            handleFileSelection(e.dataTransfer.files);
         }
     });
 
@@ -816,8 +826,8 @@ export function renderGenerator() {
         e.preventDefault();
         hideError();
 
-        if (!selectedFile) {
-            showError('Archivo requerido', 'Por favor selecciona o arrastra un archivo Excel (.xlsx) antes de continuar.');
+        if (!selectedFiles.length) {
+            showError('Archivo requerido', 'Por favor selecciona al menos un archivo Excel (.xlsx) antes de continuar.');
             return;
         }
 
@@ -874,8 +884,16 @@ export function renderGenerator() {
 
         try {
             // Llamada real al servicio de Make
-            const data = await enviarArchivoAMake(selectedFile, tipoReporte);
+            const responses = [];
+            for (let index = 0; index < selectedFiles.length; index++) {
+                const file = selectedFiles[index];
+                statusLabel.textContent = `Procesando archivo ${index + 1} de ${selectedFiles.length}...`;
+                statusSubtext.textContent = file.name;
+                progressBar.style.width = `${Math.round(25 + ((index / selectedFiles.length) * 65))}%`;
+                responses.push(await enviarArchivoAMake(file, tipoReporte));
+            }
             clearInterval(progressInterval);
+            const data = responses.length === 1 ? responses[0] : responses;
 
             // Validar que la respuesta contenga datos
             if (!data) {
@@ -897,7 +915,8 @@ export function renderGenerator() {
             console.log('[Generator] Datos recibidos de MakeService:', data);
 
             // Extraer urlDescarga y filas de forma flexible
-            const urlDescarga = data.urlDescarga || data.downloadUrl || data.webViewLink || data.fileUrl || data.url || data.link || '#';
+            const firstResponse = responses[0] || {};
+            const urlDescarga = firstResponse.urlDescarga || firstResponse.downloadUrl || firstResponse.webViewLink || firstResponse.fileUrl || firstResponse.url || firstResponse.link || '#';
             currentPreviewUrl = urlDescarga;
             lastProcessedData = data;
             try {
