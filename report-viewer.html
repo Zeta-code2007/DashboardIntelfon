@@ -366,7 +366,13 @@ function isSyntheticAccount(record) {
   const bank = canonicalKey(getField(record, 'Banco', 'banco', 'bank', 'bankName'));
   const account = canonicalKey(getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber'));
   const syntheticNames = new Set(['global', 'total', 'totales', 'consolidado', 'consolidada', 'resumen']);
-  return syntheticNames.has(bank) || syntheticNames.has(account);
+  return syntheticNames.has(bank)
+    || syntheticNames.has(account)
+    || bank.includes('global')
+    || bank.includes('consolidado')
+    || account.includes('global')
+    || account.includes('consolidado')
+    || (/^banco\d+$/.test(bank) && /^cta\d+$/.test(account));
 }
 
 function getField(record, ...names) {
@@ -448,9 +454,9 @@ function mergeAccountRecords(...sources) {
     if (isSyntheticAccount(record)) return;
     const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName');
     const account = getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber');
-    if (!bank && !account) return;
-    const bankName = bank || `Banco ${index + 1}`;
-    const accountName = account || `CTA-${index + 1}`;
+    if (!bank || !account) return;
+    const bankName = String(bank).trim();
+    const accountName = String(account).trim();
     const key = `${canonicalKey(bankName)}|${canonicalKey(accountName)}`;
     const previous = merged.get(key);
     if (!previous) {
@@ -1237,7 +1243,13 @@ const btnClearDashboard = document.getElementById('btn-clear-dashboard');
 if (btnClearDashboard) {
   btnClearDashboard.addEventListener('click', () => {
     if (!confirm('¿Deseas limpiar todos los datos del dashboard? Esta acción no elimina el archivo original.')) return;
+    const currentSnapshot = localStorage.getItem('intelfon_current_report');
+    if (loadedReportSnapshot && currentSnapshot && currentSnapshot !== loadedReportSnapshot) {
+      initDataEngine();
+      return;
+    }
     localStorage.removeItem('intelfon_current_report');
+    localStorage.removeItem('intelfon_processing_id');
     downloadExcelUrl = '#';
     initDataEngine();
   });

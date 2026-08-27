@@ -367,13 +367,7 @@ export function renderGenerator() {
     // Función para abrir el visor interactivo de código en nueva pestaña / pantalla completa
     function abrirVisorInteractivo() {
         if (!lastProcessedData) {
-            const saved = localStorage.getItem('intelfon_current_report');
-            if (saved) {
-                try { lastProcessedData = JSON.parse(saved); } catch (_) {}
-            }
-        }
-        if (!lastProcessedData) {
-            Toast.warning('Aún no se han recibido datos del reporte para previsualizar.');
+            Toast.warning('Primero debes procesar un archivo nuevo para previsualizarlo.');
             return;
         }
         replaceCurrentReport(lastProcessedData);
@@ -382,13 +376,7 @@ export function renderGenerator() {
 
     function transferirAlOverview() {
         if (!lastProcessedData) {
-            const saved = localStorage.getItem('intelfon_current_report');
-            if (saved) {
-                try { lastProcessedData = JSON.parse(saved); } catch (_) {}
-            }
-        }
-        if (!lastProcessedData) {
-            Toast.warning('Primero debes generar o procesar un archivo para transferir datos al Overview.');
+            Toast.warning('Primero debes procesar un archivo nuevo para transferir sus datos.');
             return;
         }
 
@@ -413,6 +401,7 @@ export function renderGenerator() {
         btnClearDashboard.addEventListener('click', () => {
             if (!confirm('¿Deseas limpiar los datos actuales del dashboard? Esta acción no elimina el archivo original.')) return;
             localStorage.removeItem('intelfon_current_report');
+            localStorage.removeItem('intelfon_processing_id');
             selectedFile = null;
             lastProcessedData = null;
             currentPreviewUrl = '';
@@ -832,7 +821,8 @@ export function renderGenerator() {
         progressBar.className = 'bg-intelfon-red h-full w-0 transition-all duration-500';
         progressBar.style.width = '25%';
 
-        // El nuevo procesamiento reemplaza completamente al reporte anterior.
+        const processingId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem('intelfon_processing_id', processingId);
         localStorage.removeItem('intelfon_current_report');
         lastProcessedData = null;
 
@@ -873,6 +863,10 @@ export function renderGenerator() {
             // Validar que la respuesta contenga datos
             if (!data) {
                 throw new Error('El Webhook de Make no devolvió ningún dato.');
+            }
+
+            if (localStorage.getItem('intelfon_processing_id') !== processingId) {
+                throw new Error('Esta respuesta pertenece a una ejecución anterior y fue descartada.');
             }
 
             // Actualizar progreso exitoso
