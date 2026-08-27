@@ -318,6 +318,7 @@ let BASE_DATA = {
 };
 let DATA = null;
 let downloadExcelUrl = '#';
+let loadedReportSnapshot = null;
 
 window.addEventListener('storage', event => {
   if (event.key === 'intelfon_current_report') initDataEngine();
@@ -359,6 +360,13 @@ function normalizedKey(value) {
 
 function canonicalKey(value) {
   return normalizedKey(value).replace(/\s+/g, '');
+}
+
+function isSyntheticAccount(record) {
+  const bank = canonicalKey(getField(record, 'Banco', 'banco', 'bank', 'bankName'));
+  const account = canonicalKey(getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber'));
+  const syntheticNames = new Set(['global', 'total', 'totales', 'consolidado', 'consolidada', 'resumen']);
+  return syntheticNames.has(bank) || syntheticNames.has(account);
 }
 
 function getField(record, ...names) {
@@ -437,6 +445,7 @@ function mergeAccountRecords(...sources) {
   const merged = new Map();
   sources.flatMap(asArray).forEach((record, index) => {
     if (!record || typeof record !== 'object' || Array.isArray(record)) return;
+    if (isSyntheticAccount(record)) return;
     const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName');
     const account = getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber');
     if (!bank && !account) return;
@@ -496,6 +505,7 @@ function parseRawReport() {
 
 function initDataEngine() {
   const parsed = parseRawReport();
+  loadedReportSnapshot = localStorage.getItem('intelfon_current_report');
   RAW_TRANSACTIONS = [];
 
   if (!parsed || !Array.isArray(parsed.bancosList) || parsed.bancosList.length === 0) {
@@ -1239,6 +1249,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.tabs')?.remove();
   }
   initDataEngine();
+  setInterval(() => {
+    const currentSnapshot = localStorage.getItem('intelfon_current_report');
+    if (currentSnapshot !== loadedReportSnapshot) initDataEngine();
+  }, 500);
 });
 </script>
 </body>

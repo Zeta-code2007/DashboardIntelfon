@@ -359,6 +359,11 @@ export function renderGenerator() {
     let currentPreviewUrl = '';
     let lastProcessedData = null;
 
+    function replaceCurrentReport(data) {
+        localStorage.removeItem('intelfon_current_report');
+        localStorage.setItem('intelfon_current_report', JSON.stringify(data));
+    }
+
     // Función para abrir el visor interactivo de código en nueva pestaña / pantalla completa
     function abrirVisorInteractivo() {
         if (!lastProcessedData) {
@@ -371,7 +376,7 @@ export function renderGenerator() {
             Toast.warning('Aún no se han recibido datos del reporte para previsualizar.');
             return;
         }
-        localStorage.setItem('intelfon_current_report', JSON.stringify(lastProcessedData));
+        replaceCurrentReport(lastProcessedData);
         window.open('report-viewer.html', '_blank');
     }
 
@@ -388,7 +393,7 @@ export function renderGenerator() {
         }
 
         try {
-            localStorage.setItem('intelfon_current_report', JSON.stringify(lastProcessedData));
+            replaceCurrentReport(lastProcessedData);
             const navBtn = document.querySelector('.nav-btn[data-view="overview"]');
             if (navBtn) {
                 navBtn.click();
@@ -885,7 +890,7 @@ export function renderGenerator() {
             currentPreviewUrl = urlDescarga;
             lastProcessedData = data;
             try {
-                localStorage.setItem('intelfon_current_report', JSON.stringify(data));
+                replaceCurrentReport(data);
             } catch (_) {}
 
             const filas = extractRows(data);
