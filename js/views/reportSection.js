@@ -29,7 +29,21 @@ export function renderReportSection(target, title, options = {}) {
     viewer.className = 'overview-report-viewer';
     viewer.title = title;
     const compactParam = options.compact ? '&compact=1' : '';
-    viewer.src = `report-viewer.html?v=4.6${compactParam}#${target}`;
+
+    function getViewerUrl() {
+        let runId = '';
+        try {
+            const stored = JSON.parse(localStorage.getItem('intelfon_current_report') || 'null');
+            runId = stored?.runId || '';
+        } catch (_) {}
+        const runParam = runId ? `&runId=${encodeURIComponent(runId)}` : '';
+        return `report-viewer.html?v=4.8&t=${Date.now()}${runParam}${compactParam}#${target}`;
+    }
+
+    viewer.src = getViewerUrl();
+    window.addEventListener('storage', event => {
+        if (event.key === 'intelfon_current_report') viewer.src = getViewerUrl();
+    });
     viewer.loading = 'eager';
     container.appendChild(viewer);
 

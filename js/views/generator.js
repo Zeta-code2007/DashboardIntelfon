@@ -358,10 +358,27 @@ export function renderGenerator() {
     let selectedFile = null;
     let currentPreviewUrl = '';
     let lastProcessedData = null;
+    let currentRunId = null;
 
-    function replaceCurrentReport(data) {
-        localStorage.removeItem('intelfon_current_report');
-        localStorage.setItem('intelfon_current_report', JSON.stringify(data));
+    function createRunId() {
+        if (crypto.randomUUID) return crypto.randomUUID();
+        return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    function purgeReportState() {
+        ['intelfon_current_report', 'intelfon_processing_id'].forEach(key => {
+            localStorage.removeItem(key);
+            sessionStorage.removeItem(key);
+        });
+    }
+
+    function replaceCurrentReport(data, runId) {
+        purgeReportState();
+        localStorage.setItem('intelfon_current_report', JSON.stringify({
+            runId,
+            createdAt: new Date().toISOString(),
+            data
+        }));
     }
 
     // Función para abrir el visor interactivo de código en nueva pestaña / pantalla completa
@@ -370,8 +387,8 @@ export function renderGenerator() {
             Toast.warning('Primero debes procesar un archivo nuevo para previsualizarlo.');
             return;
         }
-        replaceCurrentReport(lastProcessedData);
-        window.open('report-viewer.html', '_blank');
+        replaceCurrentReport(lastProcessedData, currentRunId);
+        window.open(`report-viewer.html?t=${Date.now()}&runId=${encodeURIComponent(currentRunId)}`, '_blank');
     }
 
     function transferirAlOverview() {
@@ -381,7 +398,7 @@ export function renderGenerator() {
         }
 
         try {
-            replaceCurrentReport(lastProcessedData);
+            replaceCurrentReport(lastProcessedData, currentRunId);
             const navBtn = document.querySelector('.nav-btn[data-view="overview"]');
             if (navBtn) {
                 navBtn.click();
@@ -400,8 +417,7 @@ export function renderGenerator() {
     if (btnClearDashboard) {
         btnClearDashboard.addEventListener('click', () => {
             if (!confirm('¿Deseas limpiar los datos actuales del dashboard? Esta acción no elimina el archivo original.')) return;
-            localStorage.removeItem('intelfon_current_report');
-            localStorage.removeItem('intelfon_processing_id');
+            purgeReportState();
             selectedFile = null;
             lastProcessedData = null;
             currentPreviewUrl = '';
@@ -821,9 +837,10 @@ export function renderGenerator() {
         progressBar.className = 'bg-intelfon-red h-full w-0 transition-all duration-500';
         progressBar.style.width = '25%';
 
-        const processingId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const processingId = createRunId();
+        currentRunId = processingId;
+        purgeReportState();
         localStorage.setItem('intelfon_processing_id', processingId);
-        localStorage.removeItem('intelfon_current_report');
         lastProcessedData = null;
 
         btnSubmit.disabled = true;
@@ -865,7 +882,7 @@ export function renderGenerator() {
                 throw new Error('El Webhook de Make no devolvió ningún dato.');
             }
 
-            if (localStorage.getItem('intelfon_processing_id') !== processingId) {
+            if (localStorage.getItem('intelfon_processing_id') !== processingId || currentRunId !== processingId) {
                 throw new Error('Esta respuesta pertenece a una ejecución anterior y fue descartada.');
             }
 
@@ -884,7 +901,7 @@ export function renderGenerator() {
             currentPreviewUrl = urlDescarga;
             lastProcessedData = data;
             try {
-                replaceCurrentReport(data);
+                replaceCurrentReport(data, processingId);
             } catch (_) {}
 
             const filas = extractRows(data);

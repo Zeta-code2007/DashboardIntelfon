@@ -319,6 +319,7 @@ let BASE_DATA = {
 let DATA = null;
 let downloadExcelUrl = '#';
 let loadedReportSnapshot = null;
+const expectedRunId = new URLSearchParams(window.location.search).get('runId') || '';
 
 window.addEventListener('storage', event => {
   if (event.key === 'intelfon_current_report') initDataEngine();
@@ -487,7 +488,9 @@ function parseRawReport() {
   if (!saved) return null;
 
   try {
-    const original = parseJsonValue(JSON.parse(saved));
+    const stored = parseJsonValue(JSON.parse(saved));
+    if (!expectedRunId || stored?.runId !== expectedRunId || !stored?.data) return null;
+    const original = parseJsonValue(stored.data);
     const raw = unwrapPayload(original);
     const outerFileName = getField(original, 'fileName', 'filename', 'nombreArchivo');
     const outerDownloadUrl = getField(original, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
