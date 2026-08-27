@@ -372,8 +372,58 @@ function asArray(value) {
   if (parsed && typeof parsed === 'object') {
     const values = Object.values(parsed);
     if (values.length && values.every(item => item && typeof item === 'object')) return values;
+    if (getField(parsed, 'Banco', 'banco', 'bank', 'Cuenta', 'cuenta', 'account')) return [parsed];
   }
   return [];
+}
+
+function numberValue(value, fallback = 0) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const text = String(value ?? '').trim().replace(/[^0-9,.-]/g, '');
+  if (!text) return fallback;
+  const normalized = text.includes(',') && text.includes('.')
+    ? (text.lastIndexOf(',') > text.lastIndexOf('.') ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, ''))
+    : text.replace(',', '.');
+  const result = Number(normalized);
+  return Number.isFinite(result) ? result : fallback;
+}
+
+function normalizeDate(value) {
+  if (typeof value === 'number' && value > 20000 && value < 100000) {
+    const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
+    return date.toISOString().slice(0, 10);
+  }
+  const text = String(value ?? '').trim();
+  const parts = text.split(/[\/-]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  }
+  return text || '2026-08-01';
+}
+
+function mergeAccountRecords(...sources) {
+  const merged = new Map();
+  sources.flatMap(asArray).forEach((record, index) => {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return;
+    const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName') || `Banco ${index + 1}`;
+    const account = getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber') || `CTA-${index + 1}`;
+    const key = `${bank}|${account}`;
+    const previous = merged.get(key);
+    if (!previous) {
+      merged.set(key, { ...record });
+      return;
+    }
+    for (const [field, value] of Object.entries(record)) {
+      if (value === undefined || value === null || value === '') continue;
+      if (Array.isArray(value)) {
+        previous[field] = [...(Array.isArray(previous[field]) ? previous[field] : []), ...value];
+      } else if (previous[field] === undefined || previous[field] === null || previous[field] === '') {
+        previous[field] = value;
+      }
+    }
+  });
+  return [...merged.values()];
 }
 
 function parseRawReport() {
@@ -385,8 +435,11 @@ function parseRawReport() {
     const raw = unwrapPayload(original);
     const outerFileName = getField(original, 'fileName', 'filename', 'nombreArchivo');
     const outerDownloadUrl = getField(original, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
-    const bancosList = asArray(getField(raw, 'bancos_procesados', 'bancos', 'cuentas', 'accounts', 'resumen_general'));
-    const resumenList = asArray(getField(raw, 'resumen_general', 'resumen', 'filas'));
+    const bancosSource = getField(raw, 'bancos_procesados', 'bancos', 'cuentas', 'accounts');
+    const resumenSource = getField(raw, 'resumen_general', 'resumen', 'filas');
+    const balanceSource = getField(raw, 'balance_general', 'balance', 'account_balances');
+    const bancosList = mergeAccountRecords(bancosSource, resumenSource, balanceSource);
+    const resumenList = asArray(resumenSource);
     const totalesObj = unwrapPayload(getField(raw, 'totales_globales', 'totales', 'balance_general')) || {};
 
     downloadExcelUrl = getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link') || outerDownloadUrl || '#';
@@ -425,11 +478,11 @@ function initDataEngine() {
   bancosList.forEach((b, idx) => {
     const bName = getField(b, 'Banco', 'banco', 'bank', 'bankName') || `Banco ${idx + 1}`;
     const accNum = getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber') || `CTA-${idx + 1}`;
-    const sIni = parseFloat(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance') ?? 0) || 0;
-    const cIng = parseFloat(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income') ?? 0) || 0;
-    const dEgr = parseFloat(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses') ?? 0) || 0;
+    const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
+    const cIng = numberValue(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income'));
+    const dEgr = numberValue(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses'));
     const sFinValue = getField(b, 'Saldo_Final', 'saldo_final', 'saldoFinal', 'finalBalance');
-    const sFin = parseFloat(sFinValue ?? (sIni + cIng - dEgr)) || 0;
+    const sFin = numberValue(sFinValue ?? (sIni + cIng - dEgr));
 
     accountsMap.push({
       bankKey: bName,
@@ -465,20 +518,16 @@ function initDataEngine() {
     const movs = asArray(getField(b, 'estado_cuenta', 'estado cuenta', 'Movimientos', 'movimientos', 'transactions', 'transacciones'));
     if (movs.length) {
       movs.forEach((m, mIdx) => {
-        let d = String(getField(m, 'Fecha', 'fecha', 'date') || '2026-08-01');
-        if (d.includes('/')) {
-          const parts = d.split('/');
-          if (parts.length === 3) d = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
+        const d = normalizeDate(getField(m, 'Fecha', 'fecha', 'date'));
         RAW_TRANSACTIONS.push({
           row: mIdx,
           bankKey: bName,
           bank: bName,
           account: accNum,
           date: d,
-          debit: parseFloat(getField(m, 'Egreso', 'Debito', 'debito', 'debit', 'debits') ?? 0) || 0,
-          credit: parseFloat(getField(m, 'Ingreso', 'Credito', 'credito', 'credit', 'credits') ?? 0) || 0,
-          balance: parseFloat(getField(m, 'Saldo_Resultante', 'Saldo', 'saldo', 'balance') ?? sFin) || 0
+          debit: numberValue(getField(m, 'Egreso', 'Debito', 'debito', 'debit', 'debits')),
+          credit: numberValue(getField(m, 'Ingreso', 'Credito', 'credito', 'credit', 'credits')),
+          balance: numberValue(getField(m, 'Saldo_Resultante', 'Saldo', 'saldo', 'balance'), sFin)
         });
       });
     }
