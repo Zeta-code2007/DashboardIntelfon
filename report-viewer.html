@@ -359,6 +359,22 @@ function getField(record, ...names) {
   return undefined;
 }
 
+function collectFields(value, names, result = [], depth = 0) {
+  const parsed = parseJsonValue(value);
+  if (!parsed || typeof parsed !== 'object' || depth > 8) return result;
+  if (Array.isArray(parsed)) {
+    parsed.forEach(item => collectFields(item, names, result, depth + 1));
+    return result;
+  }
+  for (const [key, fieldValue] of Object.entries(parsed)) {
+    if (names.some(name => normalizedKey(key) === normalizedKey(name))) {
+      result.push(parseJsonValue(fieldValue));
+    }
+    collectFields(fieldValue, names, result, depth + 1);
+  }
+  return result;
+}
+
 function unwrapPayload(value, depth = 0) {
   const parsed = parseJsonValue(value);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || depth > 5) return parsed;
@@ -438,14 +454,16 @@ function parseRawReport() {
     const raw = unwrapPayload(original);
     const outerFileName = getField(original, 'fileName', 'filename', 'nombreArchivo');
     const outerDownloadUrl = getField(original, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
-    const bancosSource = getField(raw, 'bancos_procesados', 'bancos', 'cuentas', 'accounts');
-    const resumenSource = getField(raw, 'resumen_general', 'resumen', 'filas');
-    const balanceSource = getField(raw, 'balance_general', 'balance', 'account_balances');
-    const bancosList = mergeAccountRecords(bancosSource, resumenSource, balanceSource);
-    const resumenList = asArray(resumenSource);
-    const totalesObj = unwrapPayload(getField(raw, 'totales_globales', 'totales', 'balance_general')) || {};
+    const bancosSources = collectFields(original, ['bancos_procesados', 'bancos', 'cuentas', 'accounts']);
+    const resumenSources = collectFields(original, ['resumen_general', 'filas']);
+    const balanceSources = collectFields(original, ['balance_general', 'balance', 'account_balances']);
+    const bancosList = mergeAccountRecords(...bancosSources, ...resumenSources, ...balanceSources);
+    const resumenList = resumenSources.flatMap(asArray);
+    const totalSources = collectFields(original, ['totales_globales', 'totales']);
+    const totalesObj = unwrapPayload(totalSources[0] || {}) || {};
 
-    downloadExcelUrl = getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link') || outerDownloadUrl || '#';
+    const nestedDownloadUrl = collectFields(original, ['urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link'])[0];
+    downloadExcelUrl = nestedDownloadUrl || outerDownloadUrl || '#';
 
     return { bancosList, resumenList, totalesObj, fileName: getField(raw, 'fileName', 'filename', 'nombreArchivo') || outerFileName || 'ReporteFinanciero.xlsx' };
   } catch (e) {
