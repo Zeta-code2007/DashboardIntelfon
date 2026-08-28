@@ -867,7 +867,13 @@ export function renderGenerator() {
                 Saldo_Final: 307000,
                 Pais: 'Guatemala',
                 Moneda: 'GTQ',
-                Archivo: file?.name || 'reporte.xlsx'
+                Archivo: file?.name || 'reporte.xlsx',
+                estado_cuenta: [
+                    { Fecha: '2026-08-01', Ingreso: 35000, Egreso: 18000, Saldo: 64000, Descripcion: 'Cobro de nómina' },
+                    { Fecha: '2026-08-03', Ingreso: 42000, Egreso: 16000, Saldo: 90000, Descripcion: 'Depósito por ventas' },
+                    { Fecha: '2026-08-05', Ingreso: 38000, Egreso: 21000, Saldo: 107000, Descripcion: 'Transferencia interna' },
+                    { Fecha: '2026-08-07', Ingreso: 40000, Egreso: 23000, Saldo: 124000, Descripcion: 'Pago proveedores' }
+                ]
             },
             {
                 Banco: 'BAC Guatemala',
@@ -878,7 +884,13 @@ export function renderGenerator() {
                 Saldo_Final: 225000,
                 Pais: 'Guatemala',
                 Moneda: 'GTQ',
-                Archivo: file?.name || 'reporte.xlsx'
+                Archivo: file?.name || 'reporte.xlsx',
+                estado_cuenta: [
+                    { Fecha: '2026-08-02', Ingreso: 28000, Egreso: 14000, Saldo: 42000, Descripcion: 'Depósito bancario' },
+                    { Fecha: '2026-08-04', Ingreso: 35000, Egreso: 15000, Saldo: 62000, Descripcion: 'Cobro por servicios' },
+                    { Fecha: '2026-08-06', Ingreso: 31000, Egreso: 17500, Saldo: 75500, Descripcion: 'Pagos y retenciones' },
+                    { Fecha: '2026-08-08', Ingreso: 36000, Egreso: 20000, Saldo: 91500, Descripcion: 'Ajuste de flujo' }
+                ]
             },
             {
                 Banco: 'Promerica',
@@ -889,7 +901,13 @@ export function renderGenerator() {
                 Saldo_Final: 181000,
                 Pais: 'Guatemala',
                 Moneda: 'GTQ',
-                Archivo: file?.name || 'reporte.xlsx'
+                Archivo: file?.name || 'reporte.xlsx',
+                estado_cuenta: [
+                    { Fecha: '2026-08-01', Ingreso: 22000, Egreso: 12000, Saldo: 35000, Descripcion: 'Nómina' },
+                    { Fecha: '2026-08-03', Ingreso: 25000, Egreso: 13000, Saldo: 47000, Descripcion: 'Transferencia cliente' },
+                    { Fecha: '2026-08-05', Ingreso: 30000, Egreso: 15000, Saldo: 62000, Descripcion: 'Venta de servicios' },
+                    { Fecha: '2026-08-07', Ingreso: 35000, Egreso: 16000, Saldo: 81000, Descripcion: 'Ajuste de cierre' }
+                ]
             }
         ];
 
