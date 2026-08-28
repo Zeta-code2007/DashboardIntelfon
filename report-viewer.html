@@ -111,6 +111,17 @@
   .empty-state{text-align:center;padding:40px 20px;color:#94A0B2;font-size:14px}
   .empty-state svg{width:48px;height:48px;margin:0 auto 12px;color:#64748B}
 
+  /* SELECTOR MULTIPAÍS GT / SV */
+  .country-switcher{display:inline-flex;align-items:center;background:#181D26;border:1px solid #3B4454;border-radius:14px;padding:3px;gap:4px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  .country-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:10px;font-size:12px;font-weight:750;border:1px solid transparent;background:transparent;color:#94A3B8;cursor:pointer;transition:all .18s ease}
+  .country-pill:hover{color:#F8FAFC;background:rgba(255,255,255,.06)}
+  .country-pill.active{background:linear-gradient(135deg,#DC2626,#B91C1C);color:#FFFFFF;border-color:#EF4444;box-shadow:0 4px 14px rgba(220,38,38,.35)}
+  .country-pill .flag{font-size:15px;line-height:1}
+  .country-pill .country-curr{font-size:10px;opacity:.85;font-weight:600}
+  .country-pill .country-count{display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;color:#FFF}
+  .btn-toggle-country{background:linear-gradient(135deg,#1E293B,#0F172A);border:1px solid #475569;color:#38BDF8;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:800;cursor:pointer;transition:all .2s ease}
+  .btn-toggle-country:hover{background:linear-gradient(135deg,#334155,#1E293B);border-color:#38BDF8;color:#FFFFFF;box-shadow:0 4px 12px rgba(56,189,248,.25);transform:translateY(-1px)}
+
   @media(max-width:1200px){.hero{grid-template-columns:minmax(0,1fr) minmax(300px,360px)}.kpis{grid-template-columns:repeat(2,minmax(200px,1fr))}.insights{grid-template-columns:repeat(2,1fr)}.bank-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
   @media(max-width:820px){.date-filter{width:100%;border-radius:14px}.date-filter input[type="date"]{width:118px}.app{padding:14px}.hero{display:flex;flex-direction:column}.hero-actions{width:100%;justify-content:stretch}.kpis{grid-template-columns:1fr}.grid2,.grid-equal{grid-template-columns:1fr}.insights{grid-template-columns:1fr}.bank-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}canvas{height:280px}}
   @media(max-width:520px){.bank-detail-grid{grid-template-columns:1fr}}
@@ -128,8 +139,9 @@
         <div class="cover-title">Saldos Bancarios Consolidados</div>
         <div class="cover-copy">Informe financiero ejecutivo con auditoría integral de saldos iniciales, créditos, débitos, flujo neto y conciliación contable por banco y número de cuenta.</div>
         <div class="cover-badges">
+          <span>🌍 País: <b id="coverCountry">Guatemala (GT)</b></span>
           <span>📅 Período: <b id="coverCut">—</b></span>
-          <span>💵 Moneda: <b id="coverCurrency">GTQ</b></span>
+          <span>💵 Moneda: <b id="coverCurrency">GTQ (Q)</b></span>
           <span>🏦 <b id="coverBanks">0</b> entidades bancarias</span>
           <span>💳 <b id="coverAccounts">0</b> cuentas operadas</span>
         </div>
@@ -141,9 +153,28 @@
   <!-- ENCABEZADO Y FILTROS -->
   <header class="hero">
     <div class="hero-left">
-      <div class="eyebrow">Análisis financiero en tiempo real</div>
-      <h1>Consolidación Bancaria</h1>
-      <div class="sub">Auditoría contable y evolución de saldos calculados dinámicamente desde el archivo procesado.</div>
+      <div class="flex items-center gap-3 mb-2 flex-wrap">
+        <div class="eyebrow">Análisis financiero en tiempo real</div>
+        
+        <!-- SELECTOR DE PAÍS (GT / SV) -->
+        <div class="country-switcher" id="countrySwitcher" role="group" aria-label="Seleccionar País">
+          <button type="button" class="country-pill active" id="btn-country-gt" data-country="GT" title="Ver bancos de Guatemala">
+            <span class="flag">🇬🇹</span>
+            <span>Guatemala</span>
+            <span class="country-curr">(Q)</span>
+            <span class="country-count" id="badge-count-gt">0</span>
+          </button>
+          <button type="button" class="country-pill" id="btn-country-sv" data-country="SV" title="Ver bancos de El Salvador">
+            <span class="flag">🇸🇻</span>
+            <span>El Salvador</span>
+            <span class="country-curr">($)</span>
+            <span class="country-count" id="badge-count-sv">0</span>
+          </button>
+        </div>
+      </div>
+
+      <h1 id="mainCountryTitle">Consolidación Bancaria · Guatemala</h1>
+      <div class="sub" id="mainCountrySub">Auditoría contable y evolución de saldos calculados dinámicamente para bancos de Guatemala (GTQ).</div>
       <div class="meta">
         <div class="date-filter" aria-label="Filtro de fecha">
           <span class="date-filter-title">📅 Período</span>
@@ -153,13 +184,18 @@
           <button type="button" class="date-apply" id="applyDateFilter">Aplicar</button>
           <button type="button" class="date-reset" id="resetDateFilter" title="Restablecer período" aria-label="Restablecer período">↺</button>
         </div>
-        <span>💵 Moneda: <b id="metaCurrency">GTQ</b></span>
+        <span>🌍 País activo: <b id="metaCountryName">Guatemala 🇬🇹</b></span>
+        <span>💵 Moneda: <b id="metaCurrency">GTQ (Q)</b></span>
         <span>🏦 <b id="bankCount">0</b> bancos</span>
         <span>💳 <b id="accountCount">0</b> cuentas</span>
         <span>🧾 Último movimiento: <b id="latestMovement">—</b></span>
       </div>
     </div>
     <div class="hero-actions">
+      <!-- BOTÓN RÁPIDO DE CAMBIO DE PAÍS -->
+      <button type="button" class="btn-toggle-country" id="btn-quick-toggle-country" title="Alternar entre bancos de Guatemala y El Salvador">
+        <span>🇸🇻 Ver bancos SV</span>
+      </button>
       <button type="button" class="btn-primary-red" id="btn-download-pdf-direct">📄 Descargar PDF Oficial</button>
       <button type="button" class="btn-excel" id="btn-download-xlsx-direct">📥 Descargar Excel (.xlsx)</button>
       <button type="button" onclick="window.print()">🖨️ Imprimir</button>
@@ -300,25 +336,65 @@
 
 <script>
 // ===========================================================================
-// MOTOR DE EXTRACCIÓN Y CONCILIACIÓN DINÁMICA
+// MOTOR DE EXTRACCIÓN Y CONCILIACIÓN DINÁMICA MULTIPAÍS (GUATEMALA / EL SALVADOR)
 // ===========================================================================
 
 if (window.self !== window.top && window.location.hash === '#resumen') {
   document.body.classList.add('embedded-overview');
 }
 
-let RAW_TRANSACTIONS = [];
-let BASE_DATA = {
-  meta: { file: 'Reporte_Bancario.xlsx', fileCut: '—', latestMovement: '—', currency: 'GTQ', accounts: 0, banks: 0, movementCount: 0 },
-  totals: { initial: 0, final: 0, change: 0, changePct: 0, credits: 0, debits: 0, netFlow: 0 },
-  highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
-  banks: [],
-  accounts: [],
-  daily: []
+// Configuración de metadatos por país
+const COUNTRY_CONFIG = {
+  GT: {
+    code: 'GT',
+    name: 'Guatemala',
+    flag: '🇬🇹',
+    currency: 'GTQ',
+    symbol: 'Q',
+    description: 'Auditoría contable y evolución de saldos calculados dinámicamente para bancos de Guatemala (GTQ).'
+  },
+  SV: {
+    code: 'SV',
+    name: 'El Salvador',
+    flag: '🇸🇻',
+    currency: 'USD',
+    symbol: '$',
+    description: 'Auditoría contable y evolución de saldos calculados dinámicamente para bancos de El Salvador (USD).'
+  }
+};
+
+let CURRENT_COUNTRY = 'GT'; // Por defecto siempre inicia en Guatemala
+let RAW_TRANSACTIONS_BY_COUNTRY = { GT: [], SV: [] };
+let BASE_DATA_BY_COUNTRY = {
+  GT: createEmptyBaseData('GT'),
+  SV: createEmptyBaseData('SV')
 };
 let DATA = null;
 let downloadExcelUrl = '#';
 let loadedReportSnapshot = null;
+
+function createEmptyBaseData(countryCode = 'GT') {
+  const cfg = COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG.GT;
+  return {
+    meta: {
+      file: 'Sin archivo cargado',
+      fileCut: 'Esperando procesamiento',
+      latestMovement: 'Sin registros',
+      currency: cfg.currency,
+      country: cfg.code,
+      countryName: cfg.name,
+      countryFlag: cfg.flag,
+      accounts: 0,
+      banks: 0,
+      movementCount: 0
+    },
+    totals: { initial: 0, final: 0, change: 0, changePct: 0, credits: 0, debits: 0, netFlow: 0 },
+    highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
+    banks: [],
+    accounts: [],
+    daily: []
+  };
+}
 
 window.addEventListener('storage', event => {
   if (event.key === 'intelfon_current_report') initDataEngine();
@@ -330,8 +406,9 @@ document.addEventListener('visibilitychange', () => {
 
 const PALETTE = ['#DC2626', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
 
-function money(v, currency = 'GTQ') {
-  const sym = currency === 'USD' ? '$' : 'Q';
+function money(v, currency) {
+  const c = currency || DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
+  const sym = (c === 'USD' || c === '$' || c === 'USD$') ? '$' : 'Q';
   const num = Number(v) || 0;
   return `${sym} ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -339,9 +416,8 @@ const pct = v => `${v >= 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
 const cls = v => v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 const fmtDate = iso => { if (!iso) return '—'; const parts = iso.split(/[-/]/); return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : iso; };
-const periodLabel = (a, b) => a === b ? fmtDate(a) : `${fmtDate(a)} – ${fmtDate(b)}`;
+const periodLabel = (a, b) => (!a && !b) ? '—' : a === b ? fmtDate(a) : `${fmtDate(a)} – ${fmtDate(b)}`;
 const round2 = v => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
-const txKey = (bankKey, account) => `${bankKey}|${account}`;
 
 function parseJsonValue(value) {
   if (typeof value !== 'string') return value;
@@ -448,9 +524,64 @@ function normalizeDate(value) {
   return text || '2026-08-01';
 }
 
+/**
+ * Función clasificadora robusta de País (GT vs SV)
+ * Reconoce atributos explícitos, moneda, y nombres de bancos populares de cada país.
+ */
+function detectCountry(record, defaultCountry = 'GT') {
+  if (!record || typeof record !== 'object') return defaultCountry;
+
+  // 1. Verificación explícita de campo de país
+  const cVal = String(getField(record, 'pais', 'país', 'country', 'cod_pais', 'codigo_pais', 'codPais', 'nacion', 'region', 'iso_pais', '_country') || '').trim().toLowerCase();
+  if (cVal === 'sv' || cVal.includes('salvador') || cVal === 'slv') return 'SV';
+  if (cVal === 'gt' || cVal.includes('guat') || cVal === 'gtm') return 'GT';
+
+  // 2. Reconocimiento de bancos salvadoreños populares
+  const bName = String(getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || '').toLowerCase();
+  if (
+    bName.includes('agricola') || bName.includes('agrícola') ||
+    bName.includes('cuscatlan') || bName.includes('cuscatlán') ||
+    bName.includes('davivienda sv') || bName.includes('davivienda el salvador') ||
+    bName.includes('bac sv') || bName.includes('bac el salvador') ||
+    bName.includes('banco azul') || bName.includes('hipotecario') ||
+    bName.includes('fedecredito') || bName.includes('fedecrédito') ||
+    bName.includes('promerica sv') || bName.includes('promerica el salvador') ||
+    bName.includes('fomento agropecuario') || bName.includes('bancovital') ||
+    bName.includes('salvador')
+  ) {
+    return 'SV';
+  }
+
+  // 3. Reconocimiento de bancos guatemaltecos populares
+  if (
+    bName.includes('industrial') || bName.includes('banrural') ||
+    bName.includes('g&t') || bName.includes('gyt') ||
+    bName.includes('bam') || bName.includes('agromercantil') ||
+    bName.includes('chn') || bName.includes('interbanco') ||
+    bName.includes('inmobiliario') || bName.includes('vivibanco') ||
+    bName.includes('bantrab') || bName.includes('trabajadores') ||
+    bName.includes('bac gt') || bName.includes('bac guatemala') ||
+    bName.includes('promerica gt') || bName.includes('promerica guatemala') ||
+    bName.includes('ficohsa gt') || bName.includes('ficohsa guatemala') ||
+    bName.includes('guatemala')
+  ) {
+    return 'GT';
+  }
+
+  // 4. Reconocimiento por moneda
+  const curr = String(getField(record, 'Moneda', 'moneda', 'currency', 'cur') || '').trim().toUpperCase();
+  if (curr === 'GTQ' || curr === 'Q' || curr.includes('QUETZAL')) return 'GT';
+  if (curr === 'USD' || curr === '$' || curr.includes('DOLAR') || curr.includes('DÓLAR')) {
+    // Si la moneda es USD y no hay coincidencia de banco GT, categorizar en SV
+    return 'SV';
+  }
+
+  return defaultCountry;
+}
+
 function mergeAccountRecords(...sources) {
   const merged = new Map();
-  sources.flatMap(asArray).forEach((record, index) => {
+  sources.flatMap(asArray).forEach((record) => {
     if (!record || typeof record !== 'object' || Array.isArray(record)) return;
     if (isSyntheticAccount(record)) return;
     const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria');
@@ -495,10 +626,19 @@ function parseRawReport() {
     const raw = unwrapPayload(original);
     const outerFileName = getField(original, 'fileName', 'filename', 'nombreArchivo');
     const outerDownloadUrl = getField(original, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
-    const bancosSources = collectFields(original, ['bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
+
+    // Extraer fuentes de datos por país si vienen particionadas
+    const gtSpecificSources = collectFields(original, ['guatemala', 'gt', 'bancos_gt', 'bancos_guatemala', 'cuentas_gt']);
+    const svSpecificSources = collectFields(original, ['el_salvador', 'salvador', 'sv', 'bancos_sv', 'bancos_salvador', 'cuentas_sv']);
+
+    gtSpecificSources.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'GT'; });
+    svSpecificSources.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'SV'; });
+
+    const generalSources = collectFields(original, ['bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
     const resumenSources = collectFields(original, ['resumen_general', 'filas']);
     const balanceSources = collectFields(original, ['balance_general', 'balance', 'account_balances']);
-    const bancosList = mergeAccountRecords(...bancosSources, ...balanceSources, ...resumenSources);
+    
+    const bancosList = mergeAccountRecords(...gtSpecificSources, ...svSpecificSources, ...generalSources, ...balanceSources, ...resumenSources);
     const resumenList = resumenSources.flatMap(asArray);
     const totalSources = collectFields(original, ['totales_globales', 'totales']);
     const totalesObj = unwrapPayload(totalSources[0] || {}) || {};
@@ -513,33 +653,21 @@ function parseRawReport() {
   }
 }
 
-function initDataEngine() {
-  const parsed = parseRawReport();
-  loadedReportSnapshot = localStorage.getItem('intelfon_current_report');
-  RAW_TRANSACTIONS = [];
+/**
+ * Compila y construye la estructura de métricas y análisis para un país específico.
+ */
+function buildCountryBaseData(countryCode, accountsForCountry, transactionsForCountry, fileName) {
+  const cfg = COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG.GT;
+  const currency = cfg.currency;
 
-  if (!parsed || !Array.isArray(parsed.bancosList) || parsed.bancosList.length === 0) {
-    // Estado neutral / vacío cuando aún no hay archivo procesado
-    DATA = {
-      meta: { file: 'Sin archivo cargado', fileCut: 'Esperando procesamiento', latestMovement: 'Sin registros', currency: 'GTQ', accounts: 0, banks: 0, movementCount: 0 },
-      totals: { initial: 0, final: 0, change: 0, changePct: 0, credits: 0, debits: 0, netFlow: 0 },
-      highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
-      banks: [],
-      accounts: [],
-      daily: []
-    };
-    renderAll();
-    return;
+  if (!accountsForCountry || accountsForCountry.length === 0) {
+    return createEmptyBaseData(countryCode);
   }
-
-  const { bancosList, resumenList, totalesObj, fileName } = parsed;
-  const currency = getField(bancosList[0], 'Moneda', 'currency') || 'GTQ';
 
   const accountsMap = [];
   const banksMap = {};
-  const transactionKeys = new Set();
 
-  bancosList.forEach((b, idx) => {
+  accountsForCountry.forEach((b, idx) => {
     const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || `Banco ${idx + 1}`).trim();
     const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta') || `CTA-${idx + 1}`).trim();
     const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
@@ -557,7 +685,8 @@ function initDataEngine() {
       change: round2(sFin - sIni),
       changePct: sIni !== 0 ? round2(((sFin - sIni) / Math.abs(sIni)) * 100) : 0,
       credits: cIng,
-      debits: dEgr
+      debits: dEgr,
+      country: countryCode
     });
 
     const bankKey = canonicalKey(bName);
@@ -570,7 +699,8 @@ function initDataEngine() {
         final: 0,
         credits: 0,
         debits: 0,
-        accountsCount: 0
+        accountsCount: 0,
+        country: countryCode
       };
     }
     banksMap[bankKey].initial += sIni;
@@ -578,30 +708,6 @@ function initDataEngine() {
     banksMap[bankKey].credits += cIng;
     banksMap[bankKey].debits += dEgr;
     banksMap[bankKey].accountsCount += 1;
-
-    // Extraer transacciones reales si vienen en el payload
-    const movs = asArray(getField(b, 'estado_cuenta', 'estado cuenta', 'Movimientos', 'movimientos', 'transactions', 'transacciones'));
-    if (movs.length) {
-      movs.forEach((m, mIdx) => {
-        const d = normalizeDate(getField(m, 'Fecha', 'fecha', 'date'));
-        const debit = numberValue(getField(m, 'Egreso', 'Debito', 'debito', 'debit', 'debits'));
-        const credit = numberValue(getField(m, 'Ingreso', 'Credito', 'credito', 'credit', 'credits'));
-        const reference = getField(m, 'No_Referencia', 'referencia', 'reference', 'id') || '';
-        const transactionKey = `${canonicalKey(bName)}|${canonicalKey(accNum)}|${d}|${reference}|${debit}|${credit}|${getField(m, 'Descripcion', 'descripcion', 'description') || ''}`;
-        if (transactionKeys.has(transactionKey)) return;
-        transactionKeys.add(transactionKey);
-        RAW_TRANSACTIONS.push({
-          row: mIdx,
-          bankKey: bName,
-          bank: bName,
-          account: accNum,
-          date: d,
-          debit,
-          credit,
-          balance: numberValue(getField(m, 'Saldo_Resultante', 'Saldo', 'saldo', 'balance'), sFin)
-        });
-      });
-    }
   });
 
   const totalFinalAll = Object.values(banksMap).reduce((s, b) => s + b.final, 0) || 1;
@@ -618,18 +724,23 @@ function initDataEngine() {
     accounts: b.accountsCount
   }));
 
-  const minDate = RAW_TRANSACTIONS.length ? RAW_TRANSACTIONS.reduce((m, t) => !m || t.date < m ? t.date : m, '') : '';
-  const maxDate = RAW_TRANSACTIONS.length ? RAW_TRANSACTIONS.reduce((m, t) => !m || t.date > m ? t.date : m, '') : '';
+  const minDate = transactionsForCountry.length ? transactionsForCountry.reduce((m, t) => !m || t.date < m ? t.date : m, '') : '';
+  const maxDate = transactionsForCountry.length ? transactionsForCountry.reduce((m, t) => !m || t.date > m ? t.date : m, '') : '';
 
-  BASE_DATA = {
+  return {
     meta: {
       file: fileName,
       fileCut: periodLabel(minDate, maxDate),
       latestMovement: maxDate ? fmtDate(maxDate) : 'Reciente',
       currency: currency,
+      country: cfg.code,
+      countryName: cfg.name,
+      countryFlag: cfg.flag,
       accounts: accountsMap.length,
       banks: banksArray.length,
-      movementCount: RAW_TRANSACTIONS.length || accountsMap.length
+      movementCount: transactionsForCountry.length || accountsMap.length,
+      minDate,
+      maxDate
     },
     totals: {
       initial: round2(banksArray.reduce((s, b) => s + b.initial, 0)),
@@ -647,6 +758,113 @@ function initDataEngine() {
     accounts: accountsMap,
     daily: []
   };
+}
+
+function initDataEngine() {
+  const parsed = parseRawReport();
+  loadedReportSnapshot = localStorage.getItem('intelfon_current_report');
+  RAW_TRANSACTIONS_BY_COUNTRY = { GT: [], SV: [] };
+
+  if (!parsed || !Array.isArray(parsed.bancosList) || parsed.bancosList.length === 0) {
+    BASE_DATA_BY_COUNTRY = {
+      GT: createEmptyBaseData('GT'),
+      SV: createEmptyBaseData('SV')
+    };
+    updateCountryBadges();
+    applyCountry(CURRENT_COUNTRY);
+    return;
+  }
+
+  const { bancosList, fileName } = parsed;
+  const accountsByCountry = { GT: [], SV: [] };
+  const transactionKeys = new Set();
+
+  bancosList.forEach((b, idx) => {
+    const countryCode = detectCountry(b, 'GT');
+    accountsByCountry[countryCode].push(b);
+
+    const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || `Banco ${idx + 1}`).trim();
+    const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta') || `CTA-${idx + 1}`).trim();
+    const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
+    const cIng = numberValue(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income'));
+    const dEgr = numberValue(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses'));
+    const sFinValue = getField(b, 'Saldo_Final', 'saldo_final', 'saldoFinal', 'finalBalance');
+    const sFin = numberValue(sFinValue ?? (sIni + cIng - dEgr));
+
+    // Extraer transacciones reales si vienen en el payload
+    const movs = asArray(getField(b, 'estado_cuenta', 'estado cuenta', 'Movimientos', 'movimientos', 'transactions', 'transacciones'));
+    if (movs.length) {
+      movs.forEach((m, mIdx) => {
+        const d = normalizeDate(getField(m, 'Fecha', 'fecha', 'date'));
+        const debit = numberValue(getField(m, 'Egreso', 'Debito', 'debito', 'debit', 'debits'));
+        const credit = numberValue(getField(m, 'Ingreso', 'Credito', 'credito', 'credit', 'credits'));
+        const reference = getField(m, 'No_Referencia', 'referencia', 'reference', 'id') || '';
+        const transactionKey = `${canonicalKey(bName)}|${canonicalKey(accNum)}|${d}|${reference}|${debit}|${credit}|${getField(m, 'Descripcion', 'descripcion', 'description') || ''}`;
+        if (transactionKeys.has(transactionKey)) return;
+        transactionKeys.add(transactionKey);
+        RAW_TRANSACTIONS_BY_COUNTRY[countryCode].push({
+          row: mIdx,
+          country: countryCode,
+          bankKey: bName,
+          bank: bName,
+          account: accNum,
+          date: d,
+          debit,
+          credit,
+          balance: numberValue(getField(m, 'Saldo_Resultante', 'Saldo', 'saldo', 'balance'), sFin)
+        });
+      });
+    }
+  });
+
+  BASE_DATA_BY_COUNTRY = {
+    GT: buildCountryBaseData('GT', accountsByCountry.GT, RAW_TRANSACTIONS_BY_COUNTRY.GT, fileName),
+    SV: buildCountryBaseData('SV', accountsByCountry.SV, RAW_TRANSACTIONS_BY_COUNTRY.SV, fileName)
+  };
+
+  updateCountryBadges();
+  applyCountry(CURRENT_COUNTRY);
+}
+
+function updateCountryBadges() {
+  const badgeGt = document.getElementById('badge-count-gt');
+  const badgeSv = document.getElementById('badge-count-sv');
+  if (badgeGt) badgeGt.textContent = BASE_DATA_BY_COUNTRY.GT.meta.banks;
+  if (badgeSv) badgeSv.textContent = BASE_DATA_BY_COUNTRY.SV.meta.banks;
+
+  const btnGt = document.getElementById('btn-country-gt');
+  const btnSv = document.getElementById('btn-country-sv');
+  if (btnGt) btnGt.classList.toggle('active', CURRENT_COUNTRY === 'GT');
+  if (btnSv) btnSv.classList.toggle('active', CURRENT_COUNTRY === 'SV');
+
+  const btnQuickToggle = document.getElementById('btn-quick-toggle-country');
+  if (btnQuickToggle) {
+    if (CURRENT_COUNTRY === 'GT') {
+      btnQuickToggle.innerHTML = '<span>🇸🇻 Ver bancos El Salvador (SV)</span>';
+      btnQuickToggle.title = 'Cambiar a estadísticas y bancos de El Salvador';
+    } else {
+      btnQuickToggle.innerHTML = '<span>🇬🇹 Ver bancos Guatemala (GT)</span>';
+      btnQuickToggle.title = 'Cambiar a estadísticas y bancos de Guatemala';
+    }
+  }
+}
+
+/**
+ * Cambia el país activo (GT o SV) y recalcula la vista completa
+ */
+function setCountry(countryCode) {
+  if (countryCode !== 'GT' && countryCode !== 'SV') return;
+  CURRENT_COUNTRY = countryCode;
+  updateCountryBadges();
+  applyCountry(countryCode);
+}
+
+function applyCountry(countryCode) {
+  const baseData = BASE_DATA_BY_COUNTRY[countryCode] || BASE_DATA_BY_COUNTRY.GT;
+  const rawTx = RAW_TRANSACTIONS_BY_COUNTRY[countryCode] || [];
+
+  const minDate = baseData.meta.minDate || '';
+  const maxDate = baseData.meta.maxDate || '';
 
   const dFrom = document.getElementById('dateFrom');
   const dTo = document.getElementById('dateTo');
@@ -655,19 +873,23 @@ function initDataEngine() {
     dTo.min = minDate; dTo.max = maxDate; dTo.value = maxDate;
   }
 
-  DATA = buildFiltered(minDate, maxDate);
+  DATA = buildFiltered(countryCode, minDate, maxDate);
   renderAll();
 }
 
-function buildFiltered(startDate, endDate) {
-  if (!BASE_DATA.banks.length) return BASE_DATA;
-  if (!RAW_TRANSACTIONS.length) return BASE_DATA;
+function buildFiltered(countryCode, startDate, endDate) {
+  const baseData = BASE_DATA_BY_COUNTRY[countryCode] || BASE_DATA_BY_COUNTRY.GT;
+  const rawTx = RAW_TRANSACTIONS_BY_COUNTRY[countryCode] || [];
 
-  const reportStart = RAW_TRANSACTIONS.reduce((min, transaction) => !min || transaction.date < min ? transaction.date : min, '');
-  const reportEnd = RAW_TRANSACTIONS.reduce((max, transaction) => !max || transaction.date > max ? transaction.date : max, '');
+  if (!baseData.banks.length || !rawTx.length) {
+    return baseData;
+  }
+
+  const reportStart = rawTx.reduce((min, t) => !min || t.date < min ? t.date : min, '');
+  const reportEnd = rawTx.reduce((max, t) => !max || t.date > max ? t.date : max, '');
   const isCompletePeriod = startDate <= reportStart && endDate >= reportEnd;
 
-  const inRange = RAW_TRANSACTIONS.filter(t => t.date >= startDate && t.date <= endDate);
+  const inRange = rawTx.filter(t => t.date >= startDate && t.date <= endDate);
 
   const byDate = {};
   inRange.forEach(t => {
@@ -694,15 +916,15 @@ function buildFiltered(startDate, endDate) {
   const filteredCredits = round2(daily.reduce((sum, day) => sum + day.credits, 0));
   const filteredDebits = round2(daily.reduce((sum, day) => sum + day.debits, 0));
   const filteredNetFlow = round2(filteredCredits - filteredDebits);
-  const filteredFinal = round2(BASE_DATA.totals.initial + filteredNetFlow);
+  const filteredFinal = round2(baseData.totals.initial + filteredNetFlow);
   const totals = isCompletePeriod
-    ? { ...BASE_DATA.totals }
+    ? { ...baseData.totals }
     : {
-        ...BASE_DATA.totals,
+        ...baseData.totals,
         final: filteredFinal,
         change: filteredNetFlow,
-        changePct: BASE_DATA.totals.initial !== 0
-          ? round2((filteredNetFlow / Math.abs(BASE_DATA.totals.initial)) * 100)
+        changePct: baseData.totals.initial !== 0
+          ? round2((filteredNetFlow / Math.abs(baseData.totals.initial)) * 100)
           : 0,
         credits: filteredCredits,
         debits: filteredDebits,
@@ -711,20 +933,31 @@ function buildFiltered(startDate, endDate) {
 
   return {
     meta: {
-      ...BASE_DATA.meta,
+      ...baseData.meta,
       fileCut: periodLabel(startDate, endDate),
-      latestMovement: inRange.length ? fmtDate(inRange[inRange.length - 1].date) : BASE_DATA.meta.latestMovement,
-      movementCount: inRange.length || BASE_DATA.meta.movementCount
+      latestMovement: inRange.length ? fmtDate(inRange[inRange.length - 1].date) : baseData.meta.latestMovement,
+      movementCount: inRange.length || baseData.meta.movementCount
     },
     totals,
     highlights: { maxCredit, maxDebit, maxNet, minNet },
-    banks: BASE_DATA.banks,
-    accounts: BASE_DATA.accounts,
+    banks: baseData.banks,
+    accounts: baseData.accounts,
     daily: daily
   };
 }
 
 function renderHeader() {
+  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+  const titleEl = document.getElementById('mainCountryTitle');
+  const subEl = document.getElementById('mainCountrySub');
+  const coverCountryEl = document.getElementById('coverCountry');
+  const metaCountryName = document.getElementById('metaCountryName');
+
+  if (titleEl) titleEl.textContent = `Consolidación Bancaria · ${cfg.name}`;
+  if (subEl) subEl.textContent = cfg.description;
+  if (coverCountryEl) coverCountryEl.textContent = `${cfg.name} (${cfg.code})`;
+  if (metaCountryName) metaCountryName.textContent = `${cfg.name} ${cfg.flag}`;
+
   document.getElementById('latestMovement').textContent = DATA.meta.latestMovement;
   document.getElementById('bankCount').textContent = DATA.meta.banks;
   document.getElementById('accountCount').textContent = DATA.meta.accounts;
@@ -732,8 +965,8 @@ function renderHeader() {
   document.getElementById('coverCut').textContent = DATA.meta.fileCut;
   document.getElementById('coverBanks').textContent = DATA.meta.banks;
   document.getElementById('coverAccounts').textContent = DATA.meta.accounts;
-  document.getElementById('coverCurrency').textContent = DATA.meta.currency;
-  document.getElementById('metaCurrency').textContent = DATA.meta.currency;
+  document.getElementById('coverCurrency').textContent = `${DATA.meta.currency} (${cfg.symbol})`;
+  document.getElementById('metaCurrency').textContent = `${DATA.meta.currency} (${cfg.symbol})`;
 
   const logosContainer = document.getElementById('coverBankLogos');
   if (logosContainer) {
@@ -744,7 +977,7 @@ function renderHeader() {
         </div>
       `).join('');
     } else {
-      logosContainer.innerHTML = '<div class="cover-logo">RED INTELFON</div>';
+      logosContainer.innerHTML = `<div class="cover-logo">${cfg.flag} RED INTELFON ${cfg.code}</div>`;
     }
   }
 
@@ -763,8 +996,10 @@ function renderKpis() {
   if (!kpisContainer) return;
 
   const cur = DATA.meta.currency;
+  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+
   const kpis = [
-    ['Saldo inicial consolidado', money(DATA.totals.initial, cur), 'Apertura contable del período', 'neutral'],
+    ['Saldo inicial consolidado', money(DATA.totals.initial, cur), `Apertura contable (${cfg.code})`, 'neutral'],
     ['Saldo final disponible', money(DATA.totals.final, cur), 'Cuadre 100% en bancos', 'neutral'],
     ['Créditos acumulados', money(DATA.totals.credits, cur), 'Total ingresos y depósitos', 'positive'],
     ['Débitos acumulados', money(DATA.totals.debits, cur), 'Total retiros y cargos', 'negative'],
@@ -785,8 +1020,20 @@ function renderBankList() {
   const list = document.getElementById('bankList');
   if (!list) return;
 
+  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+  const otherCountryCode = CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT';
+  const otherCfg = COUNTRY_CONFIG[otherCountryCode];
+
   if (!DATA.banks.length) {
-    list.innerHTML = '<div class="empty-state">No hay registros de bancos disponibles.</div>';
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        <p>No hay cuentas bancarias de <b>${cfg.name}</b> en este archivo.</p>
+        <button type="button" class="btn-toggle-country mt-3 text-xs py-1.5 px-3" onclick="setCountry('${otherCountryCode}')" style="margin-top:10px">
+          Ver bancos de ${otherCfg.name} ${otherCfg.flag}
+        </button>
+      </div>
+    `;
     return;
   }
 
@@ -841,8 +1088,20 @@ function renderBankCards() {
   const container = document.getElementById('bankCards');
   if (!container) return;
 
+  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+  const otherCountryCode = CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT';
+  const otherCfg = COUNTRY_CONFIG[otherCountryCode];
+
   if (!DATA.banks.length) {
-    container.innerHTML = '<div class="empty-state">No hay entidades bancarias para mostrar.</div>';
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        <p>No hay entidades bancarias registradas para <b>${cfg.name}</b> en este archivo.</p>
+        <button type="button" class="btn-toggle-country mt-3" onclick="setCountry('${otherCountryCode}')" style="margin:12px auto 0">
+          Consultar bancos de ${otherCfg.name} ${otherCfg.flag}
+        </button>
+      </div>
+    `;
     return;
   }
 
@@ -870,8 +1129,10 @@ function renderAccounts() {
   const tbody = document.getElementById('accountsTable');
   if (!tbody) return;
 
+  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+
   if (!DATA.accounts.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94A0B2;padding:24px">No hay cuentas registradas en este reporte.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94A0B2;padding:28px">No hay cuentas bancarias de ${cfg.name} (${cfg.currency}) en este reporte.</td></tr>`;
     return;
   }
 
@@ -897,8 +1158,10 @@ function renderDailyTable() {
   const tbody = document.getElementById('dailyTable');
   if (!tbody) return;
 
+  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+
   if (!DATA.daily.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94A0B2;padding:24px">No hay registros diarios disponibles en este período.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A0B2;padding:28px">No hay movimientos diarios registrados para ${cfg.name} en el período seleccionado.</td></tr>`;
     return;
   }
 
@@ -944,7 +1207,7 @@ function applyCurrentDateFilter(showAlert = true) {
     if (showAlert) alert('La fecha inicial no puede ser posterior a la fecha final.');
     return false;
   }
-  DATA = buildFiltered(from, to);
+  DATA = buildFiltered(CURRENT_COUNTRY, from, to);
   renderAll();
   return true;
 }
@@ -957,6 +1220,23 @@ if (btnApplyDate) btnApplyDate.addEventListener('click', () => applyCurrentDateF
 if (btnResetDate) {
   btnResetDate.addEventListener('click', () => {
     initDataEngine();
+  });
+}
+
+// Conectores de Switcher de País
+const btnCountryGt = document.getElementById('btn-country-gt');
+const btnCountrySv = document.getElementById('btn-country-sv');
+const btnQuickToggleCountry = document.getElementById('btn-quick-toggle-country');
+
+if (btnCountryGt) {
+  btnCountryGt.addEventListener('click', () => setCountry('GT'));
+}
+if (btnCountrySv) {
+  btnCountrySv.addEventListener('click', () => setCountry('SV'));
+}
+if (btnQuickToggleCountry) {
+  btnQuickToggleCountry.addEventListener('click', () => {
+    setCountry(CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT');
   });
 }
 
@@ -1049,8 +1329,10 @@ function drawGroupedBars(id, labels, s1, s2, c1, c2) {
   const { ctx, w, h } = fitCanvas(canvas);
   ctx.clearRect(0, 0, w, h);
 
+  const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
+
   if (!labels.length) {
-    text(ctx, 'Sin datos para graficar', w / 2, h / 2, { align: 'center', color: '#64748B' });
+    text(ctx, 'Sin datos para graficar en este país', w / 2, h / 2, { align: 'center', color: '#64748B' });
     return;
   }
 
@@ -1064,7 +1346,7 @@ function drawGroupedBars(id, labels, s1, s2, c1, c2) {
     ctx.moveTo(L, y);
     ctx.lineTo(w - R, y);
     ctx.stroke();
-    text(ctx, money(max * (1 - i / 4)), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
+    text(ctx, money(max * (1 - i / 4), cur), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
   }
   const group = pw / labels.length, bw = Math.min(32, group * .28);
   labels.forEach((lab, i) => {
@@ -1083,7 +1365,7 @@ function drawGroupedBars(id, labels, s1, s2, c1, c2) {
     return {
       x: L + group * (index + 0.5),
       y: T + ph - Math.max(ph * Math.max(s1[index] || 0, s2[index] || 0) / max, 8),
-      html: `<strong>${esc(labels[index])}</strong><span style="color:${c1}">Saldo inicial: ${money(s1[index])}</span><span style="color:${c2}">Saldo final: ${money(s2[index])}</span>`
+      html: `<strong>${esc(labels[index])}</strong><span style="color:${c1}">Saldo inicial: ${money(s1[index], cur)}</span><span style="color:${c2}">Saldo final: ${money(s2[index], cur)}</span>`
     };
   });
 }
@@ -1094,8 +1376,10 @@ function drawNetBars() {
   const { ctx, w, h } = fitCanvas(canvas);
   ctx.clearRect(0, 0, w, h);
 
+  const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
+
   if (!DATA.banks.length) {
-    text(ctx, 'Sin datos para graficar', w / 2, h / 2, { align: 'center', color: '#64748B' });
+    text(ctx, 'Sin datos para graficar en este país', w / 2, h / 2, { align: 'center', color: '#64748B' });
     return;
   }
 
@@ -1118,7 +1402,7 @@ function drawNetBars() {
     const y = v >= 0 ? mid - barh : mid;
     roundedRect(ctx, cx - bw / 2, y, bw, barh, 7, v >= 0 ? '#34D399' : '#FB7185');
     text(ctx, labels[i], cx, h - 18, { size: 10, color: '#B8C2D1', align: 'center', weight: 700 });
-    text(ctx, money(v), cx, v >= 0 ? Math.max(T + 10, y - 10) : Math.min(h - B - 5, y + barh + 12), { size: 10, color: v >= 0 ? '#6EE7B7' : '#FDA4AF', align: 'center', weight: 700 });
+    text(ctx, money(v, cur), cx, v >= 0 ? Math.max(T + 10, y - 10) : Math.min(h - B - 5, y + barh + 12), { size: 10, color: v >= 0 ? '#6EE7B7' : '#FDA4AF', align: 'center', weight: 700 });
   });
 
   chartTooltip(canvas, (px, py) => {
@@ -1128,7 +1412,7 @@ function drawNetBars() {
     return {
       x: L + group * (index + 0.5),
       y: mid - (ph / 2) * Math.abs(vals[index]) / max,
-      html: `<strong>${esc(labels[index])}</strong><span style="color:${vals[index] >= 0 ? '#6EE7B7' : '#FDA4AF'}">Flujo neto: ${money(vals[index])}</span>`
+      html: `<strong>${esc(labels[index])}</strong><span style="color:${vals[index] >= 0 ? '#6EE7B7' : '#FDA4AF'}">Flujo neto: ${money(vals[index], cur)}</span>`
     };
   });
 }
@@ -1138,6 +1422,8 @@ function drawDaily() {
   if (!canvas || !canvas.offsetParent) return;
   const { ctx, w, h } = fitCanvas(canvas);
   ctx.clearRect(0, 0, w, h);
+
+  const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
 
   if (!DATA.daily.length) {
     text(ctx, 'Sin movimientos diarios en el período seleccionado', w / 2, h / 2, { size: 13, color: '#94A0B2', align: 'center', weight: 650 });
@@ -1155,7 +1441,7 @@ function drawDaily() {
     ctx.moveTo(L, y);
     ctx.lineTo(w - R, y);
     ctx.stroke();
-    text(ctx, money(max * (1 - i / 4)), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
+    text(ctx, money(max * (1 - i / 4), cur), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
   }
 
   const x = i => L + pw * (i / (DATA.daily.length - 1 || 1));
@@ -1191,7 +1477,7 @@ function drawDaily() {
     return {
       x: x(index),
       y: Math.min(y(day.credits), y(day.debits)),
-      html: `<strong>${esc(day.label)}</strong><span style="color:#34D399">Créditos: ${money(day.credits)}</span><span style="color:#FB7185">Débitos: ${money(day.debits)}</span><span>Flujo neto: ${money(day.net)}</span>`
+      html: `<strong>${esc(day.label)}</strong><span style="color:#34D399">Créditos: ${money(day.credits, cur)}</span><span style="color:#FB7185">Débitos: ${money(day.debits, cur)}</span><span>Flujo neto: ${money(day.net, cur)}</span>`
     };
   });
 }
@@ -1214,10 +1500,11 @@ function toggleFullscreen() { document.fullscreenElement ? document.exitFullscre
 const btnDownloadPdf = document.getElementById('btn-download-pdf-direct');
 if (btnDownloadPdf) {
   btnDownloadPdf.addEventListener('click', () => {
+    const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
     const element = document.getElementById('export-pdf-area');
     const opt = {
       margin: [10, 10, 10, 10],
-      filename: 'Reporte_Bancario_Consolidado_INTELFON.pdf',
+      filename: `Reporte_Bancario_${cfg.name}_INTELFON.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#171A21' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
