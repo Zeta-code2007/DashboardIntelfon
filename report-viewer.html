@@ -625,7 +625,7 @@ function mergeAccountRecords(...sources) {
 }
 
 function parseRawReport() {
-  const saved = localStorage.getItem('intelfon_current_report') || sessionStorage.getItem('intelfon_current_report');
+  const saved = localStorage.getItem('intelfon_current_report');
   if (!saved) return null;
 
   try {
@@ -1821,16 +1821,14 @@ const btnClearDashboard = document.getElementById('btn-clear-dashboard');
 if (btnClearDashboard) {
   btnClearDashboard.addEventListener('click', () => {
     if (!confirm('¿Deseas limpiar todos los datos del dashboard? Esta acción no elimina el archivo original.')) return;
-    const currentSnapshot = localStorage.getItem('intelfon_current_report');
-    if (loadedReportSnapshot && currentSnapshot && currentSnapshot !== loadedReportSnapshot) {
-      initDataEngine();
-      return;
-    }
     localStorage.removeItem('intelfon_current_report');
+    sessionStorage.removeItem('intelfon_current_report');
     localStorage.removeItem('intelfon_processing_id');
+    sessionStorage.removeItem('intelfon_processing_id');
     window.dispatchEvent(new CustomEvent('intelfon-report-updated', {
       detail: { key: 'intelfon_current_report', value: null }
     }));
+    window.parent.postMessage({ type: 'intelfon-report-cleared' }, '*');
     downloadExcelUrl = '#';
     initDataEngine();
   });

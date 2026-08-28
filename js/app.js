@@ -232,12 +232,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'intelfon-report-cleared') {
+            const activeView = document.querySelector('.nav-btn.active')?.dataset.view || 'overview';
+            loadView(activeView);
+            return;
+        }
         if (!event.data || event.data.type !== 'intelfon-navigate') return;
         if (typeof event.data.view === 'string') loadView(event.data.view);
     });
 
     window.addEventListener('storage', (event) => {
         if (event.key === 'intelfon_current_report') {
+            const activeView = document.querySelector('.nav-btn.active')?.dataset.view || 'overview';
+            loadView(activeView);
+        }
+    });
+
+    window.addEventListener('intelfon-report-updated', (event) => {
+        if (event.detail && event.detail.key === 'intelfon_current_report') {
             const activeView = document.querySelector('.nav-btn.active')?.dataset.view || 'overview';
             loadView(activeView);
         }

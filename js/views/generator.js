@@ -368,7 +368,6 @@ export function renderGenerator() {
     function purgeReportState() {
         ['intelfon_current_report', 'intelfon_processing_id'].forEach(key => {
             localStorage.removeItem(key);
-            sessionStorage.removeItem(key);
         });
     }
 
@@ -382,7 +381,6 @@ export function renderGenerator() {
         const snapshotJson = JSON.stringify(snapshot);
 
         localStorage.setItem('intelfon_current_report', snapshotJson);
-        sessionStorage.setItem('intelfon_current_report', snapshotJson);
 
         const updateEvent = new CustomEvent('intelfon-report-updated', {
             detail: { key: 'intelfon_current_report', value: snapshot }
@@ -461,6 +459,9 @@ export function renderGenerator() {
             documentPreviewSection.classList.add('hidden');
             excelPreviewFrame.src = '';
             hideError();
+            window.dispatchEvent(new CustomEvent('intelfon-report-updated', {
+                detail: { key: 'intelfon_current_report', value: null }
+            }));
             Toast.success('Dashboard limpiado. Ya puedes generar un nuevo reporte.', 'Dashboard limpio');
         });
     }
@@ -856,83 +857,6 @@ export function renderGenerator() {
         });
     }
 
-    function buildFallbackReport(file, tipoReporte) {
-        const baseRows = [
-            {
-                Banco: 'Banco Industrial',
-                Cuenta: 'GT-001',
-                Saldo_Inicial: 250000,
-                Total_Ingresos: 155000,
-                Total_Egresos: 98000,
-                Saldo_Final: 307000,
-                Pais: 'Guatemala',
-                Moneda: 'GTQ',
-                Archivo: file?.name || 'reporte.xlsx',
-                estado_cuenta: [
-                    { Fecha: '2026-08-01', Ingreso: 35000, Egreso: 18000, Saldo: 64000, Descripcion: 'Cobro de nómina' },
-                    { Fecha: '2026-08-03', Ingreso: 42000, Egreso: 16000, Saldo: 90000, Descripcion: 'Depósito por ventas' },
-                    { Fecha: '2026-08-05', Ingreso: 38000, Egreso: 21000, Saldo: 107000, Descripcion: 'Transferencia interna' },
-                    { Fecha: '2026-08-07', Ingreso: 40000, Egreso: 23000, Saldo: 124000, Descripcion: 'Pago proveedores' }
-                ]
-            },
-            {
-                Banco: 'BAC Guatemala',
-                Cuenta: 'GT-002',
-                Saldo_Inicial: 180000,
-                Total_Ingresos: 130000,
-                Total_Egresos: 85000,
-                Saldo_Final: 225000,
-                Pais: 'Guatemala',
-                Moneda: 'GTQ',
-                Archivo: file?.name || 'reporte.xlsx',
-                estado_cuenta: [
-                    { Fecha: '2026-08-02', Ingreso: 28000, Egreso: 14000, Saldo: 42000, Descripcion: 'Depósito bancario' },
-                    { Fecha: '2026-08-04', Ingreso: 35000, Egreso: 15000, Saldo: 62000, Descripcion: 'Cobro por servicios' },
-                    { Fecha: '2026-08-06', Ingreso: 31000, Egreso: 17500, Saldo: 75500, Descripcion: 'Pagos y retenciones' },
-                    { Fecha: '2026-08-08', Ingreso: 36000, Egreso: 20000, Saldo: 91500, Descripcion: 'Ajuste de flujo' }
-                ]
-            },
-            {
-                Banco: 'Promerica',
-                Cuenta: 'GT-003',
-                Saldo_Inicial: 145000,
-                Total_Ingresos: 112000,
-                Total_Egresos: 76000,
-                Saldo_Final: 181000,
-                Pais: 'Guatemala',
-                Moneda: 'GTQ',
-                Archivo: file?.name || 'reporte.xlsx',
-                estado_cuenta: [
-                    { Fecha: '2026-08-01', Ingreso: 22000, Egreso: 12000, Saldo: 35000, Descripcion: 'Nómina' },
-                    { Fecha: '2026-08-03', Ingreso: 25000, Egreso: 13000, Saldo: 47000, Descripcion: 'Transferencia cliente' },
-                    { Fecha: '2026-08-05', Ingreso: 30000, Egreso: 15000, Saldo: 62000, Descripcion: 'Venta de servicios' },
-                    { Fecha: '2026-08-07', Ingreso: 35000, Egreso: 16000, Saldo: 81000, Descripcion: 'Ajuste de cierre' }
-                ]
-            }
-        ];
-
-        const totalMonto = baseRows.reduce((sum, item) => sum + Number(item.Saldo_Final || 0), 0);
-        return {
-            resumen_general: {
-                totalRegistros: baseRows.length,
-                montoTotal: totalMonto,
-                total_registros: baseRows.length,
-                monto_total: totalMonto,
-                estadoGeneral: 'Procesado localmente',
-                estado_general: 'Procesado localmente',
-                tipoReporte: tipoReporte || 'bancario'
-            },
-            bancos_procesados: baseRows,
-            urlDescarga: '#',
-            fileName: file?.name || 'reporte.xlsx',
-            totales_globales: {
-                Saldo_Final_Global: totalMonto,
-                Total_Ingresos_Global: baseRows.reduce((sum, item) => sum + Number(item.Total_Ingresos || 0), 0),
-                Total_Egresos_Global: baseRows.reduce((sum, item) => sum + Number(item.Total_Egresos || 0), 0)
-            }
-        };
-    }
-
     // Event listener del formulario y botón de procesamiento
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -995,7 +919,6 @@ export function renderGenerator() {
 
         try {
             let data = null;
-            const fallbackFile = selectedFiles[0];
             try {
                 const responses = [];
                 for (let index = 0; index < selectedFiles.length; index++) {
@@ -1008,12 +931,16 @@ export function renderGenerator() {
                 }
 
                 data = responses.length === 1 ? responses[0] : responses;
-                if (!data || typeof data !== 'object') {
+                const hasResponseError = response => response?.error || response?.errorMessage || response?.status === 'error';
+                const responseError = Array.isArray(data)
+                    ? data.some(response => !response || typeof response !== 'object' || Object.keys(response).length === 0 || hasResponseError(response))
+                    : hasResponseError(data);
+                const hasResponseContent = Array.isArray(data) ? data.length > 0 : Object.keys(data || {}).length > 0;
+                if (!data || typeof data !== 'object' || !hasResponseContent || responseError) {
                     throw new Error('La respuesta no contiene datos válidos.');
                 }
             } catch (makeError) {
-                console.warn('[Generator] Make falló, usando fallback local para continuar la demo:', makeError);
-                data = buildFallbackReport(fallbackFile, tipoReporte);
+                throw makeError;
             }
 
             if (localStorage.getItem('intelfon_processing_id') !== processingId || currentRunId !== processingId) {
@@ -1055,6 +982,8 @@ export function renderGenerator() {
 
         } catch (err) {
             clearInterval(progressInterval);
+            localStorage.removeItem('intelfon_processing_id');
+            lastProcessedData = null;
             console.error('Error en el procesamiento:', err);
             progressBar.style.width = '100%';
             progressBar.classList.remove('bg-intelfon-red', 'bg-emerald-600');
@@ -1063,17 +992,9 @@ export function renderGenerator() {
             statusSubtext.textContent = 'Error';
             statusSpinner.classList.add('hidden');
 
-            const fallbackFile = selectedFiles[0];
-            const fallbackData = buildFallbackReport(fallbackFile, tipoReporte);
-            lastProcessedData = fallbackData;
-            replaceCurrentReport(fallbackData, processingId);
-            renderSummaryCards(fallbackData.resumen_general, extractRows(fallbackData), fallbackData.totales_globales, fallbackData);
-            renderTableRows(extractRows(fallbackData));
-            resultsPanel.classList.remove('hidden');
-
             showError(
-                'El escenario de Make no respondió, pero el dashboard quedó cargado con datos de demostración para continuar la presentación.',
-                'Se activó el modo local para que puedas seguir con la presentación sin esperar al webhook.'
+                'No se pudo procesar el archivo con Make.com.',
+                err?.message || 'El flujo no devolvió una respuesta válida. Verifica Make.com e inténtalo nuevamente.'
             );
         } finally {
             btnSubmit.disabled = false;
