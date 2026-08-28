@@ -83,7 +83,20 @@ export async function enviarArchivosAMake(files, tipoReporte) {
     try {
         data = JSON.parse(responseText);
     } catch (e) {
-        throw new Error(`Make.com devolvió una respuesta que no es JSON válido: "${responseText.substring(0, 150)}...". Asegúrate de que el último módulo en Make sea "Webhook response" y devuelva un JSON.`);
+        // Intentar limpiar y reparar problemas comunes en respuestas de Make (trailing commas, comillas o caracteres de escape)
+        try {
+            const sanitized = responseText
+                .replace(/,\s*([}\]])/g, '$1')
+                .replace(/[\u0000-\u001F]+/g, (match) => {
+                    if (match === '\n' || match === '\r' || match === '\t') return match;
+                    return '';
+                });
+            data = JSON.parse(sanitized);
+        } catch (repairErr) {
+            console.error('[MakeService] Error al parsear JSON original:', e);
+            console.error('[MakeService] Texto de respuesta recibido:', responseText);
+            throw new Error(`Make.com devolvió una respuesta que no es JSON válido: "${responseText.substring(0, 150)}...". Asegúrate de que el último módulo en Make sea "Webhook response" y devuelva un JSON.`);
+        }
     }
 
     // Si el JSON viene con doble codificación como string
@@ -93,6 +106,6 @@ export async function enviarArchivosAMake(files, tipoReporte) {
         } catch (_) { }
     }
 
-    console.log('[MakeService] Respuesta JSON recibida correctamente.');
+    console.log('[MakeService] Respuesta JSON recibida y procesada correctamente.');
     return data;
 }

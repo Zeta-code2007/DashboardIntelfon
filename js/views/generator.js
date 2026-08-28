@@ -764,7 +764,7 @@ export function renderGenerator() {
         if (!data) return [];
 
         // Parsear campos que pueden venir como strings JSON
-        const fields = ['filas', 'resumen_general', 'bancos_procesados', 'balance_general', 'totales_globales', 'resultado', 'data', 'result'];
+        const fields = ['filas', 'registros', 'resumen_general', 'bancos_procesados', 'balance_general', 'totales_globales', 'resultado', 'data', 'result', 'consolidadoRegionalUSD', 'consolidado_regional_usd', 'archivosExcel', 'archivos_excel'];
         for (const field of fields) {
             if (typeof data[field] === 'string') {
                 data[field] = tryParseJSON(data[field]);
@@ -773,35 +773,39 @@ export function renderGenerator() {
 
         // Si viene envuelto en resultado (OpenAI)
         if (data.resultado && typeof data.resultado === 'object') {
-            if (Array.isArray(data.resultado.resumen_general)) return data.resultado.resumen_general;
-            if (Array.isArray(data.resultado.bancos_procesados)) return data.resultado.bancos_procesados;
-            if (Array.isArray(data.resultado.filas)) return data.resultado.filas;
-            if (Array.isArray(data.resultado)) return data.resultado;
+            if (Array.isArray(data.resultado.resumen_general) && data.resultado.resumen_general.length) return data.resultado.resumen_general;
+            if (Array.isArray(data.resultado.bancos_procesados) && data.resultado.bancos_procesados.length) return data.resultado.bancos_procesados;
+            if (Array.isArray(data.resultado.registros) && data.resultado.registros.length) return data.resultado.registros;
+            if (Array.isArray(data.resultado.filas) && data.resultado.filas.length) return data.resultado.filas;
+            if (Array.isArray(data.resultado) && data.resultado.length) return data.resultado;
         }
 
         // Si viene envuelto en result desde el módulo ExecuteCode de Make
         if (data.result && typeof data.result === 'object') {
-            for (const field of ['filas', 'resumen_general', 'bancos_procesados', 'totales_globales']) {
+            for (const field of ['filas', 'registros', 'resumen_general', 'bancos_procesados', 'totales_globales']) {
                 if (typeof data.result[field] === 'string') data.result[field] = tryParseJSON(data.result[field]);
             }
-            if (Array.isArray(data.result.resumen_general)) return data.result.resumen_general;
-            if (Array.isArray(data.result.bancos_procesados)) return data.result.bancos_procesados;
-            if (Array.isArray(data.result.filas)) return data.result.filas;
-            if (Array.isArray(data.result)) return data.result;
+            if (Array.isArray(data.result.resumen_general) && data.result.resumen_general.length) return data.result.resumen_general;
+            if (Array.isArray(data.result.bancos_procesados) && data.result.bancos_procesados.length) return data.result.bancos_procesados;
+            if (Array.isArray(data.result.registros) && data.result.registros.length) return data.result.registros;
+            if (Array.isArray(data.result.filas) && data.result.filas.length) return data.result.filas;
+            if (Array.isArray(data.result) && data.result.length) return data.result;
         }
 
         // Si viene envuelto en data
         if (data.data && typeof data.data === 'object') {
-            if (Array.isArray(data.data.resumen_general)) return data.data.resumen_general;
-            if (Array.isArray(data.data.bancos_procesados)) return data.data.bancos_procesados;
-            if (Array.isArray(data.data.filas)) return data.data.filas;
-            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.data.resumen_general) && data.data.resumen_general.length) return data.data.resumen_general;
+            if (Array.isArray(data.data.bancos_procesados) && data.data.bancos_procesados.length) return data.data.bancos_procesados;
+            if (Array.isArray(data.data.registros) && data.data.registros.length) return data.data.registros;
+            if (Array.isArray(data.data.filas) && data.data.filas.length) return data.data.filas;
+            if (Array.isArray(data.data) && data.data.length) return data.data;
         }
 
-        if (Array.isArray(data.filas)) return data.filas;
-        if (Array.isArray(data.resumen_general)) return data.resumen_general;
-        if (Array.isArray(data.bancos_procesados)) return data.bancos_procesados;
-        if (Array.isArray(data)) return data;
+        if (Array.isArray(data.bancos_procesados) && data.bancos_procesados.length) return data.bancos_procesados;
+        if (Array.isArray(data.registros) && data.registros.length) return data.registros;
+        if (Array.isArray(data.resumen_general) && data.resumen_general.length) return data.resumen_general;
+        if (Array.isArray(data.filas) && data.filas.length) return data.filas;
+        if (Array.isArray(data) && data.length) return data;
 
         return [];
     }
@@ -1022,7 +1026,10 @@ export function renderGenerator() {
     }
 
     function createExcelDownloadUrl(response) {
-        const base64 = response?.archivoExcelBase64 || response?.excelBase64 || response?.result?.data;
+        let base64 = response?.archivoExcelBase64 || response?.excelBase64 || response?.result?.data || response?.consolidadoGeneral?.data || response?.data;
+        if (!base64 && Array.isArray(response?.archivosExcel) && response.archivosExcel.length > 0) {
+            base64 = response.archivosExcel[0]?.data;
+        }
         if (!base64 || typeof base64 !== 'string' || base64.length < 20) return '';
         return `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
     }
@@ -1122,10 +1129,7 @@ export function renderGenerator() {
                     : hasResponseError(data);
                 const hasResponseContent = Array.isArray(data) ? data.length > 0 : Object.keys(data || {}).length > 0;
                 if (!data || typeof data !== 'object' || !hasResponseContent || responseError) {
-                    throw new Error('La respuesta no contiene datos válidos.');
-                }
-                if (!extractRows(data).length) {
-                    throw new Error('Make terminó, pero no devolvió registros del Excel procesado. Revisa el mapeo de Webhook response.');
+                    throw new Error('La respuesta de Make no contiene datos válidos.');
                 }
             } catch (makeError) {
                 throw makeError;

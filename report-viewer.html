@@ -655,7 +655,9 @@ function parseRawReport() {
         || getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
       if (dUrl && dUrl !== '#') outerDownloadUrl = dUrl;
       const excelBase64 = getField(src, 'archivoExcelBase64', 'excelBase64')
-        || getField(raw, 'archivoExcelBase64', 'excelBase64');
+        || getField(raw, 'archivoExcelBase64', 'excelBase64')
+        || (Array.isArray(src?.archivosExcel) && src.archivosExcel[0]?.data ? src.archivosExcel[0].data : '')
+        || (src?.consolidadoGeneral?.data ? src.consolidadoGeneral.data : '');
       if (!outerDownloadUrl && typeof excelBase64 === 'string' && excelBase64.length > 20) {
         outerDownloadUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBase64}`;
       }
@@ -683,7 +685,7 @@ function parseRawReport() {
       gtSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'GT'; });
       svSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'SV'; });
 
-      const generalSources = collectFields(src, ['bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
+      const generalSources = collectFields(src, ['registros', 'bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
       const resumenSources = collectFields(src, ['resumen_general', 'filas', 'resumen', 'rows']);
       const balanceSources = collectFields(src, ['balance_general', 'balance', 'account_balances']);
 

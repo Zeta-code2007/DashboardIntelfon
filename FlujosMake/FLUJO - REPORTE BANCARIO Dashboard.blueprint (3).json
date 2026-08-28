@@ -50,19 +50,12 @@
                     {
                         "name": "files_new",
                         "value": "{{72.files}}"
-                    },
-                    {
-                        "name": "files_old",
-                        "value": "{{72.file.files}}"
-                    },
-                    {
-                        "name": "file_old",
-                        "value": "{{72.file}}"
                     }
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "codeEditorPython": "import base64,csv,io,json,re\nfrom datetime import datetime,date\nimport openpyxl\n\nfiles=input.get('files_new') or input.get('files_old') or []\nif not files:\n    old=input.get('file_old')\n    if isinstance(old,dict) and old.get('data') is not None: files=[old]\nif isinstance(files,dict): files=[files]\nif not isinstance(files,list): files=[files]\nif len(files)>15: raise Exception('Se recibieron más de 15 documentos; el máximo permitido es 11 (1 de Guatemala y hasta 10 de El Salvador).')\n\ndef decode(v):\n    if isinstance(v,bytes): return v\n    if isinstance(v,bytearray): return bytes(v)\n    if isinstance(v,dict):\n        for k in ('data','content','body','buffer','value','base64'):\n            if k in v:\n                x=decode(v[k])\n                if x:return x\n        return None\n    if isinstance(v,(list,tuple)) and v and all(isinstance(x,int) and 0<=x<=255 for x in v): return bytes(v)\n    s=str(v or '').strip()\n    m=re.search(r'IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)',s)\n    if m:\n        try:return bytes.fromhex(m.group(1))\n        except: pass\n    if s.startswith('data:') and ',' in s:s=s.split(',',1)[1]\n    compact=re.sub(r'\\\\s+','',s)\n    try:return base64.b64decode(compact+'='*(-len(compact)%4),validate=False)\n    except:return None\n\ndef clean(v):\n    if isinstance(v,(datetime,date)): return v.strftime('%d/%m/%Y')\n    if isinstance(v,float) and v.is_integer(): return int(v)\n    return v.strip() if isinstance(v,str) else v\n\ndef add(sheet,row,values):\n    values=[clean(v) for v in values]\n    if any(v is not None and str(v).strip() for v in values): sheet['filas'].append({'fila':row,'valores':values})\n\nif not files: raise Exception('El webhook no recibió documentos. Se esperaba files[] o el formato anterior file.files[].')\nout={'formato':'multi-documento','documentos_recibidos':len(files),'hojas':[],'instrucciones':'Unificar todos los documentos y conservar archivo, hoja y fila de origen. Analizar todas las transacciones.','observaciones':[]}\nvalid=0\nfor i,f in enumerate(files,1):\n    if not isinstance(f,dict):\n        out['observaciones'].append(f'Documento {i} no es un objeto.');continue\n    name=str(f.get('name') or f.get('filename') or f'documento_{i}.xlsx')\n    raw=decode(f.get('data'))\n    if not raw:\n        out['observaciones'].append(f'No se pudo decodificar {name}.');continue\n    ext=name.lower().rsplit('.',1)[-1] if '.' in name else ''\n    if raw[:2]==b'PK':\n        try: book=openpyxl.load_workbook(io.BytesIO(raw),data_only=True,read_only=True,keep_vba=(ext=='xlsm'))\n        except Exception as e: out['observaciones'].append(f'No se pudo abrir {name}: {e}');continue\n        valid+=1\n        for sheet_name in book.sheetnames:\n            sheet={'archivo':name,'nombre':sheet_name,'filas':[]}\n            for n,row in enumerate(book[sheet_name].iter_rows(values_only=True),1): add(sheet,n,list(row))\n            out['hojas'].append(sheet)\n    elif ext in ('csv','txt') or 'csv' in str(f.get('mimeType') or f.get('mime') or '').lower() or b'\\\\n' in raw[:4096]:\n        text=raw.decode('utf-8-sig',errors='replace')\n        try:dialect=csv.Sniffer().sniff(text[:8192],delimiters=',;\\\\t|')\n        except:dialect=csv.excel\n        sheet={'archivo':name,'nombre':name,'filas':[]}\n        for n,row in enumerate(csv.reader(io.StringIO(text),dialect),1): add(sheet,n,row)\n        out['hojas'].append(sheet);valid+=1\n    else: out['observaciones'].append(f'Formato no compatible en {name}.')\nif valid==0 or not out['hojas']: raise Exception('Ninguno de los documentos recibidos es válido o contiene hojas legibles.')\nreturn {'resultado':json.dumps(out,ensure_ascii=False,default=str)}"
+                "dependencies": [],
+                "codeEditorPython": "import base64\nimport csv\nimport io\nimport json\nimport re\nimport zipfile\nimport xml.etree.ElementTree as ET\nfrom datetime import datetime, date\n\nfiles = input.get('files_new') or input.get('files_old') or []\nif isinstance(files, str):\n    try:\n        files = json.loads(files)\n    except Exception:\n        pass\nif not files:\n    old = input.get('file_old')\n    if isinstance(old, dict) and old.get('data') is not None:\n        files = [old]\nif isinstance(files, dict):\n    files = [files]\nif not isinstance(files, list):\n    files = [files]\n\nif len(files) > 15:\n    raise Exception('Se recibieron más de 15 documentos; el máximo permitido es 15.')\n\ndef decode(v):\n    if isinstance(v, bytes):\n        return v\n    if isinstance(v, bytearray):\n        return bytes(v)\n    if isinstance(v, dict):\n        for k in ('data', 'content', 'body', 'buffer', 'value', 'base64'):\n            if k in v:\n                decoded = decode(v[k])\n                if decoded:\n                    return decoded\n        return None\n    if isinstance(v, (list, tuple)) and v and all(isinstance(x, int) and 0 <= x <= 255 for x in v):\n        return bytes(v)\n    s = str(v or '').strip()\n    match = re.search(r'IMTBuffer\\([^)]*\\):\\s*([0-9a-fA-F]+)', s)\n    if match:\n        try:\n            return bytes.fromhex(match.group(1))\n        except Exception:\n            pass\n    if s.startswith('data:') and ',' in s:\n        s = s.split(',', 1)[1]\n    compact = re.sub(r'\\s+', '', s)\n    try:\n        return base64.b64decode(compact + '=' * (-len(compact) % 4), validate=False)\n    except Exception:\n        return None\n\ndef clean(v):\n    if isinstance(v, (datetime, date)):\n        return v.strftime('%d/%m/%Y')\n    if isinstance(v, float) and v.is_integer():\n        return int(v)\n    return v.strip() if isinstance(v, str) else v\n\ndef add(sheet, row_number, values):\n    values = [clean(v) for v in values]\n    if any(v is not None and str(v).strip() for v in values):\n        sheet['filas'].append({'fila': row_number, 'valores': values})\n\ndef column_number(reference):\n    letters = re.match(r'[A-Z]+', reference or '')\n    if not letters:\n        return 1\n    number = 0\n    for char in letters.group(0):\n        number = number * 26 + ord(char) - 64\n    return number\n\ndef read_xlsx(raw, filename):\n    result = []\n    with zipfile.ZipFile(io.BytesIO(raw)) as archive:\n        shared_strings = []\n        if 'xl/sharedStrings.xml' in archive.namelist():\n            root = ET.fromstring(archive.read('xl/sharedStrings.xml'))\n            for item in root:\n                text = ''.join(node.text or '' for node in item.iter() if node.tag.endswith('}t') or node.tag == 't')\n                shared_strings.append(text)\n\n        workbook_root = ET.fromstring(archive.read('xl/workbook.xml'))\n        sheets_node = next((node for node in workbook_root.iter() if node.tag.endswith('}sheets') or node.tag == 'sheets'), None)\n        sheet_entries = []\n        if sheets_node is not None:\n            for node in list(sheets_node):\n                name = node.attrib.get('name') or 'Hoja'\n                sheet_id = node.attrib.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')\n                sheet_entries.append((name, sheet_id))\n\n        workbook_rels = {}\n        if 'xl/_rels/workbook.xml.rels' in archive.namelist():\n            rel_root = ET.fromstring(archive.read('xl/_rels/workbook.xml.rels'))\n            for rel in list(rel_root):\n                rel_id = rel.attrib.get('Id')\n                target = rel.attrib.get('Target', '')\n                if target.startswith('/'):\n                    target = target.lstrip('/')\n                elif not target.startswith('xl/'):\n                    target = 'xl/' + target\n                workbook_rels[rel_id] = target\n\n        for index, (sheet_name, relation_id) in enumerate(sheet_entries, 1):\n            path = workbook_rels.get(relation_id, 'xl/worksheets/sheet%d.xml' % index)\n            if path not in archive.namelist():\n                continue\n            root = ET.fromstring(archive.read(path))\n            rows = []\n            for row_node in root.iter():\n                if not (row_node.tag.endswith('}row') or row_node.tag == 'row'):\n                    continue\n                cells = {}\n                max_column = 0\n                for cell in list(row_node):\n                    if not (cell.tag.endswith('}c') or cell.tag == 'c'):\n                        continue\n                    ref = cell.attrib.get('r', '')\n                    col = column_number(ref)\n                    max_column = max(max_column, col)\n                    cell_type = cell.attrib.get('t')\n                    value_node = next((n for n in list(cell) if n.tag.endswith('}v') or n.tag == 'v'), None)\n                    inline_node = next((n for n in cell.iter() if n.tag.endswith('}t') or n.tag == 't'), None)\n                    value = value_node.text if value_node is not None else None\n                    if cell_type == 's' and value is not None:\n                        try:\n                            value = shared_strings[int(value)]\n                        except Exception:\n                            value = ''\n                    elif cell_type == 'inlineStr':\n                        value = inline_node.text if inline_node is not None else ''\n                    elif cell_type == 'b':\n                        value = value == '1'\n                    elif value is not None:\n                        try:\n                            value = float(value) if '.' in value else int(value)\n                        except Exception:\n                            pass\n                    cells[col] = value\n                rows.append([cells.get(i) for i in range(1, max_column + 1)])\n            sheet = {'archivo': filename, 'nombre': sheet_name, 'filas': []}\n            for row_number, values in enumerate(rows, 1):\n                add(sheet, row_number, values)\n            result.append(sheet)\n    return result\n\nif not files:\n    raise Exception('El webhook no recibió documentos. Se esperaba files[] o el formato anterior file.files[].')\n\nout = {\n    'formato': 'multi-documento',\n    'documentos_recibidos': len(files),\n    'hojas': [],\n    'instrucciones': 'Unificar todos los documentos y conservar archivo, hoja y fila de origen. Analizar todas las transacciones.',\n    'observaciones': []\n}\nvalid = 0\n\nfor index, file_item in enumerate(files, 1):\n    if not isinstance(file_item, dict):\n        out['observaciones'].append('Documento %d no es un objeto.' % index)\n        continue\n    filename = str(file_item.get('name') or file_item.get('filename') or 'documento_%d.xlsx' % index)\n    raw = decode(file_item.get('data'))\n    if not raw:\n        out['observaciones'].append('No se pudo decodificar %s.' % filename)\n        continue\n    extension = filename.lower().rsplit('.', 1)[-1] if '.' in filename else ''\n    if raw[:2] == b'PK':\n        try:\n            out['hojas'].extend(read_xlsx(raw, filename))\n            valid += 1\n        except Exception as error:\n            out['observaciones'].append('No se pudo abrir %s: %s' % (filename, error))\n    elif extension in ('csv', 'txt') or 'csv' in str(file_item.get('mimeType') or file_item.get('mime') or '').lower() or b'\\n' in raw[:4096]:\n        text = raw.decode('utf-8-sig', errors='replace')\n        try:\n            dialect = csv.Sniffer().sniff(text[:8192], delimiters=',;\\t|')\n        except Exception:\n            dialect = csv.excel\n        sheet = {'archivo': filename, 'nombre': filename, 'filas': []}\n        for row_number, row in enumerate(csv.reader(io.StringIO(text), dialect), 1):\n            add(sheet, row_number, row)\n        out['hojas'].append(sheet)\n        valid += 1\n    else:\n        out['observaciones'].append('Formato no compatible en %s.' % filename)\n\nif valid == 0 or not out['hojas']:\n    raise Exception('Ninguno de los documentos recibidos es válido o contiene hojas legibles.')\n\nreturn {'resultado': json.dumps(out, ensure_ascii=False, default=str)}"
             },
             "metadata": {
                 "designer": {
@@ -76,45 +69,45 @@
                             "label": "Python",
                             "nested": [
                                 {
-                                    "help": "Choose how the code is provided.",
                                     "name": "inputFormat",
                                     "type": "select",
                                     "label": "Input format",
+                                    "help": "Choose how the code is provided.",
+                                    "required": true,
                                     "default": "editor",
                                     "options": [
                                         {
-                                            "label": "Code editor",
                                             "value": "editor",
+                                            "label": "Code editor",
                                             "nested": [
                                                 {
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeEditorPython",
                                                     "type": "editor",
-                                                    "label": "Code",
                                                     "editor": "monaco",
-                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
                                                     "language": "python",
-                                                    "required": true
+                                                    "required": true,
+                                                    "label": "Code",
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
                                                 }
                                             ]
                                         },
                                         {
-                                            "label": "Mapped code (useful for AI)",
                                             "value": "string",
+                                            "label": "Mapped code (useful for AI)",
                                             "nested": [
                                                 {
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeStringPython",
                                                     "type": "text",
-                                                    "label": "Code",
-                                                    "default": "# You can map dynamic code from previous modules or inputs.",
                                                     "required": true,
-                                                    "multiline": true
+                                                    "multiline": true,
+                                                    "label": "Code",
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "default": "# You can map dynamic code from previous modules or inputs."
                                                 }
                                             ]
                                         }
-                                    ],
-                                    "required": true
+                                    ]
                                 }
                             ]
                         },
@@ -123,14 +116,14 @@
                             "label": "Code editor",
                             "nested": [
                                 {
-                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                     "name": "codeEditorPython",
                                     "type": "editor",
-                                    "label": "Code",
                                     "editor": "monaco",
-                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
                                     "language": "python",
-                                    "required": true
+                                    "required": true,
+                                    "label": "Code",
+                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
                                 }
                             ]
                         }
@@ -140,10 +133,10 @@
                     {
                         "name": "language",
                         "type": "select",
+                        "required": true,
+                        "mappable": true,
                         "label": "Language",
                         "default": "javascript",
-                        "mappable": true,
-                        "required": true,
                         "validate": {
                             "enum": [
                                 "javascript",
@@ -155,8 +148,8 @@
                         "name": "inputFormat",
                         "type": "select",
                         "label": "Input format",
-                        "default": "editor",
                         "required": true,
+                        "default": "editor",
                         "validate": {
                             "enum": [
                                 "editor",
@@ -167,67 +160,67 @@
                     {
                         "name": "codeEditorPython",
                         "type": "editor",
-                        "label": "Code",
                         "editor": "monaco",
-                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
                         "language": "python",
-                        "required": true
+                        "required": true,
+                        "label": "Code",
+                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
                     },
                     {
                         "name": "input",
-                        "spec": {
-                            "spec": [
-                                {
-                                    "name": "name",
-                                    "type": "text",
-                                    "label": "Name",
-                                    "required": true,
-                                    "validate": {
-                                        "max": 32,
-                                        "min": 1,
-                                        "pattern": "^[a-zA-Z0-9_]{1,32}$"
-                                    }
-                                },
-                                {
-                                    "name": "value",
-                                    "type": "any",
-                                    "label": "Value",
-                                    "required": false
-                                }
-                            ],
-                            "type": "collection",
-                            "label": "Variable"
-                        },
                         "type": "array",
-                        "label": "Input",
-                        "labels": {
-                            "add": "Add variable"
-                        },
                         "default": [
                             {
                                 "name": "foo",
                                 "value": "bar"
                             }
-                        ]
+                        ],
+                        "spec": {
+                            "type": "collection",
+                            "label": "Variable",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "required": true,
+                                    "validate": {
+                                        "pattern": "^[a-zA-Z0-9_]{1,32}$",
+                                        "min": 1,
+                                        "max": 32
+                                    },
+                                    "label": "Name"
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "any",
+                                    "required": false,
+                                    "label": "Value"
+                                }
+                            ]
+                        },
+                        "labels": {
+                            "add": "Add variable"
+                        },
+                        "label": "Input"
                     },
                     {
                         "name": "dependencies",
+                        "advanced": true,
+                        "type": "array",
                         "spec": {
                             "type": "text",
-                            "label": "Dependency",
                             "required": true,
+                            "label": "Dependency",
                             "validate": {
-                                "max": 214,
+                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$",
                                 "min": 1,
-                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$"
+                                "max": 214
                             }
                         },
-                        "type": "array",
-                        "label": "Additional dependencies (Enterprise plans only)",
                         "labels": {
                             "add": "Add dependency"
                         },
-                        "advanced": true
+                        "label": "Additional dependencies (Enterprise plans only)"
                     }
                 ]
             }
@@ -263,27 +256,18 @@
                     "y": -546
                 },
                 "restore": {
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "Intelfon's OpenAI connection"
-                        }
-                    },
                     "expect": {
                         "model": {
                             "mode": "chose",
                             "label": "gpt-5.6-sol (system)"
                         },
-                        "inputContentType": {
-                            "mode": "chose",
-                            "label": "Text prompt",
-                            "nested": [
-                                {
-                                    "help": "A text input to the model, equivalent to a text input with the `user` role.",
-                                    "name": "input",
-                                    "type": "text",
-                                    "label": "Prompt"
+                        "format": {
+                            "nested": {
+                                "type": {
+                                    "mode": "chose",
+                                    "label": "JSON object"
                                 }
-                            ]
+                            }
                         },
                         "reasoning": {
                             "nested": {
@@ -297,17 +281,26 @@
                                 }
                             }
                         },
-                        "format": {
-                            "nested": {
-                                "type": {
-                                    "mode": "chose",
-                                    "label": "JSON object"
-                                }
-                            }
-                        },
                         "truncation": {
                             "mode": "chose",
                             "label": "Disabled"
+                        },
+                        "inputContentType": {
+                            "mode": "chose",
+                            "label": "Text prompt",
+                            "nested": [
+                                {
+                                    "help": "A text input to the model, equivalent to a text input with the `user` role.",
+                                    "name": "input",
+                                    "type": "text",
+                                    "label": "Prompt"
+                                }
+                            ]
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "label": "Intelfon's OpenAI connection"
                         }
                     }
                 },
@@ -1803,12 +1796,12 @@
                     }
                 ],
                 "contentType": "custom",
-                "contentTypeValue": "text/xml; charset=utf-8",
-                "rawBodyContent": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <TipoCambioDiaString xmlns=\"http://www.banguat.gob.gt/variables/ws/\" />\n  </soap:Body>\n</soap:Envelope>",
-                "parseResponse": true,
-                "stopOnHttpError": true,
-                "allowRedirects": true,
                 "shareCookies": false,
+                "parseResponse": true,
+                "allowRedirects": true,
+                "rawBodyContent": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <TipoCambioDiaString xmlns=\"http://www.banguat.gob.gt/variables/ws/\" />\n  </soap:Body>\n</soap:Envelope>",
+                "stopOnHttpError": true,
+                "contentTypeValue": "text/xml; charset=utf-8",
                 "requestCompressedContent": true
             },
             "metadata": {
@@ -1817,12 +1810,6 @@
                     "y": -566
                 },
                 "restore": {
-                    "parameters": {
-                        "authenticationType": {
-                            "mode": "chose",
-                            "label": "No authentication"
-                        }
-                    },
                     "expect": {
                         "method": {
                             "mode": "chose",
@@ -1834,28 +1821,33 @@
                             "nested": [
                                 {
                                     "name": "contentTypeValue",
-                                    "label": "Content type value",
                                     "type": "text",
+                                    "label": "Content type value",
                                     "required": true
                                 },
                                 {
                                     "name": "rawBodyContent",
-                                    "label": "Body content",
                                     "type": "buffer",
+                                    "label": "Body content",
                                     "required": true
                                 }
                             ]
+                        }
+                    },
+                    "parameters": {
+                        "authenticationType": {
+                            "mode": "chose",
+                            "label": "No authentication"
                         }
                     }
                 },
                 "parameters": [
                     {
                         "name": "authenticationType",
-                        "label": "Authentication type",
-                        "placeholder": "Select authentication type",
                         "type": "select",
-                        "required": true,
+                        "label": "Authentication type",
                         "mappable": false,
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "noAuth",
@@ -1863,13 +1855,13 @@
                                 "basicAuth",
                                 "oAuth"
                             ]
-                        }
+                        },
+                        "placeholder": "Select authentication type"
                     },
                     {
                         "name": "tlsType",
-                        "label": "Transport layer security (TLS)",
-                        "placeholder": "Select TLS type",
                         "type": "select",
+                        "label": "Transport layer security (TLS)",
                         "advanced": true,
                         "mappable": false,
                         "validate": {
@@ -1877,28 +1869,29 @@
                                 "mTls",
                                 "tls"
                             ]
-                        }
+                        },
+                        "placeholder": "Select TLS type"
                     },
                     {
                         "name": "proxyKeychain",
-                        "label": "Proxy",
                         "type": "keychain:proxy",
+                        "label": "Proxy",
                         "advanced": true
                     }
                 ],
                 "expect": [
                     {
                         "name": "url",
-                        "label": "URL",
                         "type": "url",
+                        "label": "URL",
                         "required": true
                     },
                     {
                         "name": "method",
-                        "label": "Method",
                         "type": "select",
-                        "required": true,
+                        "label": "Method",
                         "default": "get",
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "get",
@@ -1913,20 +1906,13 @@
                     },
                     {
                         "name": "headers",
-                        "label": "Headers",
-                        "type": "array",
-                        "labels": {
-                            "add": "Add a header"
-                        },
                         "spec": {
                             "name": "header",
-                            "label": "Header",
-                            "type": "collection",
                             "spec": [
                                 {
                                     "name": "name",
-                                    "label": "Name",
                                     "type": "text",
+                                    "label": "Name",
                                     "required": true,
                                     "validate": {
                                         "pattern": "^[-!#$%&'*+.^_`|~0-9A-Za-z]+$"
@@ -1934,43 +1920,49 @@
                                 },
                                 {
                                     "name": "value",
-                                    "label": "Value",
-                                    "type": "text"
+                                    "type": "text",
+                                    "label": "Value"
                                 }
-                            ]
+                            ],
+                            "type": "collection",
+                            "label": "Header"
+                        },
+                        "type": "array",
+                        "label": "Headers",
+                        "labels": {
+                            "add": "Add a header"
                         }
                     },
                     {
                         "name": "queryParameters",
-                        "label": "Query parameters",
-                        "type": "array",
-                        "labels": {
-                            "add": "Add a parameter"
-                        },
                         "spec": {
                             "name": "queryParameter",
-                            "label": "Parameter",
-                            "type": "collection",
                             "spec": [
                                 {
                                     "name": "name",
-                                    "label": "Name",
                                     "type": "text",
+                                    "label": "Name",
                                     "required": true
                                 },
                                 {
                                     "name": "value",
-                                    "label": "Value",
-                                    "type": "text"
+                                    "type": "text",
+                                    "label": "Value"
                                 }
-                            ]
+                            ],
+                            "type": "collection",
+                            "label": "Parameter"
+                        },
+                        "type": "array",
+                        "label": "Query parameters",
+                        "labels": {
+                            "add": "Add a parameter"
                         }
                     },
                     {
                         "name": "contentType",
-                        "label": "Body content type",
-                        "placeholder": "Select body content type",
                         "type": "select",
+                        "label": "Body content type",
                         "mappable": false,
                         "validate": {
                             "enum": [
@@ -1979,32 +1971,32 @@
                                 "urlEncoded",
                                 "custom"
                             ]
-                        }
+                        },
+                        "placeholder": "Select body content type"
                     },
                     {
                         "name": "contentTypeValue",
-                        "label": "Content type value",
                         "type": "text",
+                        "label": "Content type value",
                         "required": true
                     },
                     {
                         "name": "rawBodyContent",
-                        "label": "Body content",
                         "type": "buffer",
+                        "label": "Body content",
                         "required": true
                     },
                     {
                         "name": "parseResponse",
-                        "label": "Parse response",
                         "type": "boolean",
-                        "required": true,
-                        "default": true
+                        "label": "Parse response",
+                        "default": true,
+                        "required": true
                     },
                     {
                         "name": "paginationType",
-                        "label": "Pagination type",
-                        "placeholder": "Select pagination type",
                         "type": "select",
+                        "label": "Pagination type",
                         "mappable": false,
                         "validate": {
                             "enum": [
@@ -2013,101 +2005,102 @@
                                 "urlBased",
                                 "tokenBased"
                             ]
-                        }
+                        },
+                        "placeholder": "Select pagination type"
                     },
                     {
                         "name": "stopOnHttpError",
-                        "label": "Return error if HTTP request fails",
                         "type": "boolean",
-                        "required": true,
+                        "label": "Return error if HTTP request fails",
+                        "default": true,
                         "advanced": true,
-                        "default": true
+                        "required": true
                     },
                     {
                         "name": "timeout",
-                        "label": "Timeout",
                         "type": "uinteger",
+                        "label": "Timeout",
                         "advanced": true,
                         "validate": {
-                            "min": 1,
-                            "max": 300
+                            "max": 300,
+                            "min": 1
                         }
                     },
                     {
                         "name": "allowRedirects",
-                        "label": "Allow redirects",
                         "type": "boolean",
-                        "required": true,
+                        "label": "Allow redirects",
+                        "default": true,
                         "advanced": true,
-                        "default": true
+                        "required": true
                     },
                     {
                         "name": "shareCookies",
-                        "label": "Share cookies with other HTTP modules",
                         "type": "boolean",
-                        "required": true,
+                        "label": "Share cookies with other HTTP modules",
                         "default": false,
-                        "advanced": true
+                        "advanced": true,
+                        "required": true
                     },
                     {
                         "name": "requestCompressedContent",
-                        "label": "Request compressed content",
                         "type": "boolean",
-                        "required": true,
+                        "label": "Request compressed content",
                         "default": true,
-                        "advanced": true
+                        "advanced": true,
+                        "required": true
                     }
                 ],
                 "interface": [
                     {
                         "name": "data",
-                        "label": "Data",
-                        "type": "any"
+                        "type": "any",
+                        "label": "Data"
                     },
                     {
                         "name": "statusCode",
-                        "label": "Status Code",
-                        "type": "number"
+                        "type": "number",
+                        "label": "Status Code"
                     },
                     {
                         "name": "headers",
-                        "label": "Headers",
-                        "type": "collection",
                         "spec": [
                             {
                                 "name": "content-length",
-                                "label": "Content-Length",
-                                "type": "text"
+                                "type": "text",
+                                "label": "Content-Length"
                             },
                             {
                                 "name": "content-encoding",
-                                "label": "Content-Encoding",
-                                "type": "text"
+                                "type": "text",
+                                "label": "Content-Encoding"
                             },
                             {
                                 "name": "content-type",
-                                "label": "Content-Type",
-                                "type": "text"
+                                "type": "text",
+                                "label": "Content-Type"
                             },
                             {
                                 "name": "server",
-                                "label": "Server",
-                                "type": "text"
+                                "type": "text",
+                                "label": "Server"
                             },
                             {
                                 "name": "cache-control",
-                                "label": "Cache-Control",
-                                "type": "text"
+                                "type": "text",
+                                "label": "Cache-Control"
                             },
                             {
                                 "name": "set-cookie",
-                                "label": "Set-Cookie",
-                                "type": "array",
                                 "spec": {
                                     "type": "text"
-                                }
+                                },
+                                "type": "array",
+                                "label": "Set-Cookie"
                             }
-                        ]
+                        ],
+                        "type": "collection",
+                        "label": "Headers"
                     }
                 ]
             }
@@ -2138,7 +2131,7 @@
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "codeEditorPython": "import base64, io, json, re, unicodedata\nfrom datetime import datetime, date\nfrom decimal import Decimal, InvalidOperation, ROUND_HALF_UP\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s='' if v is None else str(v)\n    s=unicodedata.normalize('NFKD',s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef items(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(o,*names,default=None):\n    if not isinstance(o,dict):return default\n    by={norm(k):v for k,v in o.items()}\n    for name in names:\n        if norm(name) in by:return by[norm(name)]\n    return default\n\ndef infer_bank(name,sheet,evidence):\n    if name is not None and str(name).strip():return str(name).strip()\n    for text in [sheet]+[str(x) for x in items(evidence)]:\n        m=re.search(r'(?<![A-Za-z])(BI|G&T|BAC|BANRURAL|BAN)(?![A-Za-z])',text or '',re.I)\n        if m:return m.group(1).upper()\n    return None\n\ndef num(v):\n    if v is None or isinstance(v,bool):return Decimal('0')\n    if isinstance(v,(int,float,Decimal)):return Decimal(str(v))\n    s=re.sub(r'[^0-9,.-]','',str(v).strip())\n    if not s:return Decimal('0')\n    if ',' in s and '.' in s:s=s.replace('.','').replace(',','.') if s.rfind(',')>s.rfind('.') else s.replace(',','')\n    elif ',' in s:\n        p=s.split(',');s=''.join(p[:-1])+'.'+p[-1] if len(p[-1]) in (1,2) else ''.join(p)\n    try:return Decimal(s)\n    except InvalidOperation:return Decimal('0')\n\ndef money(v):return float(Decimal(v).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP))\n\ndef parse_json(v):\n    if isinstance(v,dict):return v\n    if not isinstance(v,str):raise Exception('La respuesta del análisis no es texto JSON.')\n    s=v.strip().replace('```json','').replace('```','').strip();p=s.find('{')\n    if p<0:raise Exception('La respuesta del análisis no contiene un objeto JSON.')\n    s=s[p:]\n    try:return json.loads(s)\n    except Exception:\n        try:return json.loads(re.sub(r',\\s*([}\\]])',r'\\1',s))\n        except Exception as e:raise Exception(f'El análisis no es JSON válido y no se pudo reparar: {e}')\n\ndef decode(v):\n    if isinstance(v,bytes):return v\n    if isinstance(v,bytearray):return bytes(v)\n    if isinstance(v,dict):\n        for k in ('data','content','body','buffer','value','base64'):\n            if k in v:\n                b=decode(v[k])\n                if b:return b\n        return None\n    if isinstance(v,(list,tuple)) and v and all(isinstance(x,int) and 0<=x<=255 for x in v):return bytes(v)\n    s=str(v or '').strip();m=re.search(r'IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)',s)\n    if m:\n        try:return bytes.fromhex(m.group(1))\n        except Exception:pass\n    if s.startswith('data:') and ',' in s:s=s.split(',',1)[1]\n    s=re.sub(r'\\s+','',s)\n    try:return base64.b64decode(s+'='*(-len(s)%4),validate=False)\n    except Exception:return None\n\ndef parse_rate(v):\n    if isinstance(v,(int,float,Decimal)):return Decimal(str(v))\n    if isinstance(v,dict):\n        for k,val in v.items():\n            if norm(k) in ('tipocambiodiastringresult','tipocambio','result','value','valor','rate','data'):\n                r=parse_rate(val)\n                if r and r>0:return r\n        for val in v.values():\n            r=parse_rate(val)\n            if r and r>0:return r\n    s=str(v or '')\n    patterns=[r'TipoCambioDiaStringResult[^>]*>\\s*([0-9]+(?:[.,][0-9]+)?)',r'<(?:TipoCambio|Value|valor)[^>]*>\\s*([0-9]+(?:[.,][0-9]+)?)',r'\\b([0-9]+[.,][0-9]{2,6})\\b']\n    for p in patterns:\n        m=re.search(p,s,re.I)\n        if m:\n            try:return num(m.group(1))\n            except Exception:pass\n    return None\n\ndef movement_totals(movs):\n    seen=set();clean=[];inc=Decimal('0');out=Decimal('0')\n    for m in items(movs):\n        if not isinstance(m,dict):continue\n        sig=json.dumps(m,ensure_ascii=False,sort_keys=True,default=str)\n        if sig in seen:continue\n        seen.add(sig);clean.append(m)\n        a=num(get(m,'Ingreso','Ingresos','Abono','Haber','Credito','Crédito','Deposit','Deposito'));b=num(get(m,'Egreso','Egresos','Cargo','Debe','Debito','Débito','Debit','Withdrawal','Retiro'))\n        if a==0 and b==0:\n            typ=norm(get(m,'TT','Tipo','Tipo_Transaccion','Tipo de Transacción',default=''));amount=abs(num(get(m,'Monto','Importe','Valor','Amount')))\n            if typ in ('de','nc','deposito','abono','credito','credit','income','ingreso'):a=amount\n            elif typ in ('cq','nd','retiro','cargo','debito','debit','expense','egreso'):b=amount\n        inc+=abs(a);out+=abs(b)\n    return clean,inc,out\n\ndef write_row(ws,row,values):\n    for col,v in enumerate(values,1):\n        cell=ws.cell(row,col)\n        if isinstance(cell,MergedCell):continue\n        if isinstance(v,(dict,list)):v=json.dumps(v,ensure_ascii=False,default=str)\n        if isinstance(v,(datetime,date)):v=v.strftime('%d/%m/%Y')\n        cell.value=v\n\ndef fill_sheet(wb,name,headers,rows):\n    ws=wb[name] if name in wb.sheetnames else wb.create_sheet(name)\n    for r in range(1,ws.max_row+1):\n        for c in range(1,max(ws.max_column,len(headers))+1):\n            cell=ws.cell(r,c)\n            if not isinstance(cell,MergedCell):cell.value=None\n    write_row(ws,1,headers)\n    for r,row in enumerate(rows,2):write_row(ws,r,row)\n\nopenai_result=input.get('openai_result');template=input.get('plantilla_excel');raw=input.get('raw_extract');rate_raw=input.get('tipo_cambio_raw')\nif not openai_result or not template:raise Exception('Faltan el análisis o la plantilla de salida.')\ndata=parse_json(openai_result)\nif not isinstance(data,dict):raise Exception('El análisis debe ser un objeto JSON.')\nrate=parse_rate(rate_raw);observations=items(data.get('observaciones'))\nif not rate or rate<=0:raise Exception('No se pudo obtener el tipo de cambio diario del Banco de Guatemala.')\nraw_obj=raw\nif isinstance(raw,str):\n    try:raw_obj=json.loads(raw)\n    except Exception:raw_obj={}\nrawtxt=norm(json.dumps(raw_obj,ensure_ascii=False,default=str));records=[]\nfor bank in items(data.get('bancos_procesados')):\n    if not isinstance(bank,dict):continue\n    evidence=items(get(bank,'evidencia',default=[]));bank_name=infer_bank(get(bank,'Banco','banco'),get(bank,'hoja','Hoja',default=''),evidence);account=get(bank,'Cuenta','cuenta')\n    if bank_name is None or not str(bank_name).strip():bank_name='Banco no identificado';observations.append({'Campo':'Banco','Detalle':'No se encontró nombre ni abreviatura verificable en el documento.'})\n    movs,inc,out=movement_totals(get(bank,'estado_cuenta','Movimientos','movimientos','transacciones',default=[]))\n    cur=get(bank,'Moneda','moneda');cn=norm(cur)\n    factor=Decimal('1')/rate if cn in ('gtq','qtz','quetzal','quetzales','q') else Decimal('1') if cn in ('usd','dollar','dolares','us dollar') else None\n    if factor is None:observations.append({'Banco':bank_name,'Cuenta':account,'Campo':'Moneda','Detalle':f'Moneda no convertida a USD: {cur}'});factor=Decimal('0')\n    rec=dict(bank);rec['Banco']=bank_name;rec['Cuenta']=account;rec['estado_cuenta']=movs;rec['Total_Ingresos']=money(inc);rec['Total_Egresos']=money(out);rec['Neto']=money(inc-out);rec['Tipo_Cambio_GTQ_USD']=float(rate);rec['Total_Ingresos_USD']=money(inc*factor);rec['Total_Egresos_USD']=money(out*factor);rec['Neto_USD']=money((inc-out)*factor);rec['Saldo_Inicial_USD']=money(num(get(bank,'Saldo_Inicial','Saldo Inicial'))*factor);rec['Saldo_Final_USD']=money(num(get(bank,'Saldo_Final','Saldo Final'))*factor);records.append(rec)\nraw_bytes=decode(template)\nif not raw_bytes or raw_bytes[:2]!=b'PK':raise Exception('La plantilla no es un XLSX válido.')\nwb=openpyxl.load_workbook(io.BytesIO(raw_bytes))\n# Preserve every source row in a dedicated audit sheet.\nsource_rows=[]\nfor h in items(get(raw_obj,'hojas',default=[])):\n    for f in items(get(h,'filas',default=[])):\n        source_rows.append([get(h,'archivo','Archivo',default=''),get(h,'nombre','Hoja',default=''),get(f,'fila','Fila',default='')]+items(get(f,'valores',default=[]))[:30])\nfill_sheet(wb,'Datos Completos',['Archivo','Hoja','Fila']+[f'Columna {i}' for i in range(1,31)],source_rows)\nfill_sheet(wb,'Consolidado General',['Pais','Banco','Cuenta','Moneda','Saldo Inicial','Total Ingresos','Total Egresos','Saldo Final','Neto','Cantidad Movimientos'],[[get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),get(r,'Saldo_Inicial','Saldo Inicial'),r['Total_Ingresos'],r['Total_Egresos'],get(r,'Saldo_Final','Saldo Final'),r['Neto'],len(r['estado_cuenta'])] for r in records])\nregional=[];tot_i=Decimal('0');tot_e=Decimal('0');tot_n=Decimal('0')\nfor r in records:\n    si=Decimal(str(r['Saldo_Inicial_USD']));sf=Decimal(str(r['Saldo_Final_USD']));i=Decimal(str(r['Total_Ingresos_USD']));e=Decimal(str(r['Total_Egresos_USD']));n=Decimal(str(r['Neto_USD']));calc=si+i-e;diff=calc-sf;tot_i+=i;tot_e+=e;tot_n+=n\n    regional.append([get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),'USD',r['Tipo_Cambio_GTQ_USD'],money(si),money(i),money(e),money(sf),money(calc),money(diff),'OK' if money(diff)==0 else 'REVISAR'])\nregional.append(['TOTAL REGIONAL','Todos','Todas','USD','USD',float(rate),'',money(tot_i),money(tot_e),'', '',money(tot_n),''])\nfill_sheet(wb,'Consolidado Regional USD',['Pais','Banco','Cuenta','Moneda Original','Moneda Consolidada','Tipo Cambio GTQ/USD','Saldo Inicial USD','Ingresos USD','Egresos USD','Saldo Final USD','Saldo Calculado USD','Diferencia USD','Conciliacion'],regional)\ndetail=[]\nfor r in records:\n    for m in r['estado_cuenta']:\n        detail.append([get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),get(m,'Fecha','fecha'),get(m,'TT','Tipo'),get(m,'Descripcion','Descripción','description'),get(m,'No. Doc','Documento','documento'),get(m,'Debe','debe','Egreso','Egresos'),get(m,'Haber','haber','Ingreso','Ingresos'),get(m,'Saldo','saldo'),get(m,'archivo','Archivo'),get(m,'hoja','Hoja'),get(m,'fila','Fila')])\nfill_sheet(wb,'Detalle Movimientos',['Pais','Banco','Cuenta','Moneda','Fecha','Tipo','Descripcion','Documento','Debe','Haber','Saldo','Archivo','Hoja','Fila'],detail)\nfill_sheet(wb,'Observaciones',['Tipo','Detalle'],[[get(o,'Campo','Tipo',default='Observacion'),get(o,'Detalle',default=o if not isinstance(o,dict) else '')] for o in observations])\nout=io.BytesIO();wb.save(out);out.seek(0);b64=base64.b64encode(out.getvalue()).decode('ascii')\nreturn {'result':{'filename':'ReporteFinancieroIntelfon.xlsx','data':b64},'filename':'ReporteFinancieroIntelfon.xlsx','data':b64,'resumen_general':json.dumps(records,ensure_ascii=False,default=str),'bancos_procesados':json.dumps(records,ensure_ascii=False,default=str),'totales_globales':json.dumps({'tipo_cambio_gtq_usd':float(rate),'total_ingresos_usd':money(tot_i),'total_egresos_usd':money(tot_e),'total_neto_usd':money(tot_n)},ensure_ascii=False,default=str),'total_registros':len(records),'tipo_cambio_gtq_usd':float(rate),'consolidado_regional_usd':json.dumps(regional,ensure_ascii=False,default=str),'filas_fuente_completas':len(source_rows)}"
+                "codeEditorPython": "import base64, io, json, re, unicodedata\nfrom datetime import datetime, date\nfrom decimal import Decimal, InvalidOperation, ROUND_HALF_UP\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s='' if v is None else str(v)\n    s=unicodedata.normalize('NFKD',s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef items(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(o,*names,default=None):\n    if not isinstance(o,dict):return default\n    by={norm(k):v for k,v in o.items()}\n    for name in names:\n        if norm(name) in by:return by[norm(name)]\n    return default\n\ndef infer_bank(name,sheet,evidence):\n    if name is not None and str(name).strip():return str(name).strip()\n    for text in [sheet]+[str(x) for x in items(evidence)]:\n        m=re.search(r'(?<![A-Za-z])(BI|G&T|BAC|BANRURAL|BAN)(?![A-Za-z])',text or '',re.I)\n        if m:return m.group(1).upper()\n    return None\n\ndef num(v):\n    if v is None or isinstance(v,bool):return Decimal('0')\n    if isinstance(v,(int,float,Decimal)):return Decimal(str(v))\n    s=re.sub(r'[^0-9,.-]','',str(v).strip())\n    if not s:return Decimal('0')\n    if ',' in s and '.' in s:s=s.replace('.','').replace(',','.') if s.rfind(',')>s.rfind('.') else s.replace(',','')\n    elif ',' in s:\n        p=s.split(',');s=''.join(p[:-1])+'.'+p[-1] if len(p[-1]) in (1,2) else ''.join(p)\n    try:return Decimal(s)\n    except InvalidOperation:return Decimal('0')\n\ndef money(v):return float(Decimal(v).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP))\n\ndef parse_json(v):\n    if isinstance(v,dict):return v\n    if isinstance(v,list):return {'bancos_procesados':v}\n    if not isinstance(v,str):\n        try:v=json.dumps(v,ensure_ascii=False)\n        except Exception:v=str(v)\n    s=v.strip().replace('```json','').replace('```','').strip();p=s.find('{')\n    if p<0:\n        if s.startswith('['):\n            try:return {'bancos_procesados':json.loads(s)}\n            except Exception:pass\n        raise Exception('La respuesta del análisis no contiene un objeto JSON.')\n    s=s[p:]\n    try:return json.loads(s)\n    except Exception:\n        try:return json.loads(re.sub(r',\\s*([}\\]])',r'\\1',s))\n        except Exception as e:raise Exception(f'El análisis no es JSON válido y no se pudo reparar: {e}')\n\ndef decode(v):\n    if isinstance(v,bytes):return v\n    if isinstance(v,bytearray):return bytes(v)\n    if isinstance(v,dict):\n        for k in ('data','content','body','buffer','value','base64'):\n            if k in v:\n                b=decode(v[k])\n                if b:return b\n        return None\n    if isinstance(v,(list,tuple)) and v and all(isinstance(x,int) and 0<=x<=255 for x in v):return bytes(v)\n    s=str(v or '').strip();m=re.search(r'IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)',s)\n    if m:\n        try:return bytes.fromhex(m.group(1))\n        except Exception:pass\n    if s.startswith('data:') and ',' in s:s=s.split(',',1)[1]\n    s=re.sub(r'\\s+','',s)\n    try:return base64.b64decode(s+'='*(-len(s)%4),validate=False)\n    except Exception:return None\n\ndef parse_rate(v):\n    if isinstance(v,(int,float,Decimal)):return Decimal(str(v))\n    if isinstance(v,dict):\n        for k,val in v.items():\n            if norm(k) in ('tipocambiodiastringresult','tipocambio','result','value','valor','rate','data'):\n                r=parse_rate(val)\n                if r and r>0:return r\n        for val in v.values():\n            r=parse_rate(val)\n            if r and r>0:return r\n    s=str(v or '')\n    patterns=[r'TipoCambioDiaStringResult[^>]*>\\s*([0-9]+(?:[.,][0-9]+)?)',r'<(?:TipoCambio|Value|valor)[^>]*>\\s*([0-9]+(?:[.,][0-9]+)?)',r'\\b([0-9]+[.,][0-9]{2,6})\\b']\n    for p in patterns:\n        m=re.search(p,s,re.I)\n        if m:\n            try:return num(m.group(1))\n            except Exception:pass\n    return None\n\ndef movement_totals(movs):\n    seen=set();clean=[];inc=Decimal('0');out=Decimal('0')\n    for m in items(movs):\n        if not isinstance(m,dict):continue\n        sig=json.dumps(m,ensure_ascii=False,sort_keys=True,default=str)\n        if sig in seen:continue\n        seen.add(sig);clean.append(m)\n        a=num(get(m,'Ingreso','Ingresos','Abono','Haber','Credito','Crédito','Deposit','Deposito'));b=num(get(m,'Egreso','Egresos','Cargo','Debe','Debito','Débito','Debit','Withdrawal','Retiro'))\n        if a==0 and b==0:\n            typ=norm(get(m,'TT','Tipo','Tipo_Transaccion','Tipo de Transacción',default=''));amount=abs(num(get(m,'Monto','Importe','Valor','Amount')))\n            if typ in ('de','nc','deposito','abono','credito','credit','income','ingreso'):a=amount\n            elif typ in ('cq','nd','retiro','cargo','debito','debit','expense','egreso'):b=amount\n        inc+=abs(a);out+=abs(b)\n    return clean,inc,out\n\ndef write_row(ws,row,values):\n    for col,v in enumerate(values,1):\n        cell=ws.cell(row,col)\n        if isinstance(cell,MergedCell):continue\n        if isinstance(v,(dict,list)):v=json.dumps(v,ensure_ascii=False,default=str)\n        if isinstance(v,(datetime,date)):v=v.strftime('%d/%m/%Y')\n        cell.value=v\n\ndef fill_sheet(wb,name,headers,rows):\n    ws=wb[name] if name in wb.sheetnames else wb.create_sheet(name)\n    for r in range(1,ws.max_row+1):\n        for c in range(1,max(ws.max_column,len(headers))+1):\n            cell=ws.cell(r,c)\n            if not isinstance(cell,MergedCell):cell.value=None\n    write_row(ws,1,headers)\n    for r,row in enumerate(rows,2):write_row(ws,r,row)\n\nopenai_result=input.get('openai_result');template=input.get('plantilla_excel');raw=input.get('raw_extract');rate_raw=input.get('tipo_cambio_raw')\nif not openai_result or not template:raise Exception('Faltan el análisis o la plantilla de salida.')\ndata=parse_json(openai_result)\nif not isinstance(data,dict):raise Exception('El análisis debe ser un objeto JSON.')\nrate=parse_rate(rate_raw);observations=items(data.get('observaciones'))\nif not rate or rate<=0:rate=Decimal('7.80');observations.append({'Campo':'Tipo_Cambio','Detalle':'Se utilizó tasa estándar de respaldo (7.80 GTQ/USD).'});\nraw_obj=raw\nif isinstance(raw,str):\n    try:raw_obj=json.loads(raw)\n    except Exception:raw_obj={}\nrawtxt=norm(json.dumps(raw_obj,ensure_ascii=False,default=str));records=[]\nfor bank in items(data.get('bancos_procesados')):\n    if not isinstance(bank,dict):continue\n    evidence=items(get(bank,'evidencia',default=[]));bank_name=infer_bank(get(bank,'Banco','banco'),get(bank,'hoja','Hoja',default=''),evidence);account=get(bank,'Cuenta','cuenta')\n    if bank_name is None or not str(bank_name).strip():bank_name='Banco no identificado';observations.append({'Campo':'Banco','Detalle':'No se encontró nombre ni abreviatura verificable en el documento.'})\n    movs,inc,out=movement_totals(get(bank,'estado_cuenta','Movimientos','movimientos','transacciones',default=[]))\n    cur=get(bank,'Moneda','moneda');cn=norm(cur)\n    factor=Decimal('1')/rate if cn in ('gtq','qtz','quetzal','quetzales','q') else Decimal('1') if cn in ('usd','dollar','dolares','us dollar') else None\n    if factor is None:observations.append({'Banco':bank_name,'Cuenta':account,'Campo':'Moneda','Detalle':f'Moneda no convertida a USD: {cur}'});factor=Decimal('0')\n    rec=dict(bank);rec['Banco']=bank_name;rec['Cuenta']=account;rec['estado_cuenta']=movs;rec['Total_Ingresos']=money(inc);rec['Total_Egresos']=money(out);rec['Neto']=money(inc-out);rec['Tipo_Cambio_GTQ_USD']=float(rate);rec['Total_Ingresos_USD']=money(inc*factor);rec['Total_Egresos_USD']=money(out*factor);rec['Neto_USD']=money((inc-out)*factor);rec['Saldo_Inicial_USD']=money(num(get(bank,'Saldo_Inicial','Saldo Inicial'))*factor);rec['Saldo_Final_USD']=money(num(get(bank,'Saldo_Final','Saldo Final'))*factor);records.append(rec)\nraw_bytes=decode(template)\nif not raw_bytes or raw_bytes[:2]!=b'PK':raise Exception('La plantilla no es un XLSX válido.')\nwb=openpyxl.load_workbook(io.BytesIO(raw_bytes))\n# Preserve every source row in a dedicated audit sheet.\nsource_rows=[]\nfor h in items(get(raw_obj,'hojas',default=[])):\n    for f in items(get(h,'filas',default=[])):\n        source_rows.append([get(h,'archivo','Archivo',default=''),get(h,'nombre','Hoja',default=''),get(f,'fila','Fila',default='')]+items(get(f,'valores',default=[]))[:30])\nfill_sheet(wb,'Datos Completos',['Archivo','Hoja','Fila']+[f'Columna {i}' for i in range(1,31)],source_rows)\nfill_sheet(wb,'Consolidado General',['Pais','Banco','Cuenta','Moneda','Saldo Inicial','Total Ingresos','Total Egresos','Saldo Final','Neto','Cantidad Movimientos'],[[get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),get(r,'Saldo_Inicial','Saldo Inicial'),r['Total_Ingresos'],r['Total_Egresos'],get(r,'Saldo_Final','Saldo Final'),r['Neto'],len(r['estado_cuenta'])] for r in records])\nregional=[];tot_i=Decimal('0');tot_e=Decimal('0');tot_n=Decimal('0')\nfor r in records:\n    si=Decimal(str(r['Saldo_Inicial_USD']));sf=Decimal(str(r['Saldo_Final_USD']));i=Decimal(str(r['Total_Ingresos_USD']));e=Decimal(str(r['Total_Egresos_USD']));n=Decimal(str(r['Neto_USD']));calc=si+i-e;diff=calc-sf;tot_i+=i;tot_e+=e;tot_n+=n\n    regional.append([get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),'USD',r['Tipo_Cambio_GTQ_USD'],money(si),money(i),money(e),money(sf),money(calc),money(diff),'OK' if money(diff)==0 else 'REVISAR'])\nregional.append(['TOTAL REGIONAL','Todos','Todas','USD','USD',float(rate),'',money(tot_i),money(tot_e),'', '',money(tot_n),''])\nfill_sheet(wb,'Consolidado Regional USD',['Pais','Banco','Cuenta','Moneda Original','Moneda Consolidada','Tipo Cambio GTQ/USD','Saldo Inicial USD','Ingresos USD','Egresos USD','Saldo Final USD','Saldo Calculado USD','Diferencia USD','Conciliacion'],regional)\ndetail=[]\nfor r in records:\n    for m in r['estado_cuenta']:\n        detail.append([get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),get(m,'Fecha','fecha'),get(m,'TT','Tipo'),get(m,'Descripcion','Descripción','description'),get(m,'No. Doc','Documento','documento'),get(m,'Debe','debe','Egreso','Egresos'),get(m,'Haber','haber','Ingreso','Ingresos'),get(m,'Saldo','saldo'),get(m,'archivo','Archivo'),get(m,'hoja','Hoja'),get(m,'fila','Fila')])\nfill_sheet(wb,'Detalle Movimientos',['Pais','Banco','Cuenta','Moneda','Fecha','Tipo','Descripcion','Documento','Debe','Haber','Saldo','Archivo','Hoja','Fila'],detail)\nfill_sheet(wb,'Observaciones',['Tipo','Detalle'],[[get(o,'Campo','Tipo',default='Observacion'),get(o,'Detalle',default=o if not isinstance(o,dict) else '')] for o in observations])\nout=io.BytesIO();wb.save(out);out.seek(0);b64=base64.b64encode(out.getvalue()).decode('ascii')\nreturn {'result':{'filename':'ReporteFinancieroIntelfon.xlsx','data':b64},'filename':'ReporteFinancieroIntelfon.xlsx','data':b64,'resumen_general':json.dumps(records,ensure_ascii=False,default=str),'bancos_procesados':json.dumps(records,ensure_ascii=False,default=str),'totales_globales':json.dumps({'tipo_cambio_gtq_usd':float(rate),'total_ingresos_usd':money(tot_i),'total_egresos_usd':money(tot_e),'total_neto_usd':money(tot_n)},ensure_ascii=False,default=str),'total_registros':len(records),'tipo_cambio_gtq_usd':float(rate),'consolidado_regional_usd':json.dumps(regional,ensure_ascii=False,default=str),'filas_fuente_completas':len(source_rows)}"
             },
             "metadata": {
                 "designer": {
@@ -2152,45 +2145,45 @@
                             "label": "Python",
                             "nested": [
                                 {
+                                    "help": "Choose how the code is provided.",
                                     "name": "inputFormat",
                                     "type": "select",
                                     "label": "Input format",
-                                    "help": "Choose how the code is provided.",
-                                    "required": true,
                                     "default": "editor",
                                     "options": [
                                         {
-                                            "value": "editor",
                                             "label": "Code editor",
+                                            "value": "editor",
                                             "nested": [
                                                 {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeEditorPython",
                                                     "type": "editor",
-                                                    "editor": "monaco",
-                                                    "language": "python",
-                                                    "required": true,
                                                     "label": "Code",
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                                    "editor": "monaco",
+                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                                    "language": "python",
+                                                    "required": true
                                                 }
                                             ]
                                         },
                                         {
-                                            "value": "string",
                                             "label": "Mapped code (useful for AI)",
+                                            "value": "string",
                                             "nested": [
                                                 {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeStringPython",
                                                     "type": "text",
-                                                    "required": true,
-                                                    "multiline": true,
                                                     "label": "Code",
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "default": "# You can map dynamic code from previous modules or inputs."
+                                                    "default": "# You can map dynamic code from previous modules or inputs.",
+                                                    "required": true,
+                                                    "multiline": true
                                                 }
                                             ]
                                         }
-                                    ]
+                                    ],
+                                    "required": true
                                 }
                             ]
                         },
@@ -2199,14 +2192,14 @@
                             "label": "Code editor",
                             "nested": [
                                 {
+                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                     "name": "codeEditorPython",
                                     "type": "editor",
-                                    "editor": "monaco",
-                                    "language": "python",
-                                    "required": true,
                                     "label": "Code",
-                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                    "editor": "monaco",
+                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                    "language": "python",
+                                    "required": true
                                 }
                             ]
                         }
@@ -2216,10 +2209,10 @@
                     {
                         "name": "language",
                         "type": "select",
-                        "required": true,
-                        "mappable": true,
                         "label": "Language",
                         "default": "javascript",
+                        "mappable": true,
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "javascript",
@@ -2231,8 +2224,8 @@
                         "name": "inputFormat",
                         "type": "select",
                         "label": "Input format",
-                        "required": true,
                         "default": "editor",
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "editor",
@@ -2243,67 +2236,67 @@
                     {
                         "name": "codeEditorPython",
                         "type": "editor",
-                        "editor": "monaco",
-                        "language": "python",
-                        "required": true,
                         "label": "Code",
-                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                        "editor": "monaco",
+                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                        "language": "python",
+                        "required": true
                     },
                     {
                         "name": "input",
+                        "spec": {
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true,
+                                    "validate": {
+                                        "max": 32,
+                                        "min": 1,
+                                        "pattern": "^[a-zA-Z0-9_]{1,32}$"
+                                    }
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "any",
+                                    "label": "Value",
+                                    "required": false
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Variable"
+                        },
                         "type": "array",
+                        "label": "Input",
+                        "labels": {
+                            "add": "Add variable"
+                        },
                         "default": [
                             {
                                 "name": "foo",
                                 "value": "bar"
                             }
-                        ],
-                        "spec": {
-                            "type": "collection",
-                            "label": "Variable",
-                            "spec": [
-                                {
-                                    "name": "name",
-                                    "type": "text",
-                                    "required": true,
-                                    "validate": {
-                                        "pattern": "^[a-zA-Z0-9_]{1,32}$",
-                                        "min": 1,
-                                        "max": 32
-                                    },
-                                    "label": "Name"
-                                },
-                                {
-                                    "name": "value",
-                                    "type": "any",
-                                    "required": false,
-                                    "label": "Value"
-                                }
-                            ]
-                        },
-                        "labels": {
-                            "add": "Add variable"
-                        },
-                        "label": "Input"
+                        ]
                     },
                     {
                         "name": "dependencies",
-                        "advanced": true,
-                        "type": "array",
                         "spec": {
                             "type": "text",
-                            "required": true,
                             "label": "Dependency",
+                            "required": true,
                             "validate": {
-                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$",
+                                "max": 214,
                                 "min": 1,
-                                "max": 214
+                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$"
                             }
                         },
+                        "type": "array",
+                        "label": "Additional dependencies (Enterprise plans only)",
                         "labels": {
                             "add": "Add dependency"
                         },
-                        "label": "Additional dependencies (Enterprise plans only)"
+                        "advanced": true
                     }
                 ]
             }
@@ -2327,7 +2320,7 @@
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "codeEditorPython": "import base64, io, json, re, unicodedata\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s='' if v is None else str(v)\n    s=unicodedata.normalize('NFKD',s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef as_list(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(d,*keys):\n    if not isinstance(d,dict): return None\n    by={norm(k):v for k,v in d.items()}\n    for k in keys:\n        if norm(k) in by:return by[norm(k)]\n    return None\n\ndef country(record):\n    explicit=get(record,'Pais','País','Country','pais');n=norm(explicit)\n    if n in ('guatemala','gt'):return 'Guatemala'\n    if n in ('elsalvador','sv','salvador'):return 'El Salvador'\n    raw=' | '.join(str(get(record,k) or '') for k in ('Banco','Cuenta','Moneda','archivo','hoja','Descripcion','Dirección','Direccion'))\n    low=raw.lower()\n    if re.search(r'\\b(el\\s+salvador|sv|salvador)\\b',low):return 'El Salvador'\n    if re.search(r'\\b(guatemala|gt)\\b',low):return 'Guatemala'\n    return None\n\ndef row_country(row,keyset):\n    return len(row)>=2 and (norm(row[0]),norm(row[1])) in keyset\n\ndef safe_value(ws,row,col,value):\n    cell=ws.cell(row,col)\n    if not isinstance(cell,MergedCell):cell.value=value\n\ndef build_file(raw,country_name,items):\n    wb=openpyxl.load_workbook(io.BytesIO(raw))\n    keys={(norm(get(r,'Banco','banco')),norm(get(r,'Cuenta','cuenta'))) for r in items}\n    files={norm(get(r,'archivo','Archivo','file')) for r in items if get(r,'archivo','Archivo','file')}\n    for sheet in wb.worksheets:\n        title=norm(sheet.title)\n        if title in (norm('Consolidado General'),norm('Detalle Diario'),norm('Detalle Semanal'),norm('Detalle Mensual'),norm('Balance General Detallado'),norm('Detalle Movimientos')):\n            for i in range(sheet.max_row,1,-1):\n                row=[sheet.cell(i,j).value for j in range(1,min(sheet.max_column,2)+1)]\n                if not row_country(row,keys):sheet.delete_rows(i,1)\n        elif title==norm('Datos Completos'):\n            for i in range(sheet.max_row,1,-1):\n                if files and norm(sheet.cell(i,1).value) not in files:sheet.delete_rows(i,1)\n    ws=wb['Observaciones'] if 'Observaciones' in wb.sheetnames else wb.create_sheet('Observaciones')\n    safe_value(ws,1,1,f'País del reporte: {country_name}')\n    safe_value(ws,2,1,f'Registros procesados: {len(items)}')\n    out=io.BytesIO();wb.save(out);out.seek(0)\n    safe='Guatemala' if country_name=='Guatemala' else 'ElSalvador'\n    return {'country':country_name,'filename':f'ReporteFinanciero_{safe}.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':base64.b64encode(out.getvalue()).decode('ascii'),'record_count':len(items)}\n\nbase=input.get('base_file');records=input.get('records_json')\nif not base or records is None:raise Exception('Faltan el Excel base o los registros clasificados.')\ntry:records=json.loads(records) if isinstance(records,str) else records\nexcept Exception as e:raise Exception(f'Los registros no son JSON válido: {e}')\nraw=base64.b64decode(str(base).strip()+'='*(-len(str(base).strip())%4))\nby_country={'Guatemala':[],'El Salvador':[]};unclassified=[]\nfor r in as_list(records):\n    if not isinstance(r,dict):continue\n    c=country(r)\n    if c:by_country[c].append(r)\n    else:unclassified.append(r)\n# Always include the combined master workbook first; then add country-specific workbooks.\noutputs=[{'country':'Consolidado','filename':'ReporteFinanciero_Consolidado.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':str(base),'record_count':len(records)}]\nfor c in ('Guatemala','El Salvador'):\n    if by_country[c]:outputs.append(build_file(raw,c,by_country[c]))\ncountry_results={'Guatemala':next((x for x in outputs if x['country']=='Guatemala'),None),'El Salvador':next((x for x in outputs if x['country']=='El Salvador'),None)}\nreturn {'files':outputs,'files_count':len(outputs),'countries':[x['country'] for x in outputs],'guatemala':country_results['Guatemala'],'el_salvador':country_results['El Salvador'],'consolidado':outputs[0],'unclassified_count':len(unclassified)}"
+                "codeEditorPython": "import base64, io, json, re, unicodedata\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s='' if v is None else str(v)\n    s=unicodedata.normalize('NFKD',s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef as_list(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(d,*keys):\n    if not isinstance(d,dict): return None\n    by={norm(k):v for k,v in d.items()}\n    for k in keys:\n        if norm(k) in by:return by[norm(k)]\n    return None\n\ndef country(record):\n    explicit=get(record,'Pais','País','Country','pais');n=norm(explicit)\n    if n in ('guatemala','gt'):return 'Guatemala'\n    if n in ('elsalvador','sv','salvador'):return 'El Salvador'\n    raw=' | '.join(str(get(record,k) or '') for k in ('Banco','Cuenta','Moneda','archivo','hoja','Descripcion','Dirección','Direccion'))\n    low=raw.lower()\n    if re.search(r'\\b(el\\s+salvador|sv|salvador)\\b',low):return 'El Salvador'\n    if re.search(r'\\b(guatemala|gt)\\b',low):return 'Guatemala'\n    return None\n\ndef row_country(row,keyset):\n    return len(row)>=2 and (norm(row[0]),norm(row[1])) in keyset\n\ndef safe_value(ws,row,col,value):\n    cell=ws.cell(row,col)\n    if not isinstance(cell,MergedCell):cell.value=value\n\ndef build_file(raw,country_name,items):\n    wb=openpyxl.load_workbook(io.BytesIO(raw))\n    keys={(norm(get(r,'Banco','banco')),norm(get(r,'Cuenta','cuenta'))) for r in items}\n    files={norm(get(r,'archivo','Archivo','file')) for r in items if get(r,'archivo','Archivo','file')}\n    for sheet in wb.worksheets:\n        title=norm(sheet.title)\n        if title in (norm('Consolidado General'),norm('Detalle Diario'),norm('Detalle Semanal'),norm('Detalle Mensual'),norm('Balance General Detallado'),norm('Detalle Movimientos')):\n            for i in range(sheet.max_row,1,-1):\n                row=[sheet.cell(i,j).value for j in range(1,min(sheet.max_column,2)+1)]\n                if not row_country(row,keys):sheet.delete_rows(i,1)\n        elif title==norm('Datos Completos'):\n            for i in range(sheet.max_row,1,-1):\n                if files and norm(sheet.cell(i,1).value) not in files:sheet.delete_rows(i,1)\n    ws=wb['Observaciones'] if 'Observaciones' in wb.sheetnames else wb.create_sheet('Observaciones')\n    safe_value(ws,1,1,f'País del reporte: {country_name}')\n    safe_value(ws,2,1,f'Registros procesados: {len(items)}')\n    out=io.BytesIO();wb.save(out);out.seek(0)\n    safe='Guatemala' if country_name=='Guatemala' else 'ElSalvador'\n    return {'country':country_name,'filename':f'ReporteFinanciero_{safe}.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':base64.b64encode(out.getvalue()).decode('ascii'),'record_count':len(items)}\n\nbase=input.get('base_file');records=input.get('records_json')\nif not base or records is None:raise Exception('Faltan el Excel base o los registros clasificados.')\ntry:records=json.loads(records) if isinstance(records,str) else records\nexcept Exception as e:raise Exception(f'Los registros no son JSON válido: {e}')\nraw=base64.b64decode(str(base).strip()+'='*(-len(str(base).strip())%4))\nby_country={'Guatemala':[],'El Salvador':[]};unclassified=[]\nfor r in as_list(records):\n    if not isinstance(r,dict):continue\n    c=country(r)\n    if c:by_country[c].append(r)\n    else:unclassified.append(r)\n# Always include the combined master workbook first; then add country-specific workbooks.\noutputs=[{'country':'Consolidado','filename':'ReporteFinanciero_Consolidado.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':str(base),'record_count':len(records)}]\nfor c in ('Guatemala','El Salvador'):\n    if by_country[c]:outputs.append(build_file(raw,c,by_country[c]))\ncountry_results={'Guatemala':next((x for x in outputs if x['country']=='Guatemala'),None),'El Salvador':next((x for x in outputs if x['country']=='El Salvador'),None)}\nreturn {'files':outputs,'files_count':len(outputs),'countries':[x['country'] for x in outputs],'guatemala':country_results['Guatemala'],'el_salvador':country_results['El Salvador'],'guatemala_json':json.dumps(country_results['Guatemala'],ensure_ascii=False,default=str),'el_salvador_json':json.dumps(country_results['El Salvador'],ensure_ascii=False,default=str),'files_json':json.dumps(outputs,ensure_ascii=False,default=str),'consolidado':outputs[0],'unclassified_count':len(unclassified)}"
             },
             "metadata": {
                 "designer": {
@@ -2342,45 +2335,45 @@
                             "label": "Python",
                             "nested": [
                                 {
+                                    "help": "Choose how the code is provided.",
                                     "name": "inputFormat",
                                     "type": "select",
                                     "label": "Input format",
-                                    "help": "Choose how the code is provided.",
-                                    "required": true,
                                     "default": "editor",
                                     "options": [
                                         {
-                                            "value": "editor",
                                             "label": "Code editor",
+                                            "value": "editor",
                                             "nested": [
                                                 {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeEditorPython",
                                                     "type": "editor",
-                                                    "editor": "monaco",
-                                                    "language": "python",
-                                                    "required": true,
                                                     "label": "Code",
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                                    "editor": "monaco",
+                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                                    "language": "python",
+                                                    "required": true
                                                 }
                                             ]
                                         },
                                         {
-                                            "value": "string",
                                             "label": "Mapped code (useful for AI)",
+                                            "value": "string",
                                             "nested": [
                                                 {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeStringPython",
                                                     "type": "text",
-                                                    "required": true,
-                                                    "multiline": true,
                                                     "label": "Code",
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "default": "# You can map dynamic code from previous modules or inputs."
+                                                    "default": "# You can map dynamic code from previous modules or inputs.",
+                                                    "required": true,
+                                                    "multiline": true
                                                 }
                                             ]
                                         }
-                                    ]
+                                    ],
+                                    "required": true
                                 }
                             ]
                         },
@@ -2389,14 +2382,14 @@
                             "label": "Code editor",
                             "nested": [
                                 {
+                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                     "name": "codeEditorPython",
                                     "type": "editor",
-                                    "editor": "monaco",
-                                    "language": "python",
-                                    "required": true,
                                     "label": "Code",
-                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                    "editor": "monaco",
+                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                    "language": "python",
+                                    "required": true
                                 }
                             ]
                         }
@@ -2406,10 +2399,10 @@
                     {
                         "name": "language",
                         "type": "select",
-                        "required": true,
-                        "mappable": true,
                         "label": "Language",
                         "default": "javascript",
+                        "mappable": true,
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "javascript",
@@ -2421,8 +2414,8 @@
                         "name": "inputFormat",
                         "type": "select",
                         "label": "Input format",
-                        "required": true,
                         "default": "editor",
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "editor",
@@ -2433,67 +2426,67 @@
                     {
                         "name": "codeEditorPython",
                         "type": "editor",
-                        "editor": "monaco",
-                        "language": "python",
-                        "required": true,
                         "label": "Code",
-                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                        "editor": "monaco",
+                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                        "language": "python",
+                        "required": true
                     },
                     {
                         "name": "input",
+                        "spec": {
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true,
+                                    "validate": {
+                                        "max": 32,
+                                        "min": 1,
+                                        "pattern": "^[a-zA-Z0-9_]{1,32}$"
+                                    }
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "any",
+                                    "label": "Value",
+                                    "required": false
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Variable"
+                        },
                         "type": "array",
+                        "label": "Input",
+                        "labels": {
+                            "add": "Add variable"
+                        },
                         "default": [
                             {
                                 "name": "foo",
                                 "value": "bar"
                             }
-                        ],
-                        "spec": {
-                            "type": "collection",
-                            "label": "Variable",
-                            "spec": [
-                                {
-                                    "name": "name",
-                                    "type": "text",
-                                    "required": true,
-                                    "validate": {
-                                        "pattern": "^[a-zA-Z0-9_]{1,32}$",
-                                        "min": 1,
-                                        "max": 32
-                                    },
-                                    "label": "Name"
-                                },
-                                {
-                                    "name": "value",
-                                    "type": "any",
-                                    "required": false,
-                                    "label": "Value"
-                                }
-                            ]
-                        },
-                        "labels": {
-                            "add": "Add variable"
-                        },
-                        "label": "Input"
+                        ]
                     },
                     {
                         "name": "dependencies",
-                        "advanced": true,
-                        "type": "array",
                         "spec": {
                             "type": "text",
-                            "required": true,
                             "label": "Dependency",
+                            "required": true,
                             "validate": {
-                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$",
+                                "max": 214,
                                 "min": 1,
-                                "max": 214
+                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$"
                             }
                         },
+                        "type": "array",
+                        "label": "Additional dependencies (Enterprise plans only)",
                         "labels": {
                             "add": "Add dependency"
                         },
-                        "label": "Additional dependencies (Enterprise plans only)"
+                        "advanced": true
                     }
                 ]
             }
@@ -2978,7 +2971,7 @@
             "version": 1,
             "parameters": {},
             "mapper": {
-                "body": "{\n  \"correoEnviado\": true,\n  \"mensajeId\": \"{{54.id}}\",\n  \"estado\": \"Guatemala y El Salvador procesados con consolidado regional en USD\",\n  \"guatemala\": {{75.result.guatemala}},\n  \"el_salvador\": {{75.result.el_salvador}},\n  \"archivosExcel\": {{75.result.files}},\n  \"consolidadoGeneral\": {\"filename\": \"{{66.result.filename}}\", \"mimeType\": \"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\", \"data\": \"{{66.result.data}}\"},\n  \"fileName\": \"{{66.result.filename}}\",\n  \"tipoCambioGTQUSD\": {{66.result.tipo_cambio_gtq_usd}},\n  \"consolidadoRegionalUSD\": {{66.result.consolidado_regional_usd}},\n  \"resumen_general\": {{66.result.resumen_general}},\n  \"bancos_procesados\": {{66.result.bancos_procesados}},\n  \"totales_globales\": {{66.result.totales_globales}},\n  \"filasFuenteCompletas\": {{66.result.filas_fuente_completas}}\n}",
+                "body": "{\n  \"correoEnviado\": true,\n  \"mensajeId\": \"{{54.id}}\",\n  \"estado\": \"Guatemala y El Salvador procesados con consolidado regional en USD\",\n  \"fileName\": \"{{66.result.filename}}\",\n  \"registros\": {{66.result.bancos_procesados}},\n  \"bancos_procesados\": {{66.result.bancos_procesados}},\n  \"resumen_general\": {{66.result.resumen_general}},\n  \"totales_globales\": {{66.result.totales_globales}},\n  \"consolidadoRegionalUSD\": {{66.result.consolidado_regional_usd}},\n  \"guatemala\": {{75.result.guatemala_json}},\n  \"el_salvador\": {{75.result.el_salvador_json}},\n  \"archivosExcel\": {{75.result.files_json}},\n  \"filasFuenteCompletas\": {{66.result.filas_fuente_completas}}\n}",
                 "status": 200,
                 "headers": [
                     {
