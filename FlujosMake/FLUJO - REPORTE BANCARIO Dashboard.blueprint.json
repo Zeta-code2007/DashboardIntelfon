@@ -1,27 +1,27 @@
 {
-    "name": "FLUJO - REPORTE BANCARIO Guatemala Jose Zeta",
+    "name": "FLUJO - REPORTE BANCARIO Dashboard",
     "flow": [
         {
-            "id": 70,
+            "id": 72,
             "module": "gateway:CustomWebHook",
             "version": 1,
             "parameters": {
-                "hook": 4334741,
+                "hook": 4334952,
                 "maxResults": 1
             },
             "mapper": {},
             "metadata": {
                 "designer": {
-                    "x": 239,
-                    "y": 139
+                    "x": 0,
+                    "y": 0
                 },
                 "restore": {
                     "parameters": {
                         "hook": {
-                            "label": "My gateway-webhook webhook",
                             "data": {
                                 "editable": "true"
-                            }
+                            },
+                            "label": "ReportesIntelfon"
                         }
                     }
                 },
@@ -48,23 +48,26 @@
             "mapper": {
                 "input": [
                     {
-                        "name": "file",
-                        "value": "{{70.data}}"
+                        "name": "files_new",
+                        "value": "{{72.files}}"
                     },
                     {
-                        "name": "filename",
-                        "value": "{{70.name}}"
+                        "name": "files_old",
+                        "value": "{{72.file.files}}"
+                    },
+                    {
+                        "name": "file_old",
+                        "value": "{{72.file}}"
                     }
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "dependencies": [],
-                "codeEditorPython": "import base64\nimport io\nimport json\nimport re\nfrom datetime import datetime, date\n\nimport openpyxl\n\n\narchivo_raw = input.get(\"file\")\narchivo_nombre = input.get(\"filename\") or \"archivo.xlsx\"\n\n\ndef convertir_bytes(valor, vistos=None):\n    if vistos is None:\n        vistos = set()\n    if valor is None:\n        return None\n    if isinstance(valor, bytes):\n        return valor\n    if isinstance(valor, bytearray):\n        return bytes(valor)\n    if isinstance(valor, (list, tuple)):\n        if valor and all(isinstance(x, int) and 0 <= x <= 255 for x in valor):\n            return bytes(valor)\n        for elemento in valor:\n            convertido = convertir_bytes(elemento, vistos)\n            if convertido:\n                return convertido\n        return None\n    identificador = id(valor)\n    if identificador in vistos:\n        return None\n    vistos.add(identificador)\n    if isinstance(valor, dict):\n        for elemento in valor.values():\n            convertido = convertir_bytes(elemento, vistos)\n            if convertido:\n                return convertido\n        return None\n    for metodo in (\"to_bytes\", \"read\"):\n        try:\n            resultado = getattr(valor, metodo)()\n            convertido = convertir_bytes(resultado, vistos)\n            if convertido:\n                return convertido\n        except Exception:\n            pass\n    for atributo in (\"data\", \"buffer\", \"value\", \"content\", \"body\"):\n        try:\n            convertido = convertir_bytes(getattr(valor, atributo), vistos)\n            if convertido:\n                return convertido\n        except Exception:\n            pass\n    texto = str(valor).strip()\n    representaciones = [texto]\n    try:\n        representaciones.append(repr(valor))\n    except Exception:\n        pass\n    for representacion in representaciones:\n        match = re.search(r\"IMTBuffer\\([^)]*\\):\\s*([0-9a-fA-F]+)\", representacion)\n        if match:\n            hexadecimal = match.group(1)\n            if len(hexadecimal) % 2 == 0:\n                return bytes.fromhex(hexadecimal)\n        compacto = re.sub(r\"\\s+\", \"\", representacion)\n        if compacto.startswith(\"UEsDB\"):\n            try:\n                return base64.b64decode(compacto)\n            except Exception:\n                pass\n    return None\n\n\ndef convertir_valor(valor, celda=None):\n    if valor is None:\n        return None\n    if isinstance(valor, (datetime, date)):\n        return valor.strftime(\"%d/%m/%Y\")\n    if isinstance(valor, str):\n        return valor.strip()\n    if isinstance(valor, float) and valor.is_integer():\n        return int(valor)\n    return valor\n\n\ndef texto_seguro(valor):\n    if valor is None:\n        return \"\"\n    return str(valor).strip()\n\n\ncontenido = convertir_bytes(archivo_raw)\nif not contenido:\n    raise Exception(\"No se pudo obtener contenido binario del archivo desde Google Drive.\")\nif contenido[:2] != b\"PK\":\n    raise Exception(\"El archivo recibido no es un XLSX válido.\")\n\nworkbook = openpyxl.load_workbook(io.BytesIO(contenido), data_only=True)\nresultado = {\n    \"archivo\": archivo_nombre,\n    \"hojas\": [],\n    \"instrucciones\": \"Analizar todas las hojas y todas las filas. Los encabezados pueden estar en cualquier fila; no asumir que la primera fila es el encabezado.\",\n    \"observaciones\": []\n}\n\npalabras_seccion = (\n    \"saldo\", \"balance\", \"movimiento\", \"transaccion\", \"transacción\", \"resumen\",\n    \"cuenta\", \"fecha\", \"credito\", \"crédito\", \"debito\", \"débito\", \"total\",\n    \"estado de cuenta\", \"detalle\"\n)\n\nfor nombre_hoja in workbook.sheetnames:\n    hoja = workbook[nombre_hoja]\n    detalle = {\n        \"nombre\": nombre_hoja,\n        \"filas\": [],\n        \"secciones_detectadas\": [],\n        \"texto_completo\": \"\"\n    }\n    texto_filas = []\n\n    for numero_fila in range(1, hoja.max_row + 1):\n        valores = []\n        celdas = {}\n        no_vacios = []\n\n        for numero_columna in range(1, hoja.max_column + 1):\n            celda = hoja.cell(numero_fila, numero_columna)\n            valor = convertir_valor(celda.value, celda)\n            valores.append(valor)\n            if valor is not None and str(valor).strip() != \"\":\n                letra = openpyxl.utils.get_column_letter(numero_columna)\n                celdas[letra] = valor\n                no_vacios.append(str(valor).strip())\n\n        if not no_vacios:\n            continue\n\n        texto_fila = \" | \".join(no_vacios)\n        texto_filas.append(f\"Fila {numero_fila}: {texto_fila}\")\n\n        fila_info = {\n            \"fila\": numero_fila,\n            \"valores\": valores,\n            \"celdas\": celdas,\n            \"texto\": texto_fila\n        }\n        detalle[\"filas\"].append(fila_info)\n\n        texto_normalizado = texto_fila.lower()\n        if any(palabra in texto_normalizado for palabra in palabras_seccion):\n            detalle[\"secciones_detectadas\"].append({\n                \"fila\": numero_fila,\n                \"texto\": texto_fila\n            })\n\n    detalle[\"texto_completo\"] = \"\\n\".join(texto_filas)\n    resultado[\"hojas\"].append(detalle)\n\nif not resultado[\"hojas\"]:\n    resultado[\"observaciones\"].append(\"El archivo no contiene hojas con datos.\")\n\nreturn {\"resultado\": json.dumps(resultado, ensure_ascii=False, default=str)}"
+                "codeEditorPython": "import base64,csv,io,json,re\nfrom datetime import datetime,date\nimport openpyxl\n\nfiles=input.get('files_new') or input.get('files_old') or []\nif not files:\n    old=input.get('file_old')\n    if isinstance(old,dict) and old.get('data') is not None: files=[old]\nif isinstance(files,dict): files=[files]\nif not isinstance(files,list): files=[files]\nif len(files)>10: raise Exception('Se recibieron más de 10 documentos; el máximo es 10.')\n\ndef decode(v):\n    if isinstance(v,bytes): return v\n    if isinstance(v,bytearray): return bytes(v)\n    if isinstance(v,dict):\n        for k in ('data','content','body','buffer','value','base64'):\n            if k in v:\n                x=decode(v[k])\n                if x:return x\n        return None\n    if isinstance(v,(list,tuple)) and v and all(isinstance(x,int) and 0<=x<=255 for x in v): return bytes(v)\n    s=str(v or '').strip()\n    m=re.search(r'IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)',s)\n    if m:\n        try:return bytes.fromhex(m.group(1))\n        except: pass\n    if s.startswith('data:') and ',' in s:s=s.split(',',1)[1]\n    compact=re.sub(r'\\\\s+','',s)\n    try:return base64.b64decode(compact+'='*(-len(compact)%4),validate=False)\n    except:return None\n\ndef clean(v):\n    if isinstance(v,(datetime,date)): return v.strftime('%d/%m/%Y')\n    if isinstance(v,float) and v.is_integer(): return int(v)\n    return v.strip() if isinstance(v,str) else v\n\ndef add(sheet,row,values):\n    values=[clean(v) for v in values]\n    if any(v is not None and str(v).strip() for v in values): sheet['filas'].append({'fila':row,'valores':values})\n\nif not files: raise Exception('El webhook no recibió documentos. Se esperaba files[] o el formato anterior file.files[].')\nout={'formato':'multi-documento','documentos_recibidos':len(files),'hojas':[],'instrucciones':'Unificar todos los documentos y conservar archivo, hoja y fila de origen. Analizar todas las transacciones.','observaciones':[]}\nvalid=0\nfor i,f in enumerate(files,1):\n    if not isinstance(f,dict):\n        out['observaciones'].append(f'Documento {i} no es un objeto.');continue\n    name=str(f.get('name') or f.get('filename') or f'documento_{i}.xlsx')\n    raw=decode(f.get('data'))\n    if not raw:\n        out['observaciones'].append(f'No se pudo decodificar {name}.');continue\n    ext=name.lower().rsplit('.',1)[-1] if '.' in name else ''\n    if raw[:2]==b'PK':\n        try: book=openpyxl.load_workbook(io.BytesIO(raw),data_only=True,read_only=True,keep_vba=(ext=='xlsm'))\n        except Exception as e: out['observaciones'].append(f'No se pudo abrir {name}: {e}');continue\n        valid+=1\n        for sheet_name in book.sheetnames:\n            sheet={'archivo':name,'nombre':sheet_name,'filas':[]}\n            for n,row in enumerate(book[sheet_name].iter_rows(values_only=True),1): add(sheet,n,list(row))\n            out['hojas'].append(sheet)\n    elif ext in ('csv','txt') or 'csv' in str(f.get('mimeType') or f.get('mime') or '').lower() or b'\\\\n' in raw[:4096]:\n        text=raw.decode('utf-8-sig',errors='replace')\n        try:dialect=csv.Sniffer().sniff(text[:8192],delimiters=',;\\\\t|')\n        except:dialect=csv.excel\n        sheet={'archivo':name,'nombre':name,'filas':[]}\n        for n,row in enumerate(csv.reader(io.StringIO(text),dialect),1): add(sheet,n,row)\n        out['hojas'].append(sheet);valid+=1\n    else: out['observaciones'].append(f'Formato no compatible en {name}.')\nif valid==0 or not out['hojas']: raise Exception('Ninguno de los documentos recibidos es válido o contiene hojas legibles.')\nreturn {'resultado':json.dumps(out,ensure_ascii=False,default=str)}"
             },
             "metadata": {
                 "designer": {
-                    "x": 600,
-                    "y": 150
+                    "x": 300,
+                    "y": 0
                 },
                 "restore": {
                     "expect": {
@@ -73,45 +76,45 @@
                             "label": "Python",
                             "nested": [
                                 {
+                                    "help": "Choose how the code is provided.",
                                     "name": "inputFormat",
                                     "type": "select",
                                     "label": "Input format",
-                                    "help": "Choose how the code is provided.",
-                                    "required": true,
                                     "default": "editor",
                                     "options": [
                                         {
-                                            "value": "editor",
                                             "label": "Code editor",
+                                            "value": "editor",
                                             "nested": [
                                                 {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeEditorPython",
                                                     "type": "editor",
-                                                    "editor": "monaco",
-                                                    "language": "python",
-                                                    "required": true,
                                                     "label": "Code",
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                                    "editor": "monaco",
+                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                                    "language": "python",
+                                                    "required": true
                                                 }
                                             ]
                                         },
                                         {
-                                            "value": "string",
                                             "label": "Mapped code (useful for AI)",
+                                            "value": "string",
                                             "nested": [
                                                 {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeStringPython",
                                                     "type": "text",
-                                                    "required": true,
-                                                    "multiline": true,
                                                     "label": "Code",
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "default": "# You can map dynamic code from previous modules or inputs."
+                                                    "default": "# You can map dynamic code from previous modules or inputs.",
+                                                    "required": true,
+                                                    "multiline": true
                                                 }
                                             ]
                                         }
-                                    ]
+                                    ],
+                                    "required": true
                                 }
                             ]
                         },
@@ -120,14 +123,14 @@
                             "label": "Code editor",
                             "nested": [
                                 {
+                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                     "name": "codeEditorPython",
                                     "type": "editor",
-                                    "editor": "monaco",
-                                    "language": "python",
-                                    "required": true,
                                     "label": "Code",
-                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                    "editor": "monaco",
+                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                    "language": "python",
+                                    "required": true
                                 }
                             ]
                         }
@@ -137,10 +140,10 @@
                     {
                         "name": "language",
                         "type": "select",
-                        "required": true,
-                        "mappable": true,
                         "label": "Language",
                         "default": "javascript",
+                        "mappable": true,
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "javascript",
@@ -152,8 +155,8 @@
                         "name": "inputFormat",
                         "type": "select",
                         "label": "Input format",
-                        "required": true,
                         "default": "editor",
+                        "required": true,
                         "validate": {
                             "enum": [
                                 "editor",
@@ -164,67 +167,67 @@
                     {
                         "name": "codeEditorPython",
                         "type": "editor",
-                        "editor": "monaco",
-                        "language": "python",
-                        "required": true,
                         "label": "Code",
-                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                        "editor": "monaco",
+                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                        "language": "python",
+                        "required": true
                     },
                     {
                         "name": "input",
+                        "spec": {
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true,
+                                    "validate": {
+                                        "max": 32,
+                                        "min": 1,
+                                        "pattern": "^[a-zA-Z0-9_]{1,32}$"
+                                    }
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "any",
+                                    "label": "Value",
+                                    "required": false
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Variable"
+                        },
                         "type": "array",
+                        "label": "Input",
+                        "labels": {
+                            "add": "Add variable"
+                        },
                         "default": [
                             {
                                 "name": "foo",
                                 "value": "bar"
                             }
-                        ],
-                        "spec": {
-                            "type": "collection",
-                            "label": "Variable",
-                            "spec": [
-                                {
-                                    "name": "name",
-                                    "type": "text",
-                                    "required": true,
-                                    "validate": {
-                                        "pattern": "^[a-zA-Z0-9_]{1,32}$",
-                                        "min": 1,
-                                        "max": 32
-                                    },
-                                    "label": "Name"
-                                },
-                                {
-                                    "name": "value",
-                                    "type": "any",
-                                    "required": false,
-                                    "label": "Value"
-                                }
-                            ]
-                        },
-                        "labels": {
-                            "add": "Add variable"
-                        },
-                        "label": "Input"
+                        ]
                     },
                     {
                         "name": "dependencies",
-                        "advanced": true,
-                        "type": "array",
                         "spec": {
                             "type": "text",
-                            "required": true,
                             "label": "Dependency",
+                            "required": true,
                             "validate": {
-                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$",
+                                "max": 214,
                                 "min": 1,
-                                "max": 214
+                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$"
                             }
                         },
+                        "type": "array",
+                        "label": "Additional dependencies (Enterprise plans only)",
                         "labels": {
                             "add": "Add dependency"
                         },
-                        "label": "Additional dependencies (Enterprise plans only)"
+                        "advanced": true
                     }
                 ]
             }
@@ -234,87 +237,62 @@
             "module": "openai-gpt-3:createModelResponse",
             "version": 1,
             "parameters": {
-                "__IMTCONN__": 14532920
+                "__IMTCONN__": 14550561
             },
             "mapper": {
-                "input": "Eres un especialista en análisis financiero, estados de cuenta bancarios, conciliación y procesamiento contable.\n\nRecibirás un JSON generado por Python que contiene TODAS las hojas y TODAS las filas del archivo bancario. Los encabezados pueden aparecer en cualquier fila y una hoja puede contener varios bloques: encabezados, saldos, movimientos, resúmenes y totales.\n\nOBJETIVO:\nAnaliza exhaustivamente todos los datos recibidos y devuelve un reporte financiero completo para todos los bancos y cuentas detectados. No proceses solo la primera hoja, el primer bloque ni las primeras filas. No omitas un banco porque sus datos estén en una sección intermedia.\n\nREGLAS DE ANÁLISIS:\n1. Revisa todas las hojas, todas las filas, las celdas y el campo texto_completo.\n2. Detecta cada banco o cuenta aunque el nombre aparezca en un encabezado, resumen, cuenta, producto o descripción.\n3. Para cada banco/cuenta busca el saldo inicial y saldo final en todo su bloque, incluyendo etiquetas como saldo inicial, saldo anterior, saldo de apertura, saldo en libros, saldo disponible, saldo actual, saldo al cierre, balance inicial, opening balance, beginning balance, closing balance y ending balance.\n4. No escribas \"No se encontró el dato\" hasta revisar todo el bloque y sus resúmenes.\n5. Clasifica créditos, abonos y depósitos como ingresos; débitos, cargos y retiros como egresos.\n6. Conserva todos los movimientos reales. Elimina únicamente duplicados completos.\n7. No mezcles movimientos de bancos o cuentas distintas.\n8. Mantén los montos como números y las fechas como dd/mm/yyyy cuando sea posible.\n9. Si la fecha viene como número serial de Excel, conviértela a fecha real usando el contexto de la hoja.\n10. Calcula y valida: Saldo Inicial + Total Ingresos - Total Egresos = Saldo Final. No modifiques datos para forzar la conciliación; registra diferencias.\n11. Si un banco tiene varias monedas o cuentas, crea registros separados cuando corresponda.\n12. El resultado debe incluir todos los bancos encontrados, incluso si algunos campos están incompletos.\n13. Devuelve únicamente el objeto JSON solicitado por el esquema de salida. No uses Markdown ni texto antes o después.\n\nCada elemento de bancos_procesados debe incluir Banco, Cuenta, Moneda, Fecha Inicial, Fecha Final, Saldo Inicial, Total Ingresos, Total Egresos, Saldo Final, Estado Conciliacion, estado_cuenta, resumen_diario, resumen_semanal y resumen_mensual.\nCada movimiento debe incluir Fecha, No. Referencia, Descripción, Moneda, Ingreso, Egreso y Saldo Resultante.\nCada registro de resumen_general debe incluir Banco, Cuenta, Moneda, Fecha Inicial, Fecha Final, Saldo Inicial, Total Ingresos, Total Egresos y Saldo Final.\nCada registro de balance_general debe incluir Banco, Cuenta, Moneda, Período, Saldo Inicial, Total Ingresos, Total Egresos, Saldo Final, Saldo Calculado, Resultado Conciliación y Observación.\n\nLos datos de la plantilla Excel posterior sirven solamente para diseño. Los únicos datos financieros válidos son los del JSON extraído que aparece aquí:\n\nDATOS EXTRAÍDOS DEL ARCHIVO:\n{{64.result.resultado}}\n\nAntes de terminar, comprueba que bancos_procesados incluya cada banco/cuenta detectado en todas las hojas y que los saldos del BI se hayan buscado en todo su bloque, no únicamente en la primera fila.",
                 "model": "gpt-5.6-sol",
-                "store": true,
-                "format": {
-                    "name": "reporte_financiero_bancario",
-                    "type": "json_schema",
-                    "schema": "{\r\n  \"type\": \"object\",\r\n  \"properties\": {\r\n    \"bancos_procesados\": {\r\n      \"type\": \"array\",\r\n      \"items\": {\r\n        \"type\": \"object\",\r\n        \"properties\": {\r\n          \"Banco\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Cuenta\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Moneda\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Fecha_Inicial\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Fecha_Final\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Saldo_Inicial\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Total_Ingresos\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Total_Egresos\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Saldo_Final\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Estado_Conciliacion\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"estado_cuenta\": {\r\n            \"type\": \"array\",\r\n            \"items\": {\r\n              \"type\": \"object\",\r\n              \"properties\": {\r\n                \"Fecha\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"No_Referencia\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Descripcion\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Moneda\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Ingreso\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Egreso\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Saldo_Resultante\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                }\r\n              },\r\n              \"required\": [\r\n                \"Fecha\",\r\n                \"No_Referencia\",\r\n                \"Descripcion\",\r\n                \"Moneda\",\r\n                \"Ingreso\",\r\n                \"Egreso\",\r\n                \"Saldo_Resultante\"\r\n              ],\r\n              \"additionalProperties\": false\r\n            }\r\n          },\r\n          \"resumen_diario\": {\r\n            \"type\": \"array\",\r\n            \"items\": {\r\n              \"type\": \"object\",\r\n              \"properties\": {\r\n                \"Fecha\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Moneda\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Saldo_Inicial\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Total_Ingresos\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Total_Egresos\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Saldo_Final\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                }\r\n              },\r\n              \"required\": [\r\n                \"Fecha\",\r\n                \"Moneda\",\r\n                \"Saldo_Inicial\",\r\n                \"Total_Ingresos\",\r\n                \"Total_Egresos\",\r\n                \"Saldo_Final\"\r\n              ],\r\n              \"additionalProperties\": false\r\n            }\r\n          },\r\n          \"resumen_semanal\": {\r\n            \"type\": \"array\",\r\n            \"items\": {\r\n              \"type\": \"object\",\r\n              \"properties\": {\r\n                \"Semana\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Rango\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Moneda\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Saldo_Inicial\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Total_Ingresos\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Total_Egresos\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Saldo_Final\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                }\r\n              },\r\n              \"required\": [\r\n                \"Semana\",\r\n                \"Rango\",\r\n                \"Moneda\",\r\n                \"Saldo_Inicial\",\r\n                \"Total_Ingresos\",\r\n                \"Total_Egresos\",\r\n                \"Saldo_Final\"\r\n              ],\r\n              \"additionalProperties\": false\r\n            }\r\n          },\r\n          \"resumen_mensual\": {\r\n            \"type\": \"array\",\r\n            \"items\": {\r\n              \"type\": \"object\",\r\n              \"properties\": {\r\n                \"Mes\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Moneda\": {\r\n                  \"type\": \"string\"\r\n                },\r\n                \"Saldo_Inicial\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Total_Ingresos\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Total_Egresos\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                },\r\n                \"Saldo_Final\": {\r\n                  \"type\": [\"number\", \"null\"]\r\n                }\r\n              },\r\n              \"required\": [\r\n                \"Mes\",\r\n                \"Moneda\",\r\n                \"Saldo_Inicial\",\r\n                \"Total_Ingresos\",\r\n                \"Total_Egresos\",\r\n                \"Saldo_Final\"\r\n              ],\r\n              \"additionalProperties\": false\r\n            }\r\n          }\r\n        },\r\n        \"required\": [\r\n          \"Banco\",\r\n          \"Cuenta\",\r\n          \"Moneda\",\r\n          \"Fecha_Inicial\",\r\n          \"Fecha_Final\",\r\n          \"Saldo_Inicial\",\r\n          \"Total_Ingresos\",\r\n          \"Total_Egresos\",\r\n          \"Saldo_Final\",\r\n          \"Estado_Conciliacion\",\r\n          \"estado_cuenta\",\r\n          \"resumen_diario\",\r\n          \"resumen_semanal\",\r\n          \"resumen_mensual\"\r\n        ],\r\n        \"additionalProperties\": false\r\n      }\r\n    },\r\n    \"resumen_general\": {\r\n      \"type\": \"array\",\r\n      \"items\": {\r\n        \"type\": \"object\",\r\n        \"properties\": {\r\n          \"Banco\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Cuenta\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Moneda\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Fecha_Inicial\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Fecha_Final\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Saldo_Inicial\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Total_Ingresos\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Total_Egresos\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Saldo_Final\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          }\r\n        },\r\n        \"required\": [\r\n          \"Banco\",\r\n          \"Cuenta\",\r\n          \"Moneda\",\r\n          \"Fecha_Inicial\",\r\n          \"Fecha_Final\",\r\n          \"Saldo_Inicial\",\r\n          \"Total_Ingresos\",\r\n          \"Total_Egresos\",\r\n          \"Saldo_Final\"\r\n        ],\r\n        \"additionalProperties\": false\r\n      }\r\n    },\r\n    \"totales_globales\": {\r\n      \"type\": \"object\",\r\n      \"properties\": {\r\n        \"Saldo_Inicial_Global\": {\r\n          \"type\": [\"number\", \"null\"]\r\n        },\r\n        \"Total_Ingresos_Global\": {\r\n          \"type\": [\"number\", \"null\"]\r\n        },\r\n        \"Total_Egresos_Global\": {\r\n          \"type\": [\"number\", \"null\"]\r\n        },\r\n        \"Saldo_Final_Global\": {\r\n          \"type\": [\"number\", \"null\"]\r\n        }\r\n      },\r\n      \"required\": [\r\n        \"Saldo_Inicial_Global\",\r\n        \"Total_Ingresos_Global\",\r\n        \"Total_Egresos_Global\",\r\n        \"Saldo_Final_Global\"\r\n      ],\r\n      \"additionalProperties\": false\r\n    },\r\n    \"balance_general\": {\r\n      \"type\": \"array\",\r\n      \"items\": {\r\n        \"type\": \"object\",\r\n        \"properties\": {\r\n          \"Banco\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Cuenta\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Moneda\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Periodo\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Saldo_Inicial\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Total_Ingresos\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Total_Egresos\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Saldo_Final\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Saldo_Calculado\": {\r\n            \"type\": [\"number\", \"null\"]\r\n          },\r\n          \"Resultado_Conciliacion\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Observacion\": {\r\n            \"type\": \"string\"\r\n          }\r\n        },\r\n        \"required\": [\r\n          \"Banco\",\r\n          \"Cuenta\",\r\n          \"Moneda\",\r\n          \"Periodo\",\r\n          \"Saldo_Inicial\",\r\n          \"Total_Ingresos\",\r\n          \"Total_Egresos\",\r\n          \"Saldo_Final\",\r\n          \"Saldo_Calculado\",\r\n          \"Resultado_Conciliacion\",\r\n          \"Observacion\"\r\n        ],\r\n        \"additionalProperties\": false\r\n      }\r\n    },\r\n    \"observaciones\": {\r\n      \"type\": \"array\",\r\n      \"items\": {\r\n        \"type\": \"object\",\r\n        \"properties\": {\r\n          \"Banco\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Cuenta\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Campo\": {\r\n            \"type\": \"string\"\r\n          },\r\n          \"Detalle\": {\r\n            \"type\": \"string\"\r\n          }\r\n        },\r\n        \"required\": [\r\n          \"Banco\",\r\n          \"Cuenta\",\r\n          \"Campo\",\r\n          \"Detalle\"\r\n        ],\r\n        \"additionalProperties\": false\r\n      }\r\n    }\r\n  },\r\n  \"required\": [\r\n    \"bancos_procesados\",\r\n    \"resumen_general\",\r\n    \"totales_globales\",\r\n    \"balance_general\",\r\n    \"observaciones\"\r\n  ],\r\n  \"additionalProperties\": false\r\n}",
-                    "strict": true,
-                    "description": "Reporte financiero completo extraído de todos los bancos y cuentas del archivo XLSX."
-                },
-                "reasoning": {},
-                "background": false,
-                "truncation": "auto",
                 "inputContentType": "text",
                 "max_output_tokens": "24000",
+                "parallel_tool_calls": true,
+                "background": false,
                 "createConversation": true,
-                "parallel_tool_calls": true
+                "store": true,
+                "reasoning": {
+                    "effort": "none",
+                    "summary": "auto"
+                },
+                "format": {
+                    "type": "json_object"
+                },
+                "truncation": "auto",
+                "input": "Eres un analista profesional de estados de cuenta multiarchivo. Procesa TODOS los archivos recibidos en una sola corrida y genera un análisis consolidado separado por país.\n\nEl bloque siguiente contiene TODAS las hojas y filas. Revisa todos los archivos, no solo el primero.\n\nREGLAS OBLIGATORIAS:\n1. Para cada registro de banco/cuenta agrega el campo `Pais` con exactamente uno de estos valores: `Guatemala` o `El Salvador`.\n2. Determina el país usando el texto del archivo, banco, hoja, encabezados, dirección, teléfono, moneda y formato del estado de cuenta. No uses solo la moneda como criterio.\n3. Guatemala: identifica señales como Guatemala, GT, quetzales, GTQ, Q o bancos/formato guatemalteco.\n4. El Salvador: identifica señales como El Salvador, SV, salvadoreño, USD/dólares o bancos/formato salvadoreño.\n5. Si el documento indica explícitamente el país, esa señal tiene prioridad sobre cualquier inferencia por moneda.\n6. Si no hay evidencia suficiente, usa `Pais: null` y agrega una observación con el nombre exacto del archivo. Nunca inventes el país.\n7. Separa por país, banco, archivo, cuenta y moneda. Varias cuentas del mismo banco deben ser registros separados.\n8. Para cuentas y movimientos identificados como de El Salvador, usa USD salvo que el documento indique explícitamente otra moneda. Nunca asignes GTQ por defecto a El Salvador.\n9. Para Guatemala usa GTQ solo si el documento indica GTQ, quetzales, Q o el contexto es inequívocamente guatemalteco. Si indica USD, conserva USD.\n10. Conserva todos los movimientos útiles y elimina solo duplicados idénticos completos.\n11. `totales_globales` debe agrupar por Pais y Moneda; nunca convertir un total global en banco o cuenta.\n12. Incluye BANRURAL aunque no tenga cuenta: `Cuenta: null`, todos sus movimientos, resumen, balance y periodicidad.\n13. Crea periodicidad diaria, semanal con lunes como inicio y mensual para cada país/banco/cuenta/moneda.\n\nDevuelve únicamente un objeto JSON válido, sin Markdown, con:\n- `bancos_procesados`: lista separada por `Pais`/banco/cuenta/moneda, incluyendo `Pais`, `Banco`, `Cuenta` o null, `Moneda`, `archivo`, `hoja`, `estado_cuenta` completo y `periodicidad` (`diario`, `semanal`, `mensual`).\n- `resumen_general`: solo registros reales por Pais/banco/cuenta/moneda.\n- `totales_globales`: objeto agrupado por Pais y Moneda.\n- `balance_general`: solo registros reales por Pais/banco/cuenta/moneda.\n- `observaciones`.\n\nAntes de responder verifica que ningún archivo fue ignorado, que cada registro tiene Pais cuando existe evidencia, que las cuentas salvadoreñas no fueron tratadas como GTQ, que no se mezclaron bancos ni monedas y que la salida no contiene únicamente BI.\n\nDATOS COMPLETOS DE TODOS LOS ARCHIVOS:\n{{64.result}}"
             },
             "metadata": {
                 "designer": {
-                    "x": 900,
-                    "y": 150
+                    "x": 600,
+                    "y": 0
                 },
                 "restore": {
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "label": "Intelfon's OpenAI connection",
+                            "data": {
+                                "scoped": "true",
+                                "connection": "openai-gpt-3"
+                            }
+                        }
+                    },
                     "expect": {
                         "model": {
                             "mode": "chose",
                             "label": "gpt-5.6-sol (system)"
                         },
-                        "store": {
-                            "mode": "chose"
+                        "inputContentType": {
+                            "mode": "chose",
+                            "label": "Text prompt"
                         },
                         "tools": {
                             "mode": "chose"
-                        },
-                        "format": {
-                            "nested": {
-                                "type": {
-                                    "mode": "chose",
-                                    "label": "JSON schema"
-                                },
-                                "strict": {
-                                    "mode": "chose"
-                                }
-                            }
-                        },
-                        "include": {
-                            "mode": "chose"
-                        },
-                        "metadata": {
-                            "mode": "chose"
-                        },
-                        "reasoning": {
-                            "nested": {
-                                "effort": {
-                                    "mode": "chose",
-                                    "label": "Empty"
-                                },
-                                "summary": {
-                                    "mode": "chose",
-                                    "label": "Empty"
-                                }
-                            }
-                        },
-                        "background": {
-                            "mode": "chose"
-                        },
-                        "truncation": {
-                            "mode": "chose",
-                            "label": "Auto"
                         },
                         "tool_choice": {
                             "mode": "chose",
                             "label": "Empty"
                         },
-                        "inputContentType": {
-                            "mode": "chose",
-                            "label": "Text prompt"
+                        "parallel_tool_calls": {
+                            "mode": "chose"
+                        },
+                        "background": {
+                            "mode": "chose"
                         },
                         "context_management": {
                             "mode": "chose"
@@ -322,17 +300,38 @@
                         "createConversation": {
                             "mode": "chose"
                         },
-                        "parallel_tool_calls": {
+                        "store": {
                             "mode": "chose"
-                        }
-                    },
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "data": {
-                                "scoped": "true",
-                                "connection": "openai-gpt-3"
-                            },
-                            "label": "Intelfon's OpenAI connection"
+                        },
+                        "reasoning": {
+                            "nested": {
+                                "effort": {
+                                    "mode": "chose",
+                                    "label": "NoneSupported by GPT-5.1 and newer models."
+                                },
+                                "summary": {
+                                    "mode": "chose",
+                                    "label": "Auto"
+                                }
+                            }
+                        },
+                        "format": {
+                            "nested": {
+                                "type": {
+                                    "mode": "chose",
+                                    "label": "JSON object"
+                                }
+                            }
+                        },
+                        "truncation": {
+                            "mode": "chose",
+                            "label": "Auto"
+                        },
+                        "include": {
+                            "mode": "chose"
+                        },
+                        "metadata": {
+                            "mode": "chose"
                         }
                     }
                 },
@@ -373,8 +372,9 @@
                     },
                     {
                         "name": "tools",
+                        "type": "array",
+                        "label": "Tools",
                         "spec": {
-                            "name": "value",
                             "spec": [
                                 {
                                     "name": "type",
@@ -1406,10 +1406,9 @@
                                 }
                             ],
                             "type": "collection",
-                            "label": "Tool"
-                        },
-                        "type": "array",
-                        "label": "Tools"
+                            "label": "Tool",
+                            "name": "value"
+                        }
                     },
                     {
                         "name": "tool_choice",
@@ -1442,8 +1441,9 @@
                     },
                     {
                         "name": "context_management",
+                        "type": "array",
+                        "label": "Context management",
                         "spec": {
-                            "name": "value",
                             "spec": [
                                 {
                                     "name": "type",
@@ -1470,10 +1470,9 @@
                                 }
                             ],
                             "type": "collection",
-                            "label": "Context entry"
-                        },
-                        "type": "array",
-                        "label": "Context management"
+                            "label": "Context entry",
+                            "name": "value"
+                        }
                     },
                     {
                         "name": "conversationId",
@@ -1517,6 +1516,8 @@
                     },
                     {
                         "name": "reasoning",
+                        "type": "collection",
+                        "label": "Reasoning",
                         "spec": [
                             {
                                 "name": "effort",
@@ -1546,12 +1547,12 @@
                                     ]
                                 }
                             }
-                        ],
-                        "type": "collection",
-                        "label": "Reasoning"
+                        ]
                     },
                     {
                         "name": "format",
+                        "type": "collection",
+                        "label": "Output Format",
                         "spec": [
                             {
                                 "name": "type",
@@ -1564,35 +1565,8 @@
                                         "json_object"
                                     ]
                                 }
-                            },
-                            {
-                                "name": "name",
-                                "type": "text",
-                                "label": "Name",
-                                "required": true,
-                                "validate": {
-                                    "pattern": "^[a-zA-Z0-9_-]+$"
-                                }
-                            },
-                            {
-                                "name": "schema",
-                                "type": "json",
-                                "label": "Schema",
-                                "required": true
-                            },
-                            {
-                                "name": "description",
-                                "type": "text",
-                                "label": "Description"
-                            },
-                            {
-                                "name": "strict",
-                                "type": "boolean",
-                                "label": "Strict"
                             }
-                        ],
-                        "type": "collection",
-                        "label": "Output Format"
+                        ]
                     },
                     {
                         "name": "truncation",
@@ -1621,8 +1595,9 @@
                     },
                     {
                         "name": "metadata",
+                        "type": "array",
+                        "label": "Metadata",
                         "spec": {
-                            "name": "value",
                             "spec": [
                                 {
                                     "name": "key",
@@ -1636,10 +1611,9 @@
                                 }
                             ],
                             "type": "collection",
-                            "label": "Metadata"
-                        },
-                        "type": "array",
-                        "label": "Metadata"
+                            "label": "Metadata",
+                            "name": "value"
+                        }
                     },
                     {
                         "name": "input",
@@ -2660,8 +2634,7 @@
                         "type": "text",
                         "label": "Safety Identifier"
                     }
-                ],
-                "advanced": true
+                ]
             }
         },
         {
@@ -2683,8 +2656,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 1200,
-                    "y": 150
+                    "x": 900,
+                    "y": 0
                 },
                 "restore": {
                     "expect": {
@@ -2838,17 +2811,20 @@
                     {
                         "name": "plantilla_excel",
                         "value": "{{69.data}}"
+                    },
+                    {
+                        "name": "raw_extract",
+                        "value": "{{64.result.resultado}}"
                     }
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "dependencies": [],
-                "codeEditorPython": "import base64\nimport io\nimport json\nimport re\nimport unicodedata\nfrom copy import copy\n\nfrom openpyxl import load_workbook\nfrom openpyxl.cell.cell import MergedCell\nfrom openpyxl.styles import Font, PatternFill, Border, Side, Alignment\n\n\ndef normalizar(valor):\n    texto = \"\" if valor is None else str(valor)\n    texto = unicodedata.normalize(\"NFKD\", texto).encode(\"ascii\", \"ignore\").decode(\"ascii\")\n    return re.sub(r\"[^a-z0-9]+\", \"\", texto.lower())\n\n\ndef obtener(registro, *claves, default=None):\n    if not isinstance(registro, dict):\n        return default\n    normalizados = {normalizar(k): v for k, v in registro.items()}\n    for clave in claves:\n        buscada = normalizar(clave)\n        if buscada in normalizados:\n            return normalizados[buscada]\n    return default\n\n\ndef convertir_a_bytes(valor, vistos=None):\n    if vistos is None:\n        vistos = set()\n    if valor is None:\n        return None\n    if isinstance(valor, bytes):\n        return valor\n    if isinstance(valor, bytearray):\n        return bytes(valor)\n    if isinstance(valor, (list, tuple)):\n        if valor and all(isinstance(x, int) and 0 <= x <= 255 for x in valor):\n            return bytes(valor)\n        for elemento in valor:\n            resultado = convertir_a_bytes(elemento, vistos)\n            if resultado:\n                return resultado\n        return None\n    identificador = id(valor)\n    if identificador in vistos:\n        return None\n    vistos.add(identificador)\n    if isinstance(valor, dict):\n        for elemento in valor.values():\n            resultado = convertir_a_bytes(elemento, vistos)\n            if resultado:\n                return resultado\n        return None\n    for atributo in (\"data\", \"buffer\", \"value\", \"content\", \"body\"):\n        try:\n            resultado = convertir_a_bytes(getattr(valor, atributo), vistos)\n            if resultado:\n                return resultado\n        except Exception:\n            pass\n    texto = str(valor).strip()\n    match = re.search(r\"IMTBuffer\\([^)]*\\):\\s*([0-9a-fA-F]+)\", texto)\n    if match and len(match.group(1)) % 2 == 0:\n        return bytes.fromhex(match.group(1))\n    compacto = re.sub(r\"\\s+\", \"\", texto)\n    if compacto.startswith(\"UEsDB\"):\n        try:\n            return base64.b64decode(compacto)\n        except Exception:\n            pass\n    return None\n\n\ndef editable(hoja, fila, columna):\n    celda = hoja.cell(fila, columna)\n    return None if isinstance(celda, MergedCell) else celda\n\n\ndef escribir(hoja, fila, columna, valor):\n    celda = editable(hoja, fila, columna)\n    if celda is not None:\n        if isinstance(valor, (dict, list, tuple)):\n            valor = json.dumps(valor, ensure_ascii=False)\n        celda.value = valor\n        return True\n    return False\n\n\ndef fila_con_texto(hoja, textos, desde=1):\n    buscados = [normalizar(texto) for texto in textos]\n    for fila in range(desde, hoja.max_row + 1):\n        valores = [normalizar(hoja.cell(fila, columna).value) for columna in range(1, hoja.max_column + 1)]\n        if all(any(buscado in valor for valor in valores) for buscado in buscados):\n            return fila\n    return None\n\n\ndef fila_seccion(hoja, nombres, despues_de=1):\n    candidatos = [normalizar(nombre) for nombre in nombres]\n    for fila in range(max(1, despues_de), hoja.max_row + 1):\n        texto = \" \".join(normalizar(hoja.cell(fila, columna).value) for columna in range(1, hoja.max_column + 1))\n        if any(candidato in texto for candidato in candidatos):\n            return fila\n    return None\n\n\ndef copiar_estilo_fila(hoja, origen, destino):\n    for columna in range(1, hoja.max_column + 1):\n        origen_celda = editable(hoja, origen, columna)\n        destino_celda = editable(hoja, destino, columna)\n        if origen_celda is None or destino_celda is None:\n            continue\n        if origen_celda.has_style:\n            destino_celda._style = copy(origen_celda._style)\n        destino_celda.number_format = origen_celda.number_format\n\n\ndef encabezados_nueva(hoja, fila, valores):\n    for columna, valor in enumerate(valores, 1):\n        celda = editable(hoja, fila, columna)\n        if celda is None:\n            continue\n        celda.value = valor\n        celda.font = Font(bold=True, color=\"FFFFFF\")\n        celda.fill = PatternFill(fill_type=\"solid\", fgColor=\"1A365D\")\n        celda.border = Border(left=Side(style=\"thin\"), right=Side(style=\"thin\"), top=Side(style=\"thin\"), bottom=Side(style=\"thin\"))\n        celda.alignment = Alignment(horizontal=\"center\", vertical=\"center\", wrap_text=True)\n\n\nopenai_result = input.get(\"openai_result\")\nplantilla_excel = input.get(\"plantilla_excel\")\nif not openai_result:\n    raise Exception(\"No se recibió información de OpenAI.\")\nif not plantilla_excel:\n    raise Exception(\"No se recibió la plantilla Excel.\")\n\nif isinstance(openai_result, str):\n    texto = openai_result.replace(\"```json\", \"\").replace(\"```\", \"\").strip()\n    try:\n        data = json.loads(texto)\n    except Exception as error:\n        raise Exception(f\"La respuesta de OpenAI no es JSON válido: {error}\")\nelse:\n    data = openai_result\n\nif not isinstance(data, dict):\n    raise Exception(\"La respuesta de OpenAI debe ser un objeto JSON.\")\nfor clave in (\"bancos_procesados\", \"resumen_general\", \"balance_general\", \"observaciones\"):\n    if not isinstance(data.get(clave), list):\n        data[clave] = []\n\nplantilla_bytes = convertir_a_bytes(plantilla_excel)\nif not plantilla_bytes or plantilla_bytes[:2] != b\"PK\":\n    raise Exception(\"La plantilla recibida no es un XLSX válido.\")\nwb = load_workbook(io.BytesIO(plantilla_bytes))\n\n\ndef buscar_hoja_banco(nombre_banco):\n    nombre = normalizar(nombre_banco)\n    grupos = []\n    if \"industrial\" in nombre or nombre.startswith(\"bi\"):\n        grupos = [\"bi\", \"industrial\"]\n    elif \"gyt\" in nombre:\n        grupos = [\"gyt\"]\n    elif \"bac\" in nombre:\n        grupos = [\"bac\"]\n    elif \"banrural\" in nombre or nombre.startswith(\"ban\"):\n        grupos = [\"ban\", \"banrural\"]\n    for nombre_hoja in wb.sheetnames:\n        if any(grupo in normalizar(nombre_hoja) for grupo in grupos):\n            return wb[nombre_hoja], False\n    nombre_nuevo = str(nombre_banco or \"Banco\")[:31]\n    if nombre_nuevo in wb.sheetnames:\n        return wb[nombre_nuevo], False\n    return wb.create_sheet(nombre_nuevo), True\n\n\ndef escribir_control(hoja, banco):\n    campos = {\n        \"banco\": obtener(banco, \"Banco\"),\n        \"cuenta\": obtener(banco, \"Cuenta\"),\n        \"moneda\": obtener(banco, \"Moneda\"),\n        \"fechainicial\": obtener(banco, \"Fecha_Inicial\", \"Fecha Inicial\"),\n        \"fechafinal\": obtener(banco, \"Fecha_Final\", \"Fecha Final\"),\n        \"saldoinicial\": obtener(banco, \"Saldo_Inicial\", \"Saldo Inicial\"),\n        \"totalingresos\": obtener(banco, \"Total_Ingresos\", \"Total Ingresos\"),\n        \"totalegresos\": obtener(banco, \"Total_Egresos\", \"Total Egresos\"),\n        \"saldofinal\": obtener(banco, \"Saldo_Final\", \"Saldo Final\"),\n        \"estadoconciliacion\": obtener(banco, \"Estado_Conciliacion\", \"Estado Conciliacion\")\n    }\n    for fila in range(1, hoja.max_row + 1):\n        for columna in range(1, hoja.max_column + 1):\n            etiqueta = normalizar(hoja.cell(fila, columna).value)\n            for clave, valor in campos.items():\n                if etiqueta == clave or (clave in etiqueta and len(etiqueta) < len(clave) + 10):\n                    escribir(hoja, fila, columna + 1, valor)\n                    break\n\n\nws = wb[\"Consolidado General\"] if \"Consolidado General\" in wb.sheetnames else wb.create_sheet(\"Consolidado General\", 0)\nencabezados_resumen = [\"Banco\", \"Cuenta\", \"Moneda\", \"Fecha Inicial\", \"Fecha Final\", \"Saldo Inicial\", \"Total Ingresos\", \"Total Egresos\", \"Saldo Final\"]\nheader_resumen = fila_con_texto(ws, [\"Banco\", \"Cuenta\"], 1) or 5\nif not fila_con_texto(ws, [\"Banco\", \"Cuenta\"], 1):\n    encabezados_nueva(ws, header_resumen, encabezados_resumen)\n\nfor fila, registro in enumerate(data.get(\"resumen_general\", []), header_resumen + 1):\n    valores = [\n        obtener(registro, \"Banco\"),\n        obtener(registro, \"Cuenta\"),\n        obtener(registro, \"Moneda\"),\n        obtener(registro, \"Fecha_Inicial\", \"Fecha Inicial\"),\n        obtener(registro, \"Fecha_Final\", \"Fecha Final\"),\n        obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"),\n        obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"),\n        obtener(registro, \"Total_Egresos\", \"Total Egresos\"),\n        obtener(registro, \"Saldo_Final\", \"Saldo Final\")\n    ]\n    for columna, valor in enumerate(valores, 1):\n        escribir(ws, fila, columna, valor)\n\nencabezados_mov = [\"Fecha\", \"No. Referencia\", \"Descripción\", \"Moneda\", \"Ingreso\", \"Egreso\", \"Saldo Resultante\"]\nfor banco in data.get(\"bancos_procesados\", []):\n    nombre_banco = obtener(banco, \"Banco\", default=\"Banco\")\n    hoja, es_nueva = buscar_hoja_banco(nombre_banco)\n    if es_nueva:\n        escribir(hoja, 1, 1, \"Control Contable\")\n        celda = editable(hoja, 1, 1)\n        if celda is not None:\n            celda.font = Font(bold=True, size=14)\n    escribir_control(hoja, banco)\n\n    fila_header_mov = fila_con_texto(hoja, [\"Fecha\", \"Descripcion\"], 1) or fila_con_texto(hoja, [\"Fecha\", \"No. Referencia\"], 1) or 14\n    if es_nueva and fila_header_mov == 14:\n        encabezados_nueva(hoja, fila_header_mov, encabezados_mov)\n\n    fila_resumen_diario = fila_seccion(hoja, [\"resumen diario\"], fila_header_mov + 1)\n    fila_resumen_semanal = fila_seccion(hoja, [\"resumen semanal\"], fila_header_mov + 1)\n    fila_resumen_mensual = fila_seccion(hoja, [\"resumen mensual\"], fila_header_mov + 1)\n    siguientes = [x for x in (fila_resumen_diario, fila_resumen_semanal, fila_resumen_mensual) if x and x > fila_header_mov]\n    limite = min(siguientes) if siguientes else hoja.max_row + 1\n    movimientos = obtener(banco, \"Movimientos\", \"estado_cuenta\", default=[])\n    if not isinstance(movimientos, list):\n        movimientos = []\n    disponibles = max(0, limite - fila_header_mov - 1)\n    if len(movimientos) > disponibles and siguientes:\n        agregar = len(movimientos) - disponibles\n        hoja.insert_rows(limite, agregar)\n        for offset in range(agregar):\n            copiar_estilo_fila(hoja, max(1, limite - 1), limite + offset)\n\n    for fila_mov, movimiento in enumerate(movimientos, fila_header_mov + 1):\n        valores = [\n            obtener(movimiento, \"Fecha\"),\n            obtener(movimiento, \"No_Referencia\", \"No. Referencia\", \"Referencia\"),\n            obtener(movimiento, \"Descripcion\", \"Descripción\"),\n            obtener(movimiento, \"Moneda\"),\n            obtener(movimiento, \"Ingreso\"),\n            obtener(movimiento, \"Egreso\"),\n            obtener(movimiento, \"Saldo_Resultante\", \"Saldo Resultante\", \"Saldo\")\n        ]\n        for columna, valor in enumerate(valores, 1):\n            escribir(hoja, fila_mov, columna, valor)\n\n    if fila_resumen_diario:\n        header = fila_con_texto(hoja, [\"Fecha\", \"Moneda\", \"Saldo Inicial\"], fila_resumen_diario + 1)\n        if header:\n            for fila_d, registro in enumerate(obtener(banco, \"resumen_diario\", default=[]) or [], header + 1):\n                valores = [obtener(registro, \"Fecha\"), obtener(registro, \"Moneda\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\", \"Saldo\")]\n                for columna, valor in enumerate(valores, 1):\n                    escribir(hoja, fila_d, columna, valor)\n\n    if fila_resumen_semanal:\n        header = fila_con_texto(hoja, [\"Semana\", \"Moneda\"], fila_resumen_semanal + 1)\n        if header:\n            for fila_s, registro in enumerate(obtener(banco, \"resumen_semanal\", default=[]) or [], header + 1):\n                valores = [obtener(registro, \"Semana\"), obtener(registro, \"Rango\", \"Rango Fecha\"), obtener(registro, \"Moneda\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\", \"Saldo\")]\n                for columna, valor in enumerate(valores, 1):\n                    escribir(hoja, fila_s, columna, valor)\n\n    if fila_resumen_mensual:\n        header = fila_con_texto(hoja, [\"Mes\", \"Moneda\"], fila_resumen_mensual + 1)\n        if header:\n            for fila_m, registro in enumerate(obtener(banco, \"resumen_mensual\", default=[]) or [], header + 1):\n                valores = [obtener(registro, \"Mes\"), obtener(registro, \"Moneda\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\", \"Saldo\")]\n                for columna, valor in enumerate(valores, 1):\n                    escribir(hoja, fila_m, columna, valor)\n\nheaders_balance = [\"Banco\", \"Cuenta\", \"Moneda\", \"Período\", \"Saldo Inicial\", \"Total Ingresos\", \"Total Egresos\", \"Saldo Final\", \"Saldo Calculado\", \"Resultado Conciliación\", \"Observación\"]\nws_balance = wb[\"Balance General Detallado\"] if \"Balance General Detallado\" in wb.sheetnames else wb.create_sheet(\"Balance General Detallado\")\nheader_balance = fila_con_texto(ws_balance, [\"Banco\", \"Cuenta\", \"Saldo Inicial\"], 1) or 1\nif not fila_con_texto(ws_balance, [\"Banco\", \"Cuenta\", \"Saldo Inicial\"], 1):\n    encabezados_nueva(ws_balance, header_balance, headers_balance)\nfor fila_b, registro in enumerate(data.get(\"balance_general\", []), header_balance + 1):\n    valores = [obtener(registro, \"Banco\"), obtener(registro, \"Cuenta\"), obtener(registro, \"Moneda\"), obtener(registro, \"Periodo\", \"Período\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\"), obtener(registro, \"Saldo_Calculado\", \"Saldo Calculado\"), obtener(registro, \"Resultado_Conciliacion\", \"Resultado Conciliación\"), obtener(registro, \"Observacion\", \"Observación\")]\n    for columna, valor in enumerate(valores, 1):\n        escribir(ws_balance, fila_b, columna, valor)\n\nws_obs = wb[\"Observaciones\"] if \"Observaciones\" in wb.sheetnames else wb.create_sheet(\"Observaciones\")\nescribir(ws_obs, 1, 1, \"Observaciones del proceso\")\ncelda = editable(ws_obs, 1, 1)\nif celda is not None:\n    celda.font = Font(bold=True, size=14)\nfor fila_o, observacion in enumerate(data.get(\"observaciones\", []), 3):\n    if isinstance(observacion, dict):\n        escribir(ws_obs, fila_o, 1, obtener(observacion, \"Banco\", default=\"\"))\n        escribir(ws_obs, fila_o, 2, obtener(observacion, \"Cuenta\", default=\"\"))\n        escribir(ws_obs, fila_o, 3, obtener(observacion, \"Campo\", default=\"\"))\n        escribir(ws_obs, fila_o, 4, obtener(observacion, \"Detalle\", default=\"\"))\n    else:\n        escribir(ws_obs, fila_o, 1, str(observacion))\n\nsalida = io.BytesIO()\nwb.save(salida)\nsalida.seek(0)\n\ntotales = data.get(\"totales_globales\", {}) or {}\nresumen_g = data.get(\"resumen_general\", []) or []\nbancos_p = data.get(\"bancos_procesados\", []) or []\n\nresumen_json = json.dumps(resumen_g, ensure_ascii=False)\nbancos_json = json.dumps(bancos_p, ensure_ascii=False)\ntotales_json = json.dumps(totales, ensure_ascii=False)\n\nreturn {\"filename\": \"ReporteFinancieroIntelfon.xlsx\", \"data\": base64.b64encode(salida.getvalue()).decode(\"ascii\"), \"resumen_general\": resumen_json, \"bancos_procesados\": bancos_json, \"totales_globales\": totales_json, \"total_registros\": len(resumen_g)}"
+                "codeEditorPython": "import base64\nimport io\nimport json\nimport re\nimport unicodedata\nfrom copy import copy\nfrom datetime import datetime, date\nfrom decimal import Decimal, InvalidOperation, ROUND_HALF_UP\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\nfrom openpyxl.styles import Font, PatternFill, Border, Side, Alignment\n\ndef normalizar(valor):\n    texto = \"\" if valor is None else str(valor)\n    texto = unicodedata.normalize(\"NFKD\", texto).encode(\"ascii\", \"ignore\").decode(\"ascii\")\n    return re.sub(r\"[^a-z0-9]+\", \"\", texto.lower())\n\ndef obtener(registro, *claves, default=None):\n    if not isinstance(registro, dict):\n        return default\n    normalizados = {normalizar(k): v for k, v in registro.items()}\n    for clave in claves:\n        n = normalizar(clave)\n        if n in normalizados:\n            return normalizados[n]\n    return default\n\ndef lista(valor):\n    if valor is None:\n        return []\n    return valor if isinstance(valor, list) else [valor]\n\ndef es_global(valor):\n    n = normalizar(valor)\n    return n in {\"global\", \"cuentaglobal\", \"cuentageneral\", \"consolidadogeneral\", \"consolidado\", \"totalgeneral\"} or \"cuentaglobal\" in n or \"consolidadogeneral\" in n\n\ndef cuenta_visible(valor):\n    return \"Cuenta no identificada\" if valor is None or not str(valor).strip() else valor\n\ndef numero(valor):\n    if valor is None or isinstance(valor, bool):\n        return Decimal(\"0\")\n    if isinstance(valor, (int, float, Decimal)):\n        return Decimal(str(valor))\n    texto = str(valor).strip()\n    if not texto:\n        return Decimal(\"0\")\n    negativo = texto.startswith(\"(\") and texto.endswith(\")\")\n    texto = re.sub(r\"[^0-9,.-]\", \"\", texto)\n    if not texto:\n        return Decimal(\"0\")\n    if \",\" in texto and \".\" in texto:\n        if texto.rfind(\",\") > texto.rfind(\".\"):\n            texto = texto.replace(\".\", \"\").replace(\",\", \".\")\n        else:\n            texto = texto.replace(\",\", \"\")\n    elif \",\" in texto:\n        partes = texto.split(\",\")\n        texto = \"\".join(partes[:-1]) + \".\" + partes[-1] if len(partes[-1]) in (1, 2) else \"\".join(partes)\n    try:\n        valor_decimal = Decimal(texto)\n        return -valor_decimal if negativo else valor_decimal\n    except InvalidOperation:\n        return Decimal(\"0\")\n\ndef moneda(valor):\n    return float(Decimal(valor).quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP))\n\ndef firma(valor):\n    return json.dumps(valor, ensure_ascii=False, sort_keys=True, default=str)\n\ndef a_bytes(valor, vistos=None):\n    if vistos is None:\n        vistos = set()\n    if valor is None:\n        return None\n    if isinstance(valor, bytes):\n        return valor\n    if isinstance(valor, bytearray):\n        return bytes(valor)\n    if isinstance(valor, (list, tuple)):\n        if valor and all(isinstance(x, int) and 0 <= x <= 255 for x in valor):\n            return bytes(valor)\n        for item in valor:\n            salida = a_bytes(item, vistos)\n            if salida:\n                return salida\n        return None\n    if isinstance(valor, dict):\n        if id(valor) in vistos:\n            return None\n        vistos.add(id(valor))\n        for clave in (\"data\", \"content\", \"body\", \"buffer\", \"value\", \"base64\"):\n            if clave in valor:\n                salida = a_bytes(valor[clave], vistos)\n                if salida:\n                    return salida\n        for item in valor.values():\n            salida = a_bytes(item, vistos)\n            if salida:\n                return salida\n        return None\n    texto = str(valor).strip()\n    match = re.search(r\"IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)\", texto)\n    if match:\n        try:\n            return bytes.fromhex(match.group(1))\n        except Exception:\n            pass\n    if texto.startswith(\"data:\") and \",\" in texto:\n        texto = texto.split(\",\", 1)[1]\n    try:\n        return base64.b64decode(re.sub(r\"\\\\s+\", \"\", texto) + \"=\" * (-len(re.sub(r\"\\\\s+\", \"\", texto)) % 4), validate=False)\n    except Exception:\n        return None\n\ndef celda(hoja, fila, columna):\n    c = hoja.cell(fila, columna)\n    return None if isinstance(c, MergedCell) else c\n\ndef escribir(hoja, fila, columna, valor):\n    c = celda(hoja, fila, columna)\n    if c is None:\n        return\n    if isinstance(valor, (dict, list, tuple)):\n        valor = json.dumps(valor, ensure_ascii=False, default=str)\n    if isinstance(valor, (datetime, date)):\n        valor = valor.strftime(\"%d/%m/%Y\")\n    c.value = valor\n\ndef limpiar(hoja, desde, hasta, columnas):\n    for fila in range(desde, hasta + 1):\n        for columna in range(1, columnas + 1):\n            c = celda(hoja, fila, columna)\n            if c is not None:\n                c.value = None\n\ndef copiar_estilo(hoja, origen, destino, columnas):\n    for columna in range(1, columnas + 1):\n        a = celda(hoja, origen, columna)\n        b = celda(hoja, destino, columna)\n        if a is not None and b is not None and a.has_style:\n            b._style = copy(a._style)\n            b.number_format = a.number_format\n            b.alignment = copy(a.alignment)\n\ndef encabezado(hoja, requeridos, desde=1):\n    req = [normalizar(x) for x in requeridos]\n    for fila in range(desde, hoja.max_row + 1):\n        textos = [normalizar(hoja.cell(fila, col).value) for col in range(1, hoja.max_column + 1)]\n        if all(any(r in texto for texto in textos) for r in req):\n            return fila\n    return None\n\ndef poner_encabezados(hoja, fila, valores):\n    for col, valor in enumerate(valores, 1):\n        c = celda(hoja, fila, col)\n        if c is None:\n            continue\n        c.value = valor\n        c.font = Font(bold=True, color=\"FFFFFF\")\n        c.fill = PatternFill(fill_type=\"solid\", fgColor=\"1A365D\")\n        c.border = Border(left=Side(style=\"thin\"), right=Side(style=\"thin\"), top=Side(style=\"thin\"), bottom=Side(style=\"thin\"))\n        c.alignment = Alignment(horizontal=\"center\", vertical=\"center\", wrap_text=True)\n\ndef movimiento_totales(movimientos):\n    ingresos = Decimal(\"0\")\n    egresos = Decimal(\"0\")\n    vistos = set()\n    limpios = []\n    for movimiento in lista(movimientos):\n        if not isinstance(movimiento, dict):\n            continue\n        f = firma(movimiento)\n        if f in vistos:\n            continue\n        vistos.add(f)\n        limpios.append(movimiento)\n        ingreso = numero(obtener(movimiento, \"Ingreso\", \"Ingresos\", \"Abono\", \"Haber\", \"Credito\", \"Crédito\", \"Credit\", \"Deposit\", \"Deposito\"))\n        egreso = numero(obtener(movimiento, \"Egreso\", \"Egresos\", \"Cargo\", \"Debe\", \"Debito\", \"Débito\", \"Debit\", \"Withdrawal\", \"Retiro\"))\n        if ingreso == 0 and egreso == 0:\n            tipo = normalizar(obtener(movimiento, \"TT\", \"Tipo\", \"Tipo_Transaccion\", \"Tipo de Transacción\", default=\"\"))\n            importe = numero(obtener(movimiento, \"Monto\", \"Importe\", \"Valor\", \"Amount\"))\n            if tipo in {\"de\", \"nc\", \"deposito\", \"abono\", \"credito\", \"credit\", \"income\", \"ingreso\"}:\n                ingreso = abs(importe)\n            elif tipo in {\"cq\", \"nd\", \"retiro\", \"cargo\", \"debito\", \"debit\", \"expense\", \"egreso\"}:\n                egreso = abs(importe)\n        ingresos += abs(ingreso)\n        egresos += abs(egreso)\n    return limpios, ingresos, egresos\n\ndef a_registros(data):\n    registros = []\n    for banco in lista(data.get(\"bancos_procesados\")):\n        if not isinstance(banco, dict):\n            continue\n        nombre = obtener(banco, \"Banco\", \"banco\", default=\"Banco\")\n        cuenta_base = cuenta_visible(obtener(banco, \"Cuenta\", \"cuenta\", default=\"\"))\n        if es_global(nombre):\n            continue\n        cuentas = lista(obtener(banco, \"cuentas\", \"Cuentas\", default=[]))\n        fuentes = cuentas if cuentas else [banco]\n        for cuenta in fuentes:\n            registro = dict(banco)\n            if isinstance(cuenta, dict) and cuenta is not banco:\n                registro.update(cuenta)\n            cuenta_nombre = cuenta_visible(obtener(registro, \"Cuenta\", \"cuenta\", default=cuenta_base))\n            if es_global(cuenta_nombre):\n                continue\n            movimientos = obtener(registro, \"estado_cuenta\", \"Movimientos\", \"movimientos\", \"transacciones\", \"movimientos_bancarios\", default=[])\n            movimientos, ingresos, egresos = movimiento_totales(movimientos)\n            registro[\"Banco\"] = nombre\n            registro[\"Cuenta\"] = cuenta_nombre\n            registro[\"estado_cuenta\"] = movimientos\n            registro[\"Total_Ingresos\"] = moneda(ingresos)\n            registro[\"Total_Egresos\"] = moneda(egresos)\n            registro[\"Neto\"] = moneda(ingresos - egresos)\n            registros.append(registro)\n    return registros\n\ndef resumen_corregido(data, registros):\n    salida = []\n    usados = set()\n    existentes = lista(data.get(\"resumen_general\"))\n    for registro in registros:\n        banco = registro[\"Banco\"]\n        cuenta = registro[\"Cuenta\"]\n        moneda_nombre = obtener(registro, \"Moneda\", \"moneda\")\n        clave = (normalizar(banco), normalizar(cuenta), normalizar(moneda_nombre))\n        base = None\n        for candidato in existentes:\n            if not isinstance(candidato, dict):\n                continue\n            ck = (normalizar(obtener(candidato, \"Banco\", \"banco\")), normalizar(cuenta_visible(obtener(candidato, \"Cuenta\", \"cuenta\"))), normalizar(obtener(candidato, \"Moneda\", \"moneda\")))\n            if ck == clave:\n                base = dict(candidato)\n                break\n        if base is None:\n            base = {\"Banco\": banco, \"Cuenta\": cuenta, \"Moneda\": moneda_nombre}\n        base.update({\"Banco\": banco, \"Cuenta\": cuenta, \"Moneda\": moneda_nombre, \"Total_Ingresos\": registro[\"Total_Ingresos\"], \"Total_Egresos\": registro[\"Total_Egresos\"], \"Neto\": registro[\"Neto\"], \"Cantidad_Movimientos\": len(registro[\"estado_cuenta\"])})\n        salida.append(base)\n    return salida\n\ndef escribir_periodo(wb, nombre, registros, headers):\n    hoja = wb[nombre] if nombre in wb.sheetnames else wb.create_sheet(nombre)\n    h = encabezado(hoja, [\"Banco\", \"Cuenta\"], 1) or 1\n    poner_encabezados(hoja, h, headers)\n    limpiar(hoja, h + 1, hoja.max_row, len(headers))\n    for fila, registro in enumerate(registros, h + 1):\n        if fila > h + 1:\n            copiar_estilo(hoja, fila - 1, fila, len(headers))\n        valores = [obtener(registro, \"Banco\", \"banco\"), obtener(registro, \"Cuenta\", \"cuenta\"), obtener(registro, \"Moneda\", \"moneda\"), obtener(registro, \"Periodo\", \"periodo\", \"Fecha\", \"fecha\"), obtener(registro, \"Ingresos\", \"ingresos\", \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Egresos\", \"egresos\", \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Neto\", \"neto\", \"Resultado\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\"), obtener(registro, \"Cantidad_Movimientos\", \"Cantidad Movimientos\", \"Cantidad\"), obtener(registro, \"Observacion\", \"Observación\")]\n        for col, valor in enumerate(valores, 1):\n            escribir(hoja, fila, col, valor)\n\nopenai_result = input.get(\"openai_result\")\nplantilla_excel = input.get(\"plantilla_excel\")\nraw_extract = input.get(\"raw_extract\")\nif not openai_result or not plantilla_excel:\n    raise Exception(\"Faltan el análisis o la plantilla de salida.\")\ntry:\n    data = json.loads(openai_result) if isinstance(openai_result, str) else openai_result\nexcept Exception as error:\n    raise Exception(f\"El análisis no es JSON válido: {error}\")\nif not isinstance(data, dict):\n    raise Exception(\"El análisis debe ser un objeto JSON.\")\nplantilla_bytes = a_bytes(plantilla_excel)\nif not plantilla_bytes or plantilla_bytes[:2] != b\"PK\":\n    raise Exception(\"La plantilla no es un XLSX válido.\")\nwb = openpyxl.load_workbook(io.BytesIO(plantilla_bytes))\n\ntry:\n    raw = json.loads(raw_extract) if isinstance(raw_extract, str) else raw_extract\nexcept Exception:\n    raw = {}\nws_raw = wb[\"Datos Completos\"] if \"Datos Completos\" in wb.sheetnames else wb.create_sheet(\"Datos Completos\", 0)\nlimpiar(ws_raw, 2, ws_raw.max_row, max(ws_raw.max_column, 40))\nponer_encabezados(ws_raw, 1, [\"Archivo\", \"Hoja\", \"Fila\"] + [f\"Columna {i}\" for i in range(1, 31)])\nraw_row = 2\nfor hoja_data in lista(obtener(raw, \"hojas\", default=[])):\n    nombre_hoja = obtener(hoja_data, \"nombre\", default=\"\")\n    for fila_data in lista(obtener(hoja_data, \"filas\", default=[])):\n        valores = obtener(fila_data, \"valores\", default=[]) or []\n        escribir(ws_raw, raw_row, 1, obtener(raw, \"archivo\", default=\"\"))\n        escribir(ws_raw, raw_row, 2, nombre_hoja)\n        escribir(ws_raw, raw_row, 3, obtener(fila_data, \"fila\", default=raw_row - 1))\n        for col, valor in enumerate(valores[:30], 4):\n            escribir(ws_raw, raw_row, col, valor)\n        raw_row += 1\n\nregistros = a_registros(data)\nresumenes = resumen_corregido(data, registros)\nws_general = wb[\"Consolidado General\"] if \"Consolidado General\" in wb.sheetnames else wb.create_sheet(\"Consolidado General\", 1)\nheader_general = encabezado(ws_general, [\"Banco\", \"Cuenta\"], 1) or 1\nif not encabezado(ws_general, [\"Banco\", \"Cuenta\"], 1):\n    poner_encabezados(ws_general, header_general, [\"Banco\", \"Cuenta\", \"Moneda\", \"Fecha Inicial\", \"Fecha Final\", \"Saldo Inicial\", \"Total Ingresos\", \"Total Egresos\", \"Saldo Final\", \"Neto\", \"Cantidad Movimientos\"])\nlimpiar(ws_general, header_general + 1, ws_general.max_row, 11)\nfor fila, registro in enumerate(resumenes, header_general + 1):\n    if fila > header_general + 1:\n        copiar_estilo(ws_general, fila - 1, fila, 11)\n    valores = [obtener(registro, \"Banco\"), obtener(registro, \"Cuenta\"), obtener(registro, \"Moneda\"), obtener(registro, \"Fecha_Inicial\", \"Fecha Inicial\"), obtener(registro, \"Fecha_Final\", \"Fecha Final\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\"), obtener(registro, \"Neto\"), obtener(registro, \"Cantidad_Movimientos\", \"Cantidad Movimientos\")]\n    for col, valor in enumerate(valores, 1):\n        escribir(ws_general, fila, col, valor)\n\nfor campo, hoja, headers in [(\"diario\", \"Detalle Diario\", [\"Banco\", \"Cuenta\", \"Moneda\", \"Día\", \"Ingresos\", \"Egresos\", \"Neto\", \"Saldo Inicial\", \"Saldo Final\", \"Cantidad Movimientos\", \"Observación\"]), (\"semanal\", \"Detalle Semanal\", [\"Banco\", \"Cuenta\", \"Moneda\", \"Semana\", \"Ingresos\", \"Egresos\", \"Neto\", \"Saldo Inicial\", \"Saldo Final\", \"Cantidad Movimientos\", \"Observación\"]), (\"mensual\", \"Detalle Mensual\", [\"Banco\", \"Cuenta\", \"Moneda\", \"Mes\", \"Ingresos\", \"Egresos\", \"Neto\", \"Saldo Inicial\", \"Saldo Final\", \"Cantidad Movimientos\", \"Observación\"])]:\n    filas = []\n    for registro in registros:\n        periodicidad = obtener(registro, \"periodicidad\", \"Periodicidad\", default={}) or {}\n        filas.extend(lista(obtener(periodicidad, campo, campo.capitalize(), default=[])))\n    escribir_periodo(wb, hoja, filas, headers)\n\nws_balance = wb[\"Balance General Detallado\"] if \"Balance General Detallado\" in wb.sheetnames else wb.create_sheet(\"Balance General Detallado\")\nheaders_balance = [\"Banco\", \"Cuenta\", \"Moneda\", \"Período\", \"Saldo Inicial\", \"Total Ingresos\", \"Total Egresos\", \"Saldo Final\", \"Saldo Calculado\", \"Resultado Conciliación\", \"Observación\"]\nheader_balance = encabezado(ws_balance, [\"Banco\", \"Cuenta\", \"Saldo Inicial\"], 1) or 1\nif not encabezado(ws_balance, [\"Banco\", \"Cuenta\", \"Saldo Inicial\"], 1):\n    poner_encabezados(ws_balance, header_balance, headers_balance)\nlimpiar(ws_balance, header_balance + 1, ws_balance.max_row, len(headers_balance))\nfor fila, registro in enumerate(resumenes, header_balance + 1):\n    if fila > header_balance + 1:\n        copiar_estilo(ws_balance, fila - 1, fila, len(headers_balance))\n    saldo_inicial = numero(obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"))\n    saldo_final = numero(obtener(registro, \"Saldo_Final\", \"Saldo Final\"))\n    ingresos = numero(obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"))\n    egresos = numero(obtener(registro, \"Total_Egresos\", \"Total Egresos\"))\n    saldo_calculado = saldo_inicial + ingresos - egresos\n    valores = [obtener(registro, \"Banco\"), obtener(registro, \"Cuenta\"), obtener(registro, \"Moneda\"), obtener(registro, \"Periodo\", \"Período\"), moneda(saldo_inicial), moneda(ingresos), moneda(egresos), moneda(saldo_final), moneda(saldo_calculado), moneda(saldo_calculado - saldo_final), obtener(registro, \"Observacion\", \"Observación\")]\n    for col, valor in enumerate(valores, 1):\n        escribir(ws_balance, fila, col, valor)\n\nws_obs = wb[\"Observaciones\"] if \"Observaciones\" in wb.sheetnames else wb.create_sheet(\"Observaciones\")\nlimpiar(ws_obs, 3, ws_obs.max_row, 4)\nescribir(ws_obs, 1, 1, \"Observaciones del proceso\")\nfor fila, observacion in enumerate(lista(data.get(\"observaciones\")), 3):\n    if isinstance(observacion, dict):\n        escribir(ws_obs, fila, 1, obtener(observacion, \"Banco\", default=\"\"))\n        escribir(ws_obs, fila, 2, obtener(observacion, \"Cuenta\", default=\"\"))\n        escribir(ws_obs, fila, 3, obtener(observacion, \"Campo\", default=\"\"))\n        escribir(ws_obs, fila, 4, obtener(observacion, \"Detalle\", default=\"\"))\n    else:\n        escribir(ws_obs, fila, 1, str(observacion))\n\nsalida = io.BytesIO()\nwb.save(salida)\nsalida.seek(0)\nreturn {\"filename\": \"ReporteFinancieroIntelfon.xlsx\", \"data\": base64.b64encode(salida.getvalue()).decode(\"ascii\"), \"resumen_general\": json.dumps(resumenes, ensure_ascii=False, default=str), \"bancos_procesados\": json.dumps(registros, ensure_ascii=False, default=str), \"totales_globales\": json.dumps(data.get(\"totales_globales\") or {}, ensure_ascii=False, default=str), \"total_registros\": len(resumenes), \"filas_fuente_completas\": max(0, raw_row - 2)}"
             },
             "metadata": {
                 "designer": {
-                    "x": 1500,
-                    "y": 150
+                    "x": 1200,
+                    "y": 0
                 },
                 "restore": {
                     "expect": {
@@ -3014,6 +2990,223 @@
             }
         },
         {
+            "id": 75,
+            "module": "code:ExecuteCode",
+            "version": 1,
+            "parameters": {},
+            "filter": null,
+            "mapper": {
+                "input": [
+                    {
+                        "name": "base_file",
+                        "value": "{{66.result.data}}"
+                    },
+                    {
+                        "name": "records_json",
+                        "value": "{{66.result.bancos_procesados}}"
+                    }
+                ],
+                "language": "python",
+                "inputFormat": "editor",
+                "codeEditorPython": "import base64, io, json, re, unicodedata\nimport openpyxl\nfrom copy import copy\n\ndef norm(v):\n    s = '' if v is None else str(v)\n    s = unicodedata.normalize('NFKD', s).encode('ascii','ignore').decode('ascii')\n    return re.sub(r'[^a-z0-9]+','',s.lower())\n\ndef as_list(v):\n    if v is None: return []\n    return v if isinstance(v,list) else [v]\n\ndef get(d,*keys):\n    if not isinstance(d,dict): return None\n    by={norm(k):v for k,v in d.items()}\n    for k in keys:\n        if norm(k) in by: return by[norm(k)]\n    return None\n\ndef country(record):\n    explicit=get(record,'Pais','País','Country','pais')\n    n=norm(explicit)\n    if 'elsalvador' in n or n in ('sv','salvador'): return 'El Salvador'\n    if 'guatemala' in n or n=='gt': return 'Guatemala'\n    text=' '.join(str(get(record,k) or '') for k in ('Banco','Cuenta','Moneda','archivo','hoja','Descripcion','Dirección','Direccion','Pais'))\n    n=norm(text)\n    if 'elsalvador' in n or 'salvador' in n or 'elsalvadoreno' in n or 'sv' in n: return 'El Salvador'\n    if 'guatemala' in n or 'guatemalteco' in n or 'gt' in n: return 'Guatemala'\n    currency=norm(get(record,'Moneda','moneda'))\n    if currency in ('usd','us dollar','dolares','dollar'): return 'El Salvador'\n    if currency in ('gtq','quetzal','quetzales','q'): return 'Guatemala'\n    return None\n\ndef row_country(row, keyset):\n    if len(row) < 2: return False\n    return (norm(row[0]), norm(row[1])) in keyset\n\nbase=input.get('base_file')\nrecords=input.get('records_json')\nif not base or not records: raise Exception('Faltan el Excel base o los registros clasificados.')\ntry: records=json.loads(records) if isinstance(records,str) else records\nexcept Exception as e: raise Exception(f'Los registros no son JSON válido: {e}')\nraw=base64.b64decode(str(base).strip() + '=' * (-len(str(base).strip()) % 4))\nwb0=openpyxl.load_workbook(io.BytesIO(raw))\nby_country={'Guatemala':[],'El Salvador':[]}\nfor r in as_list(records):\n    if not isinstance(r,dict): continue\n    c=country(r)\n    if c: by_country[c].append(r)\n\noutputs=[]\nfor c in ('Guatemala','El Salvador'):\n    items=by_country[c]\n    if not items: continue\n    wb=openpyxl.load_workbook(io.BytesIO(raw))\n    keys={(norm(get(r,'Banco','banco')),norm(get(r,'Cuenta','cuenta'))) for r in items}\n    files={norm(get(r,'archivo','Archivo','file')) for r in items if get(r,'archivo','Archivo','file')}\n    for sheet in wb.worksheets:\n        title=norm(sheet.title)\n        if title in (norm('Consolidado General'),norm('Detalle Diario'),norm('Detalle Semanal'),norm('Detalle Mensual'),norm('Balance General Detallado')):\n            for i in range(sheet.max_row,1,-1):\n                row=[sheet.cell(i,j).value for j in range(1,min(sheet.max_column,2)+1)]\n                if not row_country(row,keys): sheet.delete_rows(i,1)\n        elif title==norm('Datos Completos'):\n            for i in range(sheet.max_row,1,-1):\n                file_value=norm(sheet.cell(i,1).value)\n                if files and file_value not in files: sheet.delete_rows(i,1)\n    ws=wb['Observaciones'] if 'Observaciones' in wb.sheetnames else wb.create_sheet('Observaciones')\n    ws.cell(1,1).value=f'País del reporte: {c}'\n    out=io.BytesIO(); wb.save(out); out.seek(0)\n    safe='Guatemala' if c=='Guatemala' else 'ElSalvador'\n    outputs.append({'country':c,'filename':f'ReporteFinanciero_{safe}.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':base64.b64encode(out.getvalue()).decode('ascii')})\nif not outputs:\n    outputs=[{'country':'Sin clasificar','filename':'ReporteFinancieroIntelfon.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':str(base)}]\nreturn {'files':outputs,'files_count':len(outputs),'countries':[x['country'] for x in outputs]}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 1500,
+                    "y": 0,
+                    "name": "Separar por país"
+                },
+                "restore": {
+                    "expect": {
+                        "language": {
+                            "mode": "chose",
+                            "label": "Python",
+                            "nested": [
+                                {
+                                    "name": "inputFormat",
+                                    "type": "select",
+                                    "label": "Input format",
+                                    "help": "Choose how the code is provided.",
+                                    "required": true,
+                                    "default": "editor",
+                                    "options": [
+                                        {
+                                            "value": "editor",
+                                            "label": "Code editor",
+                                            "nested": [
+                                                {
+                                                    "name": "codeEditorPython",
+                                                    "type": "editor",
+                                                    "editor": "monaco",
+                                                    "language": "python",
+                                                    "required": true,
+                                                    "label": "Code",
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "value": "string",
+                                            "label": "Mapped code (useful for AI)",
+                                            "nested": [
+                                                {
+                                                    "name": "codeStringPython",
+                                                    "type": "text",
+                                                    "required": true,
+                                                    "multiline": true,
+                                                    "label": "Code",
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "default": "# You can map dynamic code from previous modules or inputs."
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "inputFormat": {
+                            "mode": "chose",
+                            "label": "Code editor",
+                            "nested": [
+                                {
+                                    "name": "codeEditorPython",
+                                    "type": "editor",
+                                    "editor": "monaco",
+                                    "language": "python",
+                                    "required": true,
+                                    "label": "Code",
+                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "expect": [
+                    {
+                        "name": "language",
+                        "type": "select",
+                        "required": true,
+                        "mappable": true,
+                        "label": "Language",
+                        "default": "javascript",
+                        "validate": {
+                            "enum": [
+                                "javascript",
+                                "python"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "inputFormat",
+                        "type": "select",
+                        "label": "Input format",
+                        "required": true,
+                        "default": "editor",
+                        "validate": {
+                            "enum": [
+                                "editor",
+                                "string"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "codeEditorPython",
+                        "type": "editor",
+                        "editor": "monaco",
+                        "language": "python",
+                        "required": true,
+                        "label": "Code",
+                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
+                    },
+                    {
+                        "name": "input",
+                        "type": "array",
+                        "default": [
+                            {
+                                "name": "foo",
+                                "value": "bar"
+                            }
+                        ],
+                        "spec": {
+                            "type": "collection",
+                            "label": "Variable",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "required": true,
+                                    "validate": {
+                                        "pattern": "^[a-zA-Z0-9_]{1,32}$",
+                                        "min": 1,
+                                        "max": 32
+                                    },
+                                    "label": "Name"
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "any",
+                                    "required": false,
+                                    "label": "Value"
+                                }
+                            ]
+                        },
+                        "labels": {
+                            "add": "Add variable"
+                        },
+                        "label": "Input"
+                    },
+                    {
+                        "name": "dependencies",
+                        "advanced": true,
+                        "type": "array",
+                        "spec": {
+                            "type": "text",
+                            "required": true,
+                            "label": "Dependency",
+                            "validate": {
+                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$",
+                                "min": 1,
+                                "max": 214
+                            }
+                        },
+                        "labels": {
+                            "add": "Add dependency"
+                        },
+                        "label": "Additional dependencies (Enterprise plans only)"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 73,
+            "module": "builtin:BasicFeeder",
+            "version": 1,
+            "parameters": {},
+            "mapper": {
+                "array": "{{75.result.files}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 1800,
+                    "y": 0,
+                    "name": "Iterar reportes"
+                },
+                "restore": {},
+                "expect": [
+                    {
+                        "name": "array",
+                        "type": "array",
+                        "spec": [],
+                        "label": "Array",
+                        "editable": true,
+                        "mode": "edit"
+                    }
+                ]
+            }
+        },
+        {
             "id": 68,
             "module": "google-drive:uploadAFile",
             "version": 4,
@@ -3021,20 +3214,25 @@
                 "__IMTCONN__": 14533030
             },
             "mapper": {
-                "data": "{{toBinary(66.result.data; \"base64\")}}",
+                "data": "{{toBinary(73.data; \"base64\")}}",
                 "select": "value",
                 "convert": false,
-                "filename": "{{66.result.filename}}",
+                "filename": "{{73.filename}}",
                 "folderId": "/1WjxqCooo7HA0YNkEMETjCaBpqgjPQVIW/1bfL5Jvh8AGvO8GumVz57PEXmFW3WEwfj",
                 "targetType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "destination": "drive"
             },
             "metadata": {
                 "designer": {
-                    "x": 1800,
-                    "y": 150
+                    "x": 2100,
+                    "y": 0
                 },
                 "restore": {
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "label": "Joses's Google Drive connection"
+                        }
+                    },
                     "expect": {
                         "select": {
                             "mode": "chose",
@@ -3135,16 +3333,6 @@
                                 }
                             ]
                         },
-                        "folderId": {
-                            "mode": "chose",
-                            "path": [
-                                "ReportesBancario",
-                                "Reportes listos"
-                            ]
-                        },
-                        "targetType": {
-                            "mode": "edit"
-                        },
                         "destination": {
                             "mode": "chose",
                             "label": "My Drive",
@@ -3160,11 +3348,16 @@
                                     "required": true
                                 }
                             ]
-                        }
-                    },
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "Joses's Google Drive connection"
+                        },
+                        "folderId": {
+                            "mode": "chose",
+                            "path": [
+                                "ReportesBancariosIntelfon(Guatemala)",
+                                "Reportes listos"
+                            ]
+                        },
+                        "targetType": {
+                            "mode": "edit"
                         }
                     }
                 },
@@ -3249,6 +3442,31 @@
             }
         },
         {
+            "id": 74,
+            "module": "builtin:BasicAggregator",
+            "version": 1,
+            "parameters": {
+                "target": "54.attachments",
+                "feeder": 73
+            },
+            "filter": null,
+            "mapper": {
+                "filename": "{{73.filename}}",
+                "data": "{{toBinary(73.data; \"base64\")}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 2400,
+                    "y": 0,
+                    "name": "Unir adjuntos"
+                },
+                "restore": {}
+            },
+            "flags": {
+                "stopIfEmpty": true
+            }
+        },
+        {
             "id": 54,
             "module": "google-email:sendAnEmail",
             "version": 4,
@@ -3260,23 +3478,23 @@
                     "fernandozeta057@gmail.com",
                     "zetajosezzz@gmail.com"
                 ],
-                "content": "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<meta charset=\"UTF-8\">\r\n</head>\r\n\r\n<body style=\"font-family: Arial, sans-serif; background-color:#f5f7fa; padding:20px;\">\r\n\r\n<table width=\"600\" style=\"margin:auto; background:white; border-radius:10px; padding:30px; border:1px solid #ddd;\">\r\n\r\n<tr>\r\n<td align=\"center\">\r\n\r\n<h2 style=\"color:#1A365D;\">\r\nReporte Financiero Bancario\r\n</h2>\r\n\r\n<p style=\"font-size:16px; color:#333;\">\r\nEstimados,\r\n</p>\r\n\r\n<p style=\"font-size:15px; color:#555;\">\r\nPor medio del presente se informa que el reporte financiero bancario \r\ncorrespondiente al período procesado ha sido generado correctamente.\r\n</p>\r\n\r\n\r\n<table width=\"100%\" style=\"background:#f8fafc; padding:15px; border-radius:8px;\">\r\n\r\n<tr>\r\n<td>\r\n<b>Estado:</b>\r\n</td>\r\n\r\n<td style=\"color:#008000;\">\r\nReporte generado correctamente\r\n</td>\r\n\r\n</tr>\r\n\r\n\r\n<tr>\r\n<td>\r\n<b>Período:</b>\r\n</td>\r\n\r\n<td>\r\nMes procesado automáticamente\r\n</td>\r\n\r\n</tr>\r\n\r\n\r\n<tr>\r\n<td>\r\n<b>Archivo:</b>\r\n</td>\r\n\r\n<td>\r\nReporteFinancieroIntelfon.xlsx\r\n</td>\r\n\r\n</tr>\r\n\r\n</table>\r\n\r\n\r\n<br>\r\n\r\n\r\n<p style=\"font-size:14px;color:#555;\">\r\nEl archivo adjunto contiene:\r\n</p>\r\n\r\n<ul style=\"font-size:14px;color:#555;\">\r\n<li>Consolidado general.</li>\r\n<li>Detalle por banco/cuenta.</li>\r\n<li>Balance general.</li>\r\n<li>Validaciones financieras.</li>\r\n</ul>\r\n\r\n\r\n<p style=\"font-size:14px;color:#555;\">\r\nEste correo fue generado automáticamente por el flujo de reporte financiero.\r\n</p>\r\n\r\n\r\n<br>\r\n\r\n<p style=\"color:#1A365D;font-weight:bold;\">\r\nRed Intelfon\r\n</p>\r\n\r\n\r\n</td>\r\n</tr>\r\n\r\n</table>\r\n\r\n</body>\r\n</html>",
+                "content": "<!DOCTYPE html>\r\n<html>\r\n<head>\r\n<meta charset=\"UTF-8\">\r\n</head>\r\n<body style=\"font-family: Arial, sans-serif; background-color:#f5f7fa; padding:20px;\">\r\n<table width=\"600\" style=\"margin:auto; background:white; border-radius:10px; padding:30px; border:1px solid #ddd;\">\r\n<tr><td align=\"center\">\r\n<h2 style=\"color:#1A365D;\">Reporte Financiero Bancario</h2>\r\n<p style=\"font-size:16px; color:#333;\">Estimados,</p>\r\n<p style=\"font-size:15px; color:#555;\">El reporte financiero bancario fue generado correctamente y separado por país.</p>\r\n<table width=\"100%\" style=\"background:#f8fafc; padding:15px; border-radius:8px;\">\r\n<tr><td><b>Estado:</b></td><td style=\"color:#008000;\">Reportes generados correctamente</td></tr>\r\n<tr><td><b>Archivos:</b></td><td>Se adjunta Guatemala, El Salvador o ambos, según los documentos recibidos.</td></tr>\r\n</table>\r\n<br>\r\n<p style=\"font-size:14px;color:#555;\">Cada archivo adjunto contiene únicamente las cuentas y movimientos identificados para su país.</p>\r\n<p style=\"font-size:14px;color:#555;\">Este correo fue generado automáticamente por el flujo de reporte financiero.</p>\r\n<br><p style=\"color:#1A365D;font-weight:bold;\">Red Intelfon</p>\r\n</td></tr>\r\n</table>\r\n</body>\r\n</html>",
                 "subject": "Reporte Financiero Bancario Automatizado - {{mes}}",
                 "bodyType": "rawHtml",
-                "attachments": [
-                    {
-                        "data": "{{toBinary(66.result.data; \"base64\")}}",
-                        "filename": "{{66.result.filename}}"
-                    }
-                ]
+                "attachments": "{{74.array}}"
             },
             "metadata": {
                 "designer": {
-                    "x": 2110,
-                    "y": 144,
+                    "x": 2700,
+                    "y": 0,
                     "name": "Send Gmail"
                 },
                 "restore": {
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "label": "Joses's Gmail connection"
+                        }
+                    },
                     "expect": {
                         "bodyType": {
                             "mode": "chose",
@@ -3289,11 +3507,6 @@
                                     "label": "Content"
                                 }
                             ]
-                        }
-                    },
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "Joses's Gmail connection"
                         }
                     }
                 },
@@ -3446,8 +3659,8 @@
             "version": 1,
             "parameters": {},
             "mapper": {
-                "status": "200",
-                "body": "{\r\n  \"urlDescarga\": \"{{68.webViewLink}}\",\r\n  \"resumen\": {\r\n    \"totalRegistros\": {{66.result.total_registros}},\r\n    \"montoTotal\": \"{{66.result.totales_globales}}\",\r\n    \"estadoGeneral\": \"Completado\"\r\n  },\r\n  \"filas\": {{66.result.resumen_general}},\r\n  \"bancos_procesados\": {{66.result.bancos_procesados}},\r\n  \"totales_globales\": {{66.result.totales_globales}}\r\n}",
+                "body": "{\n  \"correoEnviado\": true,\n  \"mensajeId\": \"{{54.id}}\",\n  \"estado\": \"Reportes separados por país y enviados en un solo correo\"\n}",
+                "status": 200,
                 "headers": [
                     {
                         "key": "Content-Type",
@@ -3457,38 +3670,32 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 2410,
-                    "y": 144
+                    "x": 3000,
+                    "y": 0
                 },
-                "restore": {
-                    "expect": {
-                        "headers": {
-                            "mode": "chose"
-                        }
-                    }
-                },
+                "restore": {},
                 "expect": [
                     {
                         "name": "status",
-                        "type": "uinteger",
                         "label": "Status",
+                        "type": "uinteger",
+                        "required": true,
+                        "default": 200,
                         "validate": {
                             "min": 100
-                        },
-                        "required": true
+                        }
                     },
                     {
                         "name": "body",
-                        "type": "any",
-                        "label": "Body"
+                        "label": "Body",
+                        "type": "any"
                     },
                     {
                         "name": "headers",
-                        "type": "array",
                         "label": "Custom headers",
-                        "validate": {
-                            "maxItems": 16
-                        },
+                        "type": "array",
+                        "editable": true,
+                        "advanced": true,
                         "spec": [
                             {
                                 "name": "key",
@@ -3508,7 +3715,10 @@
                                     "max": 4096
                                 }
                             }
-                        ]
+                        ],
+                        "validate": {
+                            "maxItems": 16
+                        }
                     }
                 ]
             }
