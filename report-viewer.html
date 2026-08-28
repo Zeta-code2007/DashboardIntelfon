@@ -621,34 +621,54 @@ function parseRawReport() {
   if (!saved) return null;
 
   try {
-    const stored = parseJsonValue(JSON.parse(saved));
-    const expectedRunId = new URLSearchParams(window.location.search).get('runId') || stored?.runId || '';
-    if (!expectedRunId || stored?.runId !== expectedRunId || !stored?.data) return null;
-    const original = parseJsonValue(stored.data);
-    const raw = unwrapPayload(original);
-    const outerFileName = getField(original, 'fileName', 'filename', 'nombreArchivo');
-    const outerDownloadUrl = getField(original, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
+    let parsedJson = parseJsonValue(JSON.parse(saved));
+    if (!parsedJson) return null;
 
-    // Extraer fuentes de datos por país si vienen particionadas
-    const gtSpecificSources = collectFields(original, ['guatemala', 'gt', 'bancos_gt', 'bancos_guatemala', 'cuentas_gt']);
-    const svSpecificSources = collectFields(original, ['el_salvador', 'salvador', 'sv', 'bancos_sv', 'bancos_salvador', 'cuentas_sv']);
+    // Aceptar cualquier estructura: { data }, { resultado }, arrays, o payload plano
+    let original = parsedJson.data !== undefined ? parsedJson.data : parsedJson;
+    original = parseJsonValue(original);
 
-    gtSpecificSources.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'GT'; });
-    svSpecificSources.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'SV'; });
+    let sourcesArray = Array.isArray(original) ? original : [original];
 
-    const generalSources = collectFields(original, ['bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
-    const resumenSources = collectFields(original, ['resumen_general', 'filas']);
-    const balanceSources = collectFields(original, ['balance_general', 'balance', 'account_balances']);
-    
-    const bancosList = mergeAccountRecords(...gtSpecificSources, ...svSpecificSources, ...generalSources, ...balanceSources, ...resumenSources);
-    const resumenList = resumenSources.flatMap(asArray);
-    const totalSources = collectFields(original, ['totales_globales', 'totales']);
-    const totalesObj = unwrapPayload(totalSources[0] || {}) || {};
+    let allBancosList = [];
+    let allResumenList = [];
+    let fileName = 'ReporteFinanciero.xlsx';
+    let outerDownloadUrl = '';
 
-    const nestedDownloadUrl = collectFields(original, ['urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link'])[0];
-    downloadExcelUrl = nestedDownloadUrl || outerDownloadUrl || '#';
+    sourcesArray.forEach(src => {
+      if (!src) return;
+      const raw = unwrapPayload(src);
+      const fName = getField(src, 'fileName', 'filename', 'nombreArchivo') || getField(raw, 'fileName', 'filename', 'nombreArchivo');
+      if (fName) fileName = fName;
 
-    return { bancosList, resumenList, totalesObj, fileName: getField(raw, 'fileName', 'filename', 'nombreArchivo') || outerFileName || 'ReporteFinanciero.xlsx' };
+      const dUrl = getField(src, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link')
+        || getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
+      if (dUrl && dUrl !== '#') outerDownloadUrl = dUrl;
+
+      // Fuentes específicas de GT / SV si vienen particionadas
+      const gtSpecific = collectFields(src, ['guatemala', 'gt', 'bancos_gt', 'bancos_guatemala', 'cuentas_gt']);
+      const svSpecific = collectFields(src, ['el_salvador', 'salvador', 'sv', 'bancos_sv', 'bancos_salvador', 'cuentas_sv']);
+
+      gtSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'GT'; });
+      svSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'SV'; });
+
+      const generalSources = collectFields(src, ['bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
+      const resumenSources = collectFields(src, ['resumen_general', 'filas', 'resumen', 'rows']);
+      const balanceSources = collectFields(src, ['balance_general', 'balance', 'account_balances']);
+
+      const merged = mergeAccountRecords(...gtSpecific, ...svSpecific, ...generalSources, ...balanceSources, ...resumenSources);
+      if (merged.length) {
+        allBancosList.push(...merged);
+      }
+      allResumenList.push(...resumenSources.flatMap(asArray));
+    });
+
+    const bancosList = mergeAccountRecords(allBancosList);
+    const resumenList = allResumenList;
+
+    downloadExcelUrl = outerDownloadUrl || '#';
+
+    return { bancosList, resumenList, fileName };
   } catch (e) {
     console.error('Error parseando reporte guardado:', e);
     return null;
@@ -1242,17 +1262,30 @@ if (btnQuickToggleCountry) {
   });
 }
 
-// Pestañas
+// Pestañas y Navegación
 function activateTab(targetName) {
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
-  const btn = document.querySelector(`.tab[data-target="${targetName}"]`);
-  if (!btn) return;
-  btn.classList.add('active');
-  const target = document.getElementById(targetName);
-  if (target) target.classList.add('active');
-  setTimeout(drawAll, 80);
+  const cleanTarget = (targetName || 'resumen').replace('#', '').trim();
+  document.querySelectorAll('.tab').forEach(x => {
+    x.classList.toggle('active', x.dataset.target === cleanTarget);
+  });
+  document.querySelectorAll('.section').forEach(x => {
+    x.classList.toggle('active', x.id === cleanTarget);
+  });
+  setTimeout(() => {
+    drawAll(true);
+  }, 100);
 }
+
+function syncActiveTabFromLocation() {
+  const hash = window.location.hash.replace('#', '').trim();
+  if (hash && document.getElementById(hash)) {
+    activateTab(hash);
+  } else {
+    activateTab('resumen');
+  }
+}
+
+window.addEventListener('hashchange', syncActiveTabFromLocation);
 
 document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
   const parentViews = {
@@ -1269,9 +1302,6 @@ document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', (
   activateTab(btn.dataset.target);
   history.replaceState(null, '', `#${btn.dataset.target}`);
 }));
-
-const initialTab = window.location.hash.replace('#', '');
-if (initialTab) activateTab(initialTab);
 
 // ===========================================================================
 // MOTOR DE ANIMACIONES FLUIDAS, EFECTOS VISUALES Y SCROLL-TRIGGER
@@ -1309,15 +1339,18 @@ function animateChart(chartId, renderFn, duration = 750) {
   CHART_ANIMATIONS[chartId] = requestAnimationFrame(step);
 }
 
-// Canvas Gráficas con Soporte Retina / HiDPI
+// Canvas Gráficas con Soporte Retina / HiDPI y Protección de Dimensiones Ocultas
 function fitCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(300, rect.width * dpr);
-  canvas.height = Math.max(220, rect.height * dpr);
+  const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth - 40 : 600;
+  const width = rect.width > 50 ? rect.width : (parentWidth > 50 ? parentWidth : 600);
+  const height = rect.height > 50 ? rect.height : 330;
+  canvas.width = Math.max(300, Math.floor(width * dpr));
+  canvas.height = Math.max(200, Math.floor(height * dpr));
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  return { ctx, w: rect.width, h: rect.height };
+  return { ctx, w: width, h: height };
 }
 
 function roundedRect(ctx, x, y, w, h, r, fill, glow = null) {
@@ -1798,9 +1831,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.tabs')?.remove();
   }
   initDataEngine();
+  syncActiveTabFromLocation();
   setInterval(() => {
     const currentSnapshot = localStorage.getItem('intelfon_current_report');
-    if (currentSnapshot !== loadedReportSnapshot) initDataEngine();
+    if (currentSnapshot !== loadedReportSnapshot) {
+      initDataEngine();
+      syncActiveTabFromLocation();
+    }
   }, 500);
 });
 </script>

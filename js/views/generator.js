@@ -383,22 +383,48 @@ export function renderGenerator() {
 
     // Función para abrir el visor interactivo de código en nueva pestaña / pantalla completa
     function abrirVisorInteractivo() {
-        if (!lastProcessedData) {
+        let dataToOpen = lastProcessedData;
+        let runIdToOpen = currentRunId;
+
+        if (!dataToOpen) {
+            try {
+                const stored = JSON.parse(localStorage.getItem('intelfon_current_report') || 'null');
+                if (stored && (stored.data || stored.resultado || stored.bancos_procesados)) {
+                    dataToOpen = stored.data || stored;
+                    runIdToOpen = stored.runId || createRunId();
+                }
+            } catch (_) {}
+        }
+
+        if (!dataToOpen) {
             Toast.warning('Primero debes procesar un archivo nuevo para previsualizarlo.');
             return;
         }
-        replaceCurrentReport(lastProcessedData, currentRunId);
-        window.open(`report-viewer.html?t=${Date.now()}&runId=${encodeURIComponent(currentRunId)}`, '_blank');
+        replaceCurrentReport(dataToOpen, runIdToOpen);
+        window.open(`report-viewer.html?t=${Date.now()}&runId=${encodeURIComponent(runIdToOpen)}`, '_blank');
     }
 
     function transferirAlOverview() {
-        if (!lastProcessedData) {
+        let dataToTransfer = lastProcessedData;
+        let runIdToTransfer = currentRunId;
+
+        if (!dataToTransfer) {
+            try {
+                const stored = JSON.parse(localStorage.getItem('intelfon_current_report') || 'null');
+                if (stored && (stored.data || stored.resultado || stored.bancos_procesados)) {
+                    dataToTransfer = stored.data || stored;
+                    runIdToTransfer = stored.runId || createRunId();
+                }
+            } catch (_) {}
+        }
+
+        if (!dataToTransfer) {
             Toast.warning('Primero debes procesar un archivo nuevo para transferir sus datos.');
             return;
         }
 
         try {
-            replaceCurrentReport(lastProcessedData, currentRunId);
+            replaceCurrentReport(dataToTransfer, runIdToTransfer);
             const navBtn = document.querySelector('.nav-btn[data-view="overview"]');
             if (navBtn) {
                 navBtn.click();
