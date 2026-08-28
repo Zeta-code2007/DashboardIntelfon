@@ -8,6 +8,78 @@ import { CONFIG } from '../config.js';
  * @param {string} tipoReporte - Tipo de reporte seleccionado (Ventas, Inventario, Ejecutivo).
  * @returns {Promise<Object>} Promesa que resuelve al objeto con la estructura de respuesta de Make.
  */
+/**
+ * Repara problemas comunes de JSON inválido que llegan desde Make cuando el escenario
+ * arma la respuesta del Webhook interpolando texto plano en lugar de generar JSON real.
+ *
+ * Recorre el texto carácter por carácter (respetando si está dentro de un string) para:
+ *  1) Escapar saltos de línea / tabs / retornos de carro crudos que hayan quedado
+ *     DENTRO de un valor de texto (esto es lo que más rompe el parseo cuando el Excel
+ *     original trae celdas con saltos de línea).
+ *  2) Fuera de los strings: reemplazar tokens que no son JSON válido (NaN, Infinity,
+ *     -Infinity, y los equivalentes de Python None/True/False) por su equivalente JSON.
+ *  3) Quitar comas sobrantes antes de "}" o "]".
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function sanitizeMakeJsonText(text) {
+    let result = '';
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+
+        if (inString) {
+            if (escaped) {
+                result += ch;
+                escaped = false;
+                continue;
+            }
+            if (ch === '\\') {
+                result += ch;
+                escaped = true;
+                continue;
+            }
+            if (ch === '"') {
+                result += ch;
+                inString = false;
+                continue;
+            }
+            const code = ch.charCodeAt(0);
+            if (code < 0x20) {
+                // Carácter de control crudo dentro de un string: JSON no lo permite sin escapar.
+                if (ch === '\n') result += '\\n';
+                else if (ch === '\r') result += '\\r';
+                else if (ch === '\t') result += '\\t';
+                else result += '\\u' + code.toString(16).padStart(4, '0');
+                continue;
+            }
+            result += ch;
+            continue;
+        }
+
+        if (ch === '"') {
+            inString = true;
+            result += ch;
+            continue;
+        }
+        result += ch;
+    }
+
+    return result
+        // Comas sobrantes antes de cerrar objeto/array
+        .replace(/,\s*([}\]])/g, '$1')
+        // NaN / Infinity / -Infinity como valores (fuera de strings, ya no hay riesgo de tocar texto)
+        .replace(/([:,\[]\s*)NaN\b/g, '$1null')
+        .replace(/([:,\[]\s*)-?Infinity\b/g, '$1null')
+        // Tokens de Python que a veces se cuelan en vez de sus equivalentes JSON
+        .replace(/([:,\[]\s*)None\b/g, '$1null')
+        .replace(/([:,\[]\s*)True\b/g, '$1true')
+        .replace(/([:,\[]\s*)False\b/g, '$1false');
+}
+
 function readAsBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -91,17 +163,19 @@ export async function enviarArchivosAMake(files, tipoReporte) {
     try {
         data = JSON.parse(responseText);
     } catch (e) {
-        // Intentar limpiar y reparar problemas comunes en respuestas de Make (trailing commas, comillas o caracteres de escape)
+        // Intentar limpiar y reparar problemas comunes en respuestas de Make:
+        // - saltos de línea / tabs / retornos de carro SIN escapar dentro de un valor de texto
+        //   (muy común cuando Make arma el JSON con interpolación de texto plano y el Excel
+        //   trae celdas con saltos de línea)
+        // - comas sobrantes antes de "}" o "]"
+        // - NaN / Infinity / -Infinity generados por cálculos de Python con datos vacíos (no son JSON válido)
+        // - tokens de Python (None / True / False) filtrados por error hacia la respuesta
         try {
-            const sanitized = responseText
-                .replace(/,\s*([}\]])/g, '$1')
-                .replace(/[\u0000-\u001F]+/g, (match) => {
-                    if (match === '\n' || match === '\r' || match === '\t') return match;
-                    return '';
-                });
+            const sanitized = sanitizeMakeJsonText(responseText);
             data = JSON.parse(sanitized);
+            console.warn('[MakeService] La respuesta de Make traía JSON inválido; se reparó automáticamente antes de parsear.');
         } catch (repairErr) {
-            console.warn('[MakeService] La respuesta de Make es texto plano (200 OK):', responseText);
+            console.warn('[MakeService] La respuesta de Make es texto plano (200 OK) y no se pudo reparar:', responseText);
             return {
                 accepted: true,
                 asincrono: true,
