@@ -12,8 +12,8 @@
             "mapper": {},
             "metadata": {
                 "designer": {
-                    "x": 0,
-                    "y": 0
+                    "x": 261,
+                    "y": -554
                 },
                 "restore": {
                     "parameters": {
@@ -66,8 +66,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 300,
-                    "y": 0
+                    "x": 440,
+                    "y": 401
                 },
                 "restore": {
                     "expect": {
@@ -240,7 +240,7 @@
                 "__IMTCONN__": 14550561
             },
             "mapper": {
-                "input": "Eres un auditor bancario estricto. Analiza TODOS los archivos y TODAS las hojas y filas entregadas. No inventes bancos, cuentas, nombres, números de cuenta, monedas ni movimientos.\n\nOBJETIVO: producir un JSON completo y verificable para conciliación bancaria.\n\nREGLAS DE IDENTIFICACIÓN:\n1. Cada registro debe representar una sola combinación real de Pais, Banco, Cuenta, Moneda y archivo.\n2. Extrae Banco, Cuenta, nombres, números de cuenta, moneda, saldos y movimientos solamente del contenido de los archivos. Conserva el texto original relevante en `evidencia`.\n3. Un banco solo puede aparecer si su nombre aparece explícitamente en el archivo/hoja o si existe una evidencia textual inequívoca del propio documento. Si no se puede demostrar, usa `Banco: null` y agrega observación; nunca rellenes con un banco conocido por intuición.\n4. Una cuenta solo puede aparecer si el número o identificador aparece explícitamente. Si no existe, usa `Cuenta: null`. Nunca copies una cuenta de otro banco o de otra hoja.\n5. Separa estrictamente por Pais, Banco, Cuenta, Moneda, archivo y hoja. Nunca mezcles movimientos entre bancos o cuentas.\n6. País: usa exactamente `Guatemala`, `El Salvador` o `null`. Decide usando país explícito, dirección, teléfono, banco, encabezados, moneda y formato; la evidencia explícita tiene prioridad. La moneda por sí sola nunca decide el país.\n7. Guatemala puede usar GTQ/quetzales/Q solo con evidencia; El Salvador puede usar USD/dólares solo con evidencia o contexto inequívoco. Nunca conviertas GTQ en USD ni USD en GTQ.\n8. Incluye BANRURAL solamente si aparece en los archivos. Si aparece sin número de cuenta, conserva sus movimientos con `Cuenta: null`.\n9. Conserva todos los movimientos útiles. Elimina únicamente duplicados idénticos completos. Cada movimiento debe mantener fecha, tipo, descripción, documento, debe, haber, saldo y la fila/hoja/archivo de origen cuando existan.\n10. Calcula ingresos, egresos, neto, saldo inicial, saldo final y cantidad de movimientos por cada registro. Para conciliación: `saldo_calculado = saldo_inicial + ingresos - egresos` y `diferencia_conciliacion = saldo_calculado - saldo_final`.\n11. `totales_globales` debe agrupar solamente por Pais y Moneda; jamás crear un banco o cuenta global. Los globales no deben entrar en `bancos_procesados`, `resumen_general` ni `balance_general` como si fueran bancos.\n12. Genera periodicidad diaria, semanal (lunes como inicio) y mensual por cada registro real.\n13. Antes de responder, haz una auditoría cruzada: cada Banco/Cuenta debe poder localizarse en el texto fuente; cada movimiento debe pertenecer a la misma combinación; ningún registro puede ser solamente una suposición; revisa que no aparezcan bancos ajenos al contenido.\n\nFORMATO: devuelve únicamente JSON válido, sin Markdown ni comentarios. No cortes el JSON. Si el volumen es demasiado grande, conserva prioridad en identificación, movimientos y conciliación, pero sigue devolviendo JSON válido.\n\nEstructura requerida:\n{\n  \"bancos_procesados\": [{\"Pais\": \"Guatemala|El Salvador|null\", \"Banco\": \"string|null\", \"Cuenta\": \"string|null\", \"Moneda\": \"GTQ|USD|string|null\", \"archivo\": \"string\", \"hoja\": \"string\", \"evidencia\": [\"string\"], \"estado_cuenta\": [], \"periodicidad\": {\"diario\": [], \"semanal\": [], \"mensual\": []}}],\n  \"resumen_general\": [],\n  \"totales_globales\": {},\n  \"balance_general\": [],\n  \"observaciones\": []\n}\n\nDATOS COMPLETOS:\n{{64.result}}",
+                "input": "Eres un auditor bancario estricto. Analiza TODOS los archivos, TODAS las hojas, TODAS las secciones y TODAS las filas. No resumas ni omitas movimientos.\n\nOBJETIVO: producir un JSON completo para conciliación bancaria, preservando la trazabilidad exacta de cada dato.\n\nREGLAS OBLIGATORIAS:\n1. Cada registro corresponde a una sola combinación real de Pais, Banco, Cuenta, Moneda, archivo y hoja/sección. Si una hoja contiene varias cuentas o bloques, sepáralos por cuenta y encabezado.\n2. Extrae Banco, Cuenta, nombres, números de cuenta, moneda, saldos y movimientos únicamente del texto fuente. Conserva `evidencia` con archivo, hoja y fila cuando exista.\n3. Si el nombre completo del banco no aparece, pero aparece una abreviatura verificable en el nombre de la hoja, encabezado o bloque —por ejemplo `BI`, `G&T`, `BAC`, `BAN` o `BANRURAL`— usa esa abreviatura exacta en el campo `Banco`; NO uses null ni `Banco no identificado`. Solo expande la abreviatura a un nombre completo si esa expansión aparece explícitamente en el archivo. No confundas una abreviatura con otra.\n4. Si no hay ni nombre ni abreviatura verificable, usa `Banco: null` y explica la causa en `observaciones`; nunca inventes un banco.\n5. La cuenta debe salir del número o identificador que aparece en el bloque correspondiente. No copies cuentas de otra hoja, banco o sección. Si no existe, usa `Cuenta: null`.\n6. Separa estrictamente por Pais, Banco, Cuenta, Moneda, archivo y hoja. Nunca mezcles movimientos entre cuentas o bancos.\n7. País: usa exactamente `Guatemala`, `El Salvador` o `null`. Decide con país explícito, dirección, teléfono, banco, encabezados, moneda y formato; la evidencia explícita tiene prioridad. La moneda sola nunca decide.\n8. Guatemala puede usar GTQ/quetzales/Q si el archivo lo indica; El Salvador puede usar USD/dólares si el archivo lo indica. Nunca conviertas monedas.\n9. Conserva todos los movimientos útiles, con fecha, tipo, descripción, documento, debe, haber, saldo y archivo/hoja/fila si existen. Elimina solo duplicados idénticos completos.\n10. Calcula por cada registro: saldo_inicial, ingresos, egresos, neto, saldo_calculado, saldo_final, diferencia_conciliacion y cantidad_movimientos. Usa `saldo_calculado = saldo_inicial + ingresos - egresos`.\n11. `totales_globales` solo agrupa por Pais y Moneda. No conviertas un total global en banco o cuenta.\n12. Genera periodicidad diaria, semanal con lunes como inicio y mensual para cada registro real.\n13. Auditoría final antes de responder: cuenta todas las hojas y filas, verifica que cada movimiento pertenezca al bloque correcto, que cada cuenta coincida con su banco/sección, que las abreviaturas se conserven cuando sean la única identificación, y que no aparezcan bancos ajenos.\n\nDevuelve únicamente un objeto JSON válido, sin Markdown ni comentarios y sin cortar el JSON. Si el volumen es alto, conserva todos los registros y movimientos; no reemplaces datos por una explicación.\n\nEstructura requerida:\n{\n  \"bancos_procesados\": [{\"Pais\": \"Guatemala|El Salvador|null\", \"Banco\": \"string|null\", \"Cuenta\": \"string|null\", \"Moneda\": \"GTQ|USD|string|null\", \"archivo\": \"string\", \"hoja\": \"string\", \"evidencia\": [\"string\"], \"estado_cuenta\": [], \"periodicidad\": {\"diario\": [], \"semanal\": [], \"mensual\": []}}],\n  \"resumen_general\": [],\n  \"totales_globales\": {},\n  \"balance_general\": [],\n  \"observaciones\": []\n}\n\nDATOS COMPLETOS:\n{{64.result}}",
                 "model": "gpt-5.6-sol",
                 "store": true,
                 "format": {
@@ -259,8 +259,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 600,
-                    "y": 0
+                    "x": 588,
+                    "y": -546
                 },
                 "restore": {
                     "parameters": {
@@ -1641,8 +1641,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 900,
-                    "y": 0
+                    "x": 756,
+                    "y": 112
                 },
                 "restore": {
                     "expect": {
@@ -1783,6 +1783,336 @@
             }
         },
         {
+            "id": 78,
+            "module": "http:MakeRequest",
+            "version": 4,
+            "parameters": {
+                "authenticationType": "noAuth"
+            },
+            "mapper": {
+                "url": "https://www.banguat.gob.gt/variables/ws/TipoCambio.asmx",
+                "method": "post",
+                "headers": [
+                    {
+                        "name": "Content-Type",
+                        "value": "text/xml; charset=utf-8"
+                    },
+                    {
+                        "name": "SOAPAction",
+                        "value": "http://www.banguat.gob.gt/variables/ws/TipoCambioDiaString"
+                    }
+                ],
+                "contentType": "custom",
+                "contentTypeValue": "text/xml; charset=utf-8",
+                "rawBodyContent": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <TipoCambioDiaString xmlns=\"http://www.banguat.gob.gt/variables/ws/\" />\n  </soap:Body>\n</soap:Envelope>",
+                "parseResponse": true,
+                "stopOnHttpError": true,
+                "allowRedirects": true,
+                "shareCookies": false,
+                "requestCompressedContent": true
+            },
+            "metadata": {
+                "designer": {
+                    "x": 927,
+                    "y": -566
+                },
+                "restore": {
+                    "parameters": {
+                        "authenticationType": {
+                            "mode": "chose",
+                            "label": "No authentication"
+                        }
+                    },
+                    "expect": {
+                        "method": {
+                            "mode": "chose",
+                            "label": "POST"
+                        },
+                        "contentType": {
+                            "mode": "chose",
+                            "label": "Custom",
+                            "nested": [
+                                {
+                                    "name": "contentTypeValue",
+                                    "label": "Content type value",
+                                    "type": "text",
+                                    "required": true
+                                },
+                                {
+                                    "name": "rawBodyContent",
+                                    "label": "Body content",
+                                    "type": "buffer",
+                                    "required": true
+                                }
+                            ]
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "authenticationType",
+                        "label": "Authentication type",
+                        "placeholder": "Select authentication type",
+                        "type": "select",
+                        "required": true,
+                        "mappable": false,
+                        "validate": {
+                            "enum": [
+                                "noAuth",
+                                "apiKey",
+                                "basicAuth",
+                                "oAuth"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tlsType",
+                        "label": "Transport layer security (TLS)",
+                        "placeholder": "Select TLS type",
+                        "type": "select",
+                        "advanced": true,
+                        "mappable": false,
+                        "validate": {
+                            "enum": [
+                                "mTls",
+                                "tls"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "proxyKeychain",
+                        "label": "Proxy",
+                        "type": "keychain:proxy",
+                        "advanced": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "url",
+                        "label": "URL",
+                        "type": "url",
+                        "required": true
+                    },
+                    {
+                        "name": "method",
+                        "label": "Method",
+                        "type": "select",
+                        "required": true,
+                        "default": "get",
+                        "validate": {
+                            "enum": [
+                                "get",
+                                "head",
+                                "post",
+                                "put",
+                                "patch",
+                                "delete",
+                                "options"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "headers",
+                        "label": "Headers",
+                        "type": "array",
+                        "labels": {
+                            "add": "Add a header"
+                        },
+                        "spec": {
+                            "name": "header",
+                            "label": "Header",
+                            "type": "collection",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "label": "Name",
+                                    "type": "text",
+                                    "required": true,
+                                    "validate": {
+                                        "pattern": "^[-!#$%&'*+.^_`|~0-9A-Za-z]+$"
+                                    }
+                                },
+                                {
+                                    "name": "value",
+                                    "label": "Value",
+                                    "type": "text"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "queryParameters",
+                        "label": "Query parameters",
+                        "type": "array",
+                        "labels": {
+                            "add": "Add a parameter"
+                        },
+                        "spec": {
+                            "name": "queryParameter",
+                            "label": "Parameter",
+                            "type": "collection",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "label": "Name",
+                                    "type": "text",
+                                    "required": true
+                                },
+                                {
+                                    "name": "value",
+                                    "label": "Value",
+                                    "type": "text"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "contentType",
+                        "label": "Body content type",
+                        "placeholder": "Select body content type",
+                        "type": "select",
+                        "mappable": false,
+                        "validate": {
+                            "enum": [
+                                "json",
+                                "multipart",
+                                "urlEncoded",
+                                "custom"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "contentTypeValue",
+                        "label": "Content type value",
+                        "type": "text",
+                        "required": true
+                    },
+                    {
+                        "name": "rawBodyContent",
+                        "label": "Body content",
+                        "type": "buffer",
+                        "required": true
+                    },
+                    {
+                        "name": "parseResponse",
+                        "label": "Parse response",
+                        "type": "boolean",
+                        "required": true,
+                        "default": true
+                    },
+                    {
+                        "name": "paginationType",
+                        "label": "Pagination type",
+                        "placeholder": "Select pagination type",
+                        "type": "select",
+                        "mappable": false,
+                        "validate": {
+                            "enum": [
+                                "offsetBased",
+                                "pageBased",
+                                "urlBased",
+                                "tokenBased"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "stopOnHttpError",
+                        "label": "Return error if HTTP request fails",
+                        "type": "boolean",
+                        "required": true,
+                        "advanced": true,
+                        "default": true
+                    },
+                    {
+                        "name": "timeout",
+                        "label": "Timeout",
+                        "type": "uinteger",
+                        "advanced": true,
+                        "validate": {
+                            "min": 1,
+                            "max": 300
+                        }
+                    },
+                    {
+                        "name": "allowRedirects",
+                        "label": "Allow redirects",
+                        "type": "boolean",
+                        "required": true,
+                        "advanced": true,
+                        "default": true
+                    },
+                    {
+                        "name": "shareCookies",
+                        "label": "Share cookies with other HTTP modules",
+                        "type": "boolean",
+                        "required": true,
+                        "default": false,
+                        "advanced": true
+                    },
+                    {
+                        "name": "requestCompressedContent",
+                        "label": "Request compressed content",
+                        "type": "boolean",
+                        "required": true,
+                        "default": true,
+                        "advanced": true
+                    }
+                ],
+                "interface": [
+                    {
+                        "name": "data",
+                        "label": "Data",
+                        "type": "any"
+                    },
+                    {
+                        "name": "statusCode",
+                        "label": "Status Code",
+                        "type": "number"
+                    },
+                    {
+                        "name": "headers",
+                        "label": "Headers",
+                        "type": "collection",
+                        "spec": [
+                            {
+                                "name": "content-length",
+                                "label": "Content-Length",
+                                "type": "text"
+                            },
+                            {
+                                "name": "content-encoding",
+                                "label": "Content-Encoding",
+                                "type": "text"
+                            },
+                            {
+                                "name": "content-type",
+                                "label": "Content-Type",
+                                "type": "text"
+                            },
+                            {
+                                "name": "server",
+                                "label": "Server",
+                                "type": "text"
+                            },
+                            {
+                                "name": "cache-control",
+                                "label": "Cache-Control",
+                                "type": "text"
+                            },
+                            {
+                                "name": "set-cookie",
+                                "label": "Set-Cookie",
+                                "type": "array",
+                                "spec": {
+                                    "type": "text"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
             "id": 66,
             "module": "code:ExecuteCode",
             "version": 1,
@@ -1800,16 +2130,20 @@
                     {
                         "name": "raw_extract",
                         "value": "{{64.result.resultado}}"
+                    },
+                    {
+                        "name": "tipo_cambio_raw",
+                        "value": "{{78.data}}"
                     }
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "codeEditorPython": "import base64, io, json, re, unicodedata\nfrom datetime import datetime, date\nfrom decimal import Decimal, InvalidOperation, ROUND_HALF_UP\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s = '' if v is None else str(v)\n    s = unicodedata.normalize('NFKD', s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef items(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(o,*names,default=None):\n    if not isinstance(o,dict): return default\n    nmap={norm(k):v for k,v in o.items()}\n    for name in names:\n        if norm(name) in nmap: return nmap[norm(name)]\n    return default\n\ndef num(v):\n    if v is None or isinstance(v,bool): return Decimal('0')\n    if isinstance(v,(int,float,Decimal)): return Decimal(str(v))\n    s=re.sub(r'[^0-9,.-]','',str(v).strip())\n    if not s:return Decimal('0')\n    if ',' in s and '.' in s:s=s.replace('.','').replace(',','.') if s.rfind(',')>s.rfind('.') else s.replace(',','')\n    elif ',' in s:\n        p=s.split(',');s=''.join(p[:-1])+'.'+p[-1] if len(p[-1]) in (1,2) else ''.join(p)\n    try:return Decimal(s)\n    except InvalidOperation:return Decimal('0')\n\ndef money(v):return float(Decimal(v).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP))\n\ndef parse_json(v):\n    if isinstance(v,dict):return v\n    if not isinstance(v,str):raise Exception('La respuesta del análisis no es texto JSON.')\n    s=v.strip().replace('```json','').replace('```','').strip();p=s.find('{')\n    if p<0:raise Exception('La respuesta del análisis no contiene un objeto JSON.')\n    s=s[p:]\n    try:return json.loads(s)\n    except Exception:\n        try:return json.loads(re.sub(r',\\s*([}\\]])',r'\\1',s))\n        except Exception as e:raise Exception(f'El análisis no es JSON válido y no se pudo reparar: {e}')\n\ndef decode(v):\n    if isinstance(v,bytes):return v\n    if isinstance(v,bytearray):return bytes(v)\n    if isinstance(v,dict):\n        for k in ('data','content','body','buffer','value','base64'):\n            if k in v:\n                b=decode(v[k])\n                if b:return b\n        return None\n    if isinstance(v,(list,tuple)) and v and all(isinstance(x,int) and 0<=x<=255 for x in v):return bytes(v)\n    s=str(v or '').strip();m=re.search(r'IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)',s)\n    if m:\n        try:return bytes.fromhex(m.group(1))\n        except Exception:pass\n    if s.startswith('data:') and ',' in s:s=s.split(',',1)[1]\n    s=re.sub(r'\\s+','',s)\n    try:return base64.b64decode(s+'='*(-len(s)%4),validate=False)\n    except Exception:return None\n\ndef source_text(raw):\n    if isinstance(raw,str):\n        try:raw=json.loads(raw)\n        except Exception:pass\n    return norm(json.dumps(raw,ensure_ascii=False,default=str))\n\ndef source_has(text,value):\n    n=norm(value);return bool(n) and n in text\n\ndef movement_totals(movs):\n    seen=set();clean=[];inc=Decimal('0');out=Decimal('0')\n    for m in items(movs):\n        if not isinstance(m,dict):continue\n        sig=json.dumps(m,ensure_ascii=False,sort_keys=True,default=str)\n        if sig in seen:continue\n        seen.add(sig);clean.append(m)\n        a=num(get(m,'Ingreso','Ingresos','Abono','Haber','Credito','Crédito','Deposit','Deposito'));b=num(get(m,'Egreso','Egresos','Cargo','Debe','Debito','Débito','Debit','Withdrawal','Retiro'))\n        if a==0 and b==0:\n            typ=norm(get(m,'TT','Tipo','Tipo_Transaccion','Tipo de Transacción',default=''));amount=abs(num(get(m,'Monto','Importe','Valor','Amount')))\n            if typ in ('de','nc','deposito','abono','credito','credit','income','ingreso'):a=amount\n            elif typ in ('cq','nd','retiro','cargo','debito','debit','expense','egreso'):b=amount\n        inc+=abs(a);out+=abs(b)\n    return clean,inc,out\n\ndef write_row(ws,row,values):\n    for col,v in enumerate(values,1):\n        cell=ws.cell(row,col)\n        if isinstance(cell,MergedCell):continue\n        if isinstance(v,(dict,list)):v=json.dumps(v,ensure_ascii=False,default=str)\n        if isinstance(v,(datetime,date)):v=v.strftime('%d/%m/%Y')\n        cell.value=v\n\ndef fill_sheet(wb,name,headers,rows):\n    ws=wb[name] if name in wb.sheetnames else wb.create_sheet(name)\n    for r in range(1,ws.max_row+1):\n        for c in range(1,max(ws.max_column,len(headers))+1):\n            cell=ws.cell(r,c)\n            if not isinstance(cell,MergedCell):cell.value=None\n    write_row(ws,1,headers)\n    for r,row in enumerate(rows,2):write_row(ws,r,row)\n\nopenai_result=input.get('openai_result');template=input.get('plantilla_excel');raw=input.get('raw_extract')\nif not openai_result or not template:raise Exception('Faltan el análisis o la plantilla de salida.')\ndata=parse_json(openai_result)\nif not isinstance(data,dict):raise Exception('El análisis debe ser un objeto JSON.')\nrawtxt=source_text(raw);observations=items(data.get('observaciones'));records=[]\nfor bank in items(data.get('bancos_procesados')):\n    if not isinstance(bank,dict):continue\n    bank_name=get(bank,'Banco','banco');account=get(bank,'Cuenta','cuenta');evidence=items(get(bank,'evidencia',default=[]))\n    bank_missing=bank_name is None or str(bank_name).strip()==''\n    bank_ok=bank_missing or source_has(rawtxt,bank_name) or any(source_has(rawtxt,e) for e in evidence)\n    account_ok=account is None or str(account).strip()=='' or source_has(rawtxt,account)\n    if bank_missing:observations.append({'Campo':'Banco','Detalle':'El documento no muestra un nombre de banco verificable; se conserva como Banco no identificado y no se inventa uno.'})\n    elif not bank_ok:\n        observations.append({'Campo':'Banco','Detalle':f'Se omitió un banco sin evidencia textual en los archivos: {bank_name}'});continue\n    if not account_ok:\n        observations.append({'Banco':bank_name,'Campo':'Cuenta','Detalle':f'Se omitió una cuenta sin evidencia textual en los archivos: {account}'});continue\n    movs,inc,out=movement_totals(get(bank,'estado_cuenta','Movimientos','movimientos','transacciones',default=[]))\n    rec=dict(bank);rec['Banco']=bank_name if not bank_missing else 'Banco no identificado';rec['Cuenta']=account;rec['estado_cuenta']=movs;rec['Total_Ingresos']=money(inc);rec['Total_Egresos']=money(out);rec['Neto']=money(inc-out);records.append(rec)\nsummary=[{'Pais':get(r,'Pais','pais'),'Banco':r.get('Banco'),'Cuenta':r.get('Cuenta'),'Moneda':get(r,'Moneda','moneda'),'Total_Ingresos':r['Total_Ingresos'],'Total_Egresos':r['Total_Egresos'],'Neto':r['Neto'],'Cantidad_Movimientos':len(r['estado_cuenta']),'Saldo_Inicial':get(r,'Saldo_Inicial','Saldo Inicial'),'Saldo_Final':get(r,'Saldo_Final','Saldo Final')} for r in records]\nraw_bytes=decode(template)\nif not raw_bytes or raw_bytes[:2]!=b'PK':raise Exception('La plantilla no es un XLSX válido.')\nwb=openpyxl.load_workbook(io.BytesIO(raw_bytes))\nfill_sheet(wb,'Consolidado General',['Pais','Banco','Cuenta','Moneda','Saldo Inicial','Total Ingresos','Total Egresos','Saldo Final','Neto','Cantidad Movimientos'],[[get(r,'Pais','pais'),r.get('Banco'),r.get('Cuenta'),get(r,'Moneda','moneda'),get(r,'Saldo_Inicial','Saldo Inicial'),r['Total_Ingresos'],r['Total_Egresos'],get(r,'Saldo_Final','Saldo Final'),r['Neto'],len(r['estado_cuenta'])] for r in records])\nfill_sheet(wb,'Balance General Detallado',['Pais','Banco','Cuenta','Moneda','Saldo Inicial','Total Ingresos','Total Egresos','Saldo Final','Saldo Calculado','Diferencia Conciliacion','Resultado'],[[get(r,'Pais','pais'),r.get('Banco'),r.get('Cuenta'),get(r,'Moneda','moneda'),money(num(get(r,'Saldo_Inicial','Saldo Inicial'))),r['Total_Ingresos'],r['Total_Egresos'],money(num(get(r,'Saldo_Final','Saldo Final'))),money(num(get(r,'Saldo_Inicial','Saldo Inicial'))+Decimal(str(r['Total_Ingresos']))-Decimal(str(r['Total_Egresos']))),money(num(get(r,'Saldo_Inicial','Saldo Inicial'))+Decimal(str(r['Total_Ingresos']))-Decimal(str(r['Total_Egresos']))-num(get(r,'Saldo_Final','Saldo Final'))),'OK' if money(num(get(r,'Saldo_Inicial','Saldo Inicial'))+Decimal(str(r['Total_Ingresos']))-Decimal(str(r['Total_Egresos']))-num(get(r,'Saldo_Final','Saldo Final')))==0 else 'REVISAR'] for r in records])\ndetail_rows=[]\nfor r in records:\n    for m in r['estado_cuenta']:\n        detail_rows.append([get(r,'Pais','pais'),r.get('Banco'),r.get('Cuenta'),get(r,'Moneda','moneda'),get(m,'Fecha','fecha'),get(m,'TT','Tipo'),get(m,'Descripcion','Descripción','description'),get(m,'No. Doc','Documento','documento'),get(m,'Debe','debe','Egreso','Egresos'),get(m,'Haber','haber','Ingreso','Ingresos'),get(m,'Saldo','saldo')])\nfill_sheet(wb,'Detalle Movimientos',['Pais','Banco','Cuenta','Moneda','Fecha','Tipo','Descripcion','Documento','Debe','Haber','Saldo'],detail_rows)\nfill_sheet(wb,'Observaciones',['Tipo','Detalle'],[[get(o,'Campo','Tipo',default='Observacion'),get(o,'Detalle',default=o if not isinstance(o,dict) else '')] for o in observations])\nout=io.BytesIO();wb.save(out);out.seek(0);b64=base64.b64encode(out.getvalue()).decode('ascii')\nreturn {'result':{'filename':'ReporteFinancieroIntelfon.xlsx','data':b64},'filename':'ReporteFinancieroIntelfon.xlsx','data':b64,'resumen_general':json.dumps(summary,ensure_ascii=False,default=str),'bancos_procesados':json.dumps(records,ensure_ascii=False,default=str),'totales_globales':json.dumps(data.get('totales_globales') or {},ensure_ascii=False,default=str),'total_registros':len(summary),'filas_fuente_completas':0}"
+                "codeEditorPython": "import base64, io, json, re, unicodedata\nfrom datetime import datetime, date\nfrom decimal import Decimal, InvalidOperation, ROUND_HALF_UP\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s='' if v is None else str(v)\n    s=unicodedata.normalize('NFKD',s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef items(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(o,*names,default=None):\n    if not isinstance(o,dict):return default\n    by={norm(k):v for k,v in o.items()}\n    for name in names:\n        if norm(name) in by:return by[norm(name)]\n    return default\n\ndef infer_bank(name,sheet,evidence):\n    if name is not None and str(name).strip():return str(name).strip()\n    for text in [sheet]+[str(x) for x in items(evidence)]:\n        m=re.search(r'(?<![A-Za-z])(BI|G&T|BAC|BANRURAL|BAN)(?![A-Za-z])',text or '',re.I)\n        if m:return m.group(1).upper()\n    return None\n\ndef num(v):\n    if v is None or isinstance(v,bool):return Decimal('0')\n    if isinstance(v,(int,float,Decimal)):return Decimal(str(v))\n    s=re.sub(r'[^0-9,.-]','',str(v).strip())\n    if not s:return Decimal('0')\n    if ',' in s and '.' in s:s=s.replace('.','').replace(',','.') if s.rfind(',')>s.rfind('.') else s.replace(',','')\n    elif ',' in s:\n        p=s.split(',');s=''.join(p[:-1])+'.'+p[-1] if len(p[-1]) in (1,2) else ''.join(p)\n    try:return Decimal(s)\n    except InvalidOperation:return Decimal('0')\n\ndef money(v):return float(Decimal(v).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP))\n\ndef parse_json(v):\n    if isinstance(v,dict):return v\n    if not isinstance(v,str):raise Exception('La respuesta del análisis no es texto JSON.')\n    s=v.strip().replace('```json','').replace('```','').strip();p=s.find('{')\n    if p<0:raise Exception('La respuesta del análisis no contiene un objeto JSON.')\n    s=s[p:]\n    try:return json.loads(s)\n    except Exception:\n        try:return json.loads(re.sub(r',\\s*([}\\]])',r'\\1',s))\n        except Exception as e:raise Exception(f'El análisis no es JSON válido y no se pudo reparar: {e}')\n\ndef decode(v):\n    if isinstance(v,bytes):return v\n    if isinstance(v,bytearray):return bytes(v)\n    if isinstance(v,dict):\n        for k in ('data','content','body','buffer','value','base64'):\n            if k in v:\n                b=decode(v[k])\n                if b:return b\n        return None\n    if isinstance(v,(list,tuple)) and v and all(isinstance(x,int) and 0<=x<=255 for x in v):return bytes(v)\n    s=str(v or '').strip();m=re.search(r'IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)',s)\n    if m:\n        try:return bytes.fromhex(m.group(1))\n        except Exception:pass\n    if s.startswith('data:') and ',' in s:s=s.split(',',1)[1]\n    s=re.sub(r'\\s+','',s)\n    try:return base64.b64decode(s+'='*(-len(s)%4),validate=False)\n    except Exception:return None\n\ndef parse_rate(v):\n    if isinstance(v,(int,float,Decimal)):return Decimal(str(v))\n    if isinstance(v,dict):\n        for k,val in v.items():\n            if norm(k) in ('tipocambiodiastringresult','tipocambio','result','value','valor','rate','data'):\n                r=parse_rate(val)\n                if r and r>0:return r\n        for val in v.values():\n            r=parse_rate(val)\n            if r and r>0:return r\n    s=str(v or '')\n    patterns=[r'TipoCambioDiaStringResult[^>]*>\\s*([0-9]+(?:[.,][0-9]+)?)',r'<(?:TipoCambio|Value|valor)[^>]*>\\s*([0-9]+(?:[.,][0-9]+)?)',r'\\b([0-9]+[.,][0-9]{2,6})\\b']\n    for p in patterns:\n        m=re.search(p,s,re.I)\n        if m:\n            try:return num(m.group(1))\n            except Exception:pass\n    return None\n\ndef movement_totals(movs):\n    seen=set();clean=[];inc=Decimal('0');out=Decimal('0')\n    for m in items(movs):\n        if not isinstance(m,dict):continue\n        sig=json.dumps(m,ensure_ascii=False,sort_keys=True,default=str)\n        if sig in seen:continue\n        seen.add(sig);clean.append(m)\n        a=num(get(m,'Ingreso','Ingresos','Abono','Haber','Credito','Crédito','Deposit','Deposito'));b=num(get(m,'Egreso','Egresos','Cargo','Debe','Debito','Débito','Debit','Withdrawal','Retiro'))\n        if a==0 and b==0:\n            typ=norm(get(m,'TT','Tipo','Tipo_Transaccion','Tipo de Transacción',default=''));amount=abs(num(get(m,'Monto','Importe','Valor','Amount')))\n            if typ in ('de','nc','deposito','abono','credito','credit','income','ingreso'):a=amount\n            elif typ in ('cq','nd','retiro','cargo','debito','debit','expense','egreso'):b=amount\n        inc+=abs(a);out+=abs(b)\n    return clean,inc,out\n\ndef write_row(ws,row,values):\n    for col,v in enumerate(values,1):\n        cell=ws.cell(row,col)\n        if isinstance(cell,MergedCell):continue\n        if isinstance(v,(dict,list)):v=json.dumps(v,ensure_ascii=False,default=str)\n        if isinstance(v,(datetime,date)):v=v.strftime('%d/%m/%Y')\n        cell.value=v\n\ndef fill_sheet(wb,name,headers,rows):\n    ws=wb[name] if name in wb.sheetnames else wb.create_sheet(name)\n    for r in range(1,ws.max_row+1):\n        for c in range(1,max(ws.max_column,len(headers))+1):\n            cell=ws.cell(r,c)\n            if not isinstance(cell,MergedCell):cell.value=None\n    write_row(ws,1,headers)\n    for r,row in enumerate(rows,2):write_row(ws,r,row)\n\nopenai_result=input.get('openai_result');template=input.get('plantilla_excel');raw=input.get('raw_extract');rate_raw=input.get('tipo_cambio_raw')\nif not openai_result or not template:raise Exception('Faltan el análisis o la plantilla de salida.')\ndata=parse_json(openai_result)\nif not isinstance(data,dict):raise Exception('El análisis debe ser un objeto JSON.')\nrate=parse_rate(rate_raw);observations=items(data.get('observaciones'))\nif not rate or rate<=0:raise Exception('No se pudo obtener el tipo de cambio diario del Banco de Guatemala.')\nraw_obj=raw\nif isinstance(raw,str):\n    try:raw_obj=json.loads(raw)\n    except Exception:raw_obj={}\nrawtxt=norm(json.dumps(raw_obj,ensure_ascii=False,default=str));records=[]\nfor bank in items(data.get('bancos_procesados')):\n    if not isinstance(bank,dict):continue\n    evidence=items(get(bank,'evidencia',default=[]));bank_name=infer_bank(get(bank,'Banco','banco'),get(bank,'hoja','Hoja',default=''),evidence);account=get(bank,'Cuenta','cuenta')\n    if bank_name is None or not str(bank_name).strip():bank_name='Banco no identificado';observations.append({'Campo':'Banco','Detalle':'No se encontró nombre ni abreviatura verificable en el documento.'})\n    movs,inc,out=movement_totals(get(bank,'estado_cuenta','Movimientos','movimientos','transacciones',default=[]))\n    cur=get(bank,'Moneda','moneda');cn=norm(cur)\n    factor=Decimal('1')/rate if cn in ('gtq','qtz','quetzal','quetzales','q') else Decimal('1') if cn in ('usd','dollar','dolares','us dollar') else None\n    if factor is None:observations.append({'Banco':bank_name,'Cuenta':account,'Campo':'Moneda','Detalle':f'Moneda no convertida a USD: {cur}'});factor=Decimal('0')\n    rec=dict(bank);rec['Banco']=bank_name;rec['Cuenta']=account;rec['estado_cuenta']=movs;rec['Total_Ingresos']=money(inc);rec['Total_Egresos']=money(out);rec['Neto']=money(inc-out);rec['Tipo_Cambio_GTQ_USD']=float(rate);rec['Total_Ingresos_USD']=money(inc*factor);rec['Total_Egresos_USD']=money(out*factor);rec['Neto_USD']=money((inc-out)*factor);rec['Saldo_Inicial_USD']=money(num(get(bank,'Saldo_Inicial','Saldo Inicial'))*factor);rec['Saldo_Final_USD']=money(num(get(bank,'Saldo_Final','Saldo Final'))*factor);records.append(rec)\nraw_bytes=decode(template)\nif not raw_bytes or raw_bytes[:2]!=b'PK':raise Exception('La plantilla no es un XLSX válido.')\nwb=openpyxl.load_workbook(io.BytesIO(raw_bytes))\n# Preserve every source row in a dedicated audit sheet.\nsource_rows=[]\nfor h in items(get(raw_obj,'hojas',default=[])):\n    for f in items(get(h,'filas',default=[])):\n        source_rows.append([get(h,'archivo','Archivo',default=''),get(h,'nombre','Hoja',default=''),get(f,'fila','Fila',default='')]+items(get(f,'valores',default=[]))[:30])\nfill_sheet(wb,'Datos Completos',['Archivo','Hoja','Fila']+[f'Columna {i}' for i in range(1,31)],source_rows)\nfill_sheet(wb,'Consolidado General',['Pais','Banco','Cuenta','Moneda','Saldo Inicial','Total Ingresos','Total Egresos','Saldo Final','Neto','Cantidad Movimientos'],[[get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),get(r,'Saldo_Inicial','Saldo Inicial'),r['Total_Ingresos'],r['Total_Egresos'],get(r,'Saldo_Final','Saldo Final'),r['Neto'],len(r['estado_cuenta'])] for r in records])\nregional=[];tot_i=Decimal('0');tot_e=Decimal('0');tot_n=Decimal('0')\nfor r in records:\n    si=Decimal(str(r['Saldo_Inicial_USD']));sf=Decimal(str(r['Saldo_Final_USD']));i=Decimal(str(r['Total_Ingresos_USD']));e=Decimal(str(r['Total_Egresos_USD']));n=Decimal(str(r['Neto_USD']));calc=si+i-e;diff=calc-sf;tot_i+=i;tot_e+=e;tot_n+=n\n    regional.append([get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),'USD',r['Tipo_Cambio_GTQ_USD'],money(si),money(i),money(e),money(sf),money(calc),money(diff),'OK' if money(diff)==0 else 'REVISAR'])\nregional.append(['TOTAL REGIONAL','Todos','Todas','USD','USD',float(rate),'',money(tot_i),money(tot_e),'', '',money(tot_n),''])\nfill_sheet(wb,'Consolidado Regional USD',['Pais','Banco','Cuenta','Moneda Original','Moneda Consolidada','Tipo Cambio GTQ/USD','Saldo Inicial USD','Ingresos USD','Egresos USD','Saldo Final USD','Saldo Calculado USD','Diferencia USD','Conciliacion'],regional)\ndetail=[]\nfor r in records:\n    for m in r['estado_cuenta']:\n        detail.append([get(r,'Pais','pais'),r['Banco'],r['Cuenta'],get(r,'Moneda','moneda'),get(m,'Fecha','fecha'),get(m,'TT','Tipo'),get(m,'Descripcion','Descripción','description'),get(m,'No. Doc','Documento','documento'),get(m,'Debe','debe','Egreso','Egresos'),get(m,'Haber','haber','Ingreso','Ingresos'),get(m,'Saldo','saldo'),get(m,'archivo','Archivo'),get(m,'hoja','Hoja'),get(m,'fila','Fila')])\nfill_sheet(wb,'Detalle Movimientos',['Pais','Banco','Cuenta','Moneda','Fecha','Tipo','Descripcion','Documento','Debe','Haber','Saldo','Archivo','Hoja','Fila'],detail)\nfill_sheet(wb,'Observaciones',['Tipo','Detalle'],[[get(o,'Campo','Tipo',default='Observacion'),get(o,'Detalle',default=o if not isinstance(o,dict) else '')] for o in observations])\nout=io.BytesIO();wb.save(out);out.seek(0);b64=base64.b64encode(out.getvalue()).decode('ascii')\nreturn {'result':{'filename':'ReporteFinancieroIntelfon.xlsx','data':b64},'filename':'ReporteFinancieroIntelfon.xlsx','data':b64,'resumen_general':json.dumps(records,ensure_ascii=False,default=str),'bancos_procesados':json.dumps(records,ensure_ascii=False,default=str),'totales_globales':json.dumps({'tipo_cambio_gtq_usd':float(rate),'total_ingresos_usd':money(tot_i),'total_egresos_usd':money(tot_e),'total_neto_usd':money(tot_n)},ensure_ascii=False,default=str),'total_registros':len(records),'tipo_cambio_gtq_usd':float(rate),'consolidado_regional_usd':json.dumps(regional,ensure_ascii=False,default=str),'filas_fuente_completas':len(source_rows)}"
             },
             "metadata": {
                 "designer": {
-                    "x": 1200,
-                    "y": 0
+                    "x": 1143,
+                    "y": 365
                 },
                 "restore": {
                     "expect": {
@@ -1993,12 +2327,12 @@
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "codeEditorPython": "import base64, io, json, re, unicodedata\nimport openpyxl\nfrom copy import copy\n\ndef norm(v):\n    s = '' if v is None else str(v)\n    s = unicodedata.normalize('NFKD', s).encode('ascii','ignore').decode('ascii')\n    return re.sub(r'[^a-z0-9]+','',s.lower())\n\ndef as_list(v):\n    if v is None: return []\n    return v if isinstance(v,list) else [v]\n\ndef get(d,*keys):\n    if not isinstance(d,dict): return None\n    by={norm(k):v for k,v in d.items()}\n    for k in keys:\n        if norm(k) in by: return by[norm(k)]\n    return None\n\ndef country(record):\n    explicit=get(record,'Pais','País','Country','pais')\n    n=norm(explicit)\n    if 'elsalvador' in n or n in ('sv','salvador'): return 'El Salvador'\n    if 'guatemala' in n or n=='gt': return 'Guatemala'\n    text=' '.join(str(get(record,k) or '') for k in ('Banco','Cuenta','Moneda','archivo','hoja','Descripcion','Dirección','Direccion','Pais'))\n    n=norm(text)\n    if 'elsalvador' in n or 'salvador' in n or 'elsalvadoreno' in n or 'sv' in n: return 'El Salvador'\n    if 'guatemala' in n or 'guatemalteco' in n or 'gt' in n: return 'Guatemala'\n    currency=norm(get(record,'Moneda','moneda'))\n    if currency in ('usd','us dollar','dolares','dollar'): return 'El Salvador'\n    if currency in ('gtq','quetzal','quetzales','q'): return 'Guatemala'\n    return None\n\ndef row_country(row, keyset):\n    if len(row) < 2: return False\n    return (norm(row[0]), norm(row[1])) in keyset\n\nbase=input.get('base_file')\nrecords=input.get('records_json')\nif not base or not records: raise Exception('Faltan el Excel base o los registros clasificados.')\ntry: records=json.loads(records) if isinstance(records,str) else records\nexcept Exception as e: raise Exception(f'Los registros no son JSON válido: {e}')\nraw=base64.b64decode(str(base).strip() + '=' * (-len(str(base).strip()) % 4))\nwb0=openpyxl.load_workbook(io.BytesIO(raw))\nby_country={'Guatemala':[],'El Salvador':[]}\nfor r in as_list(records):\n    if not isinstance(r,dict): continue\n    c=country(r)\n    if c: by_country[c].append(r)\n\noutputs=[]\nfor c in ('Guatemala','El Salvador'):\n    items=by_country[c]\n    if not items: continue\n    wb=openpyxl.load_workbook(io.BytesIO(raw))\n    keys={(norm(get(r,'Banco','banco')),norm(get(r,'Cuenta','cuenta'))) for r in items}\n    files={norm(get(r,'archivo','Archivo','file')) for r in items if get(r,'archivo','Archivo','file')}\n    for sheet in wb.worksheets:\n        title=norm(sheet.title)\n        if title in (norm('Consolidado General'),norm('Detalle Diario'),norm('Detalle Semanal'),norm('Detalle Mensual'),norm('Balance General Detallado')):\n            for i in range(sheet.max_row,1,-1):\n                row=[sheet.cell(i,j).value for j in range(1,min(sheet.max_column,2)+1)]\n                if not row_country(row,keys): sheet.delete_rows(i,1)\n        elif title==norm('Datos Completos'):\n            for i in range(sheet.max_row,1,-1):\n                file_value=norm(sheet.cell(i,1).value)\n                if files and file_value not in files: sheet.delete_rows(i,1)\n    ws=wb['Observaciones'] if 'Observaciones' in wb.sheetnames else wb.create_sheet('Observaciones')\n    ws.cell(1,1).value=f'País del reporte: {c}'\n    out=io.BytesIO(); wb.save(out); out.seek(0)\n    safe='Guatemala' if c=='Guatemala' else 'ElSalvador'\n    outputs.append({'country':c,'filename':f'ReporteFinanciero_{safe}.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':base64.b64encode(out.getvalue()).decode('ascii')})\nif not outputs:\n    outputs=[{'country':'Sin clasificar','filename':'ReporteFinancieroIntelfon.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':str(base)}]\nreturn {'files':outputs,'files_count':len(outputs),'countries':[x['country'] for x in outputs]}"
+                "codeEditorPython": "import base64, io, json, re, unicodedata\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s='' if v is None else str(v)\n    s=unicodedata.normalize('NFKD',s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef as_list(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(d,*keys):\n    if not isinstance(d,dict): return None\n    by={norm(k):v for k,v in d.items()}\n    for k in keys:\n        if norm(k) in by:return by[norm(k)]\n    return None\n\ndef country(record):\n    explicit=get(record,'Pais','País','Country','pais');n=norm(explicit)\n    if n in ('guatemala','gt'):return 'Guatemala'\n    if n in ('elsalvador','sv','salvador'):return 'El Salvador'\n    raw=' | '.join(str(get(record,k) or '') for k in ('Banco','Cuenta','Moneda','archivo','hoja','Descripcion','Dirección','Direccion'))\n    low=raw.lower()\n    if re.search(r'\\b(el\\s+salvador|sv|salvador)\\b',low):return 'El Salvador'\n    if re.search(r'\\b(guatemala|gt)\\b',low):return 'Guatemala'\n    return None\n\ndef row_country(row,keyset):\n    return len(row)>=2 and (norm(row[0]),norm(row[1])) in keyset\n\ndef safe_value(ws,row,col,value):\n    cell=ws.cell(row,col)\n    if not isinstance(cell,MergedCell):cell.value=value\n\ndef build_file(raw,country_name,items):\n    wb=openpyxl.load_workbook(io.BytesIO(raw))\n    keys={(norm(get(r,'Banco','banco')),norm(get(r,'Cuenta','cuenta'))) for r in items}\n    files={norm(get(r,'archivo','Archivo','file')) for r in items if get(r,'archivo','Archivo','file')}\n    for sheet in wb.worksheets:\n        title=norm(sheet.title)\n        if title in (norm('Consolidado General'),norm('Detalle Diario'),norm('Detalle Semanal'),norm('Detalle Mensual'),norm('Balance General Detallado'),norm('Detalle Movimientos')):\n            for i in range(sheet.max_row,1,-1):\n                row=[sheet.cell(i,j).value for j in range(1,min(sheet.max_column,2)+1)]\n                if not row_country(row,keys):sheet.delete_rows(i,1)\n        elif title==norm('Datos Completos'):\n            for i in range(sheet.max_row,1,-1):\n                if files and norm(sheet.cell(i,1).value) not in files:sheet.delete_rows(i,1)\n    ws=wb['Observaciones'] if 'Observaciones' in wb.sheetnames else wb.create_sheet('Observaciones')\n    safe_value(ws,1,1,f'País del reporte: {country_name}')\n    safe_value(ws,2,1,f'Registros procesados: {len(items)}')\n    out=io.BytesIO();wb.save(out);out.seek(0)\n    safe='Guatemala' if country_name=='Guatemala' else 'ElSalvador'\n    return {'country':country_name,'filename':f'ReporteFinanciero_{safe}.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':base64.b64encode(out.getvalue()).decode('ascii'),'record_count':len(items)}\n\nbase=input.get('base_file');records=input.get('records_json')\nif not base or records is None:raise Exception('Faltan el Excel base o los registros clasificados.')\ntry:records=json.loads(records) if isinstance(records,str) else records\nexcept Exception as e:raise Exception(f'Los registros no son JSON válido: {e}')\nraw=base64.b64decode(str(base).strip()+'='*(-len(str(base).strip())%4))\nby_country={'Guatemala':[],'El Salvador':[]};unclassified=[]\nfor r in as_list(records):\n    if not isinstance(r,dict):continue\n    c=country(r)\n    if c:by_country[c].append(r)\n    else:unclassified.append(r)\n# Always include the combined master workbook first; then add country-specific workbooks.\noutputs=[{'country':'Consolidado','filename':'ReporteFinanciero_Consolidado.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':str(base),'record_count':len(records)}]\nfor c in ('Guatemala','El Salvador'):\n    if by_country[c]:outputs.append(build_file(raw,c,by_country[c]))\ncountry_results={'Guatemala':next((x for x in outputs if x['country']=='Guatemala'),None),'El Salvador':next((x for x in outputs if x['country']=='El Salvador'),None)}\nreturn {'files':outputs,'files_count':len(outputs),'countries':[x['country'] for x in outputs],'guatemala':country_results['Guatemala'],'el_salvador':country_results['El Salvador'],'consolidado':outputs[0],'unclassified_count':len(unclassified)}"
             },
             "metadata": {
                 "designer": {
-                    "x": 1500,
-                    "y": 0,
+                    "x": 1327,
+                    "y": -590,
                     "name": "Separar por país"
                 },
                 "restore": {
@@ -2008,45 +2342,45 @@
                             "label": "Python",
                             "nested": [
                                 {
-                                    "help": "Choose how the code is provided.",
                                     "name": "inputFormat",
                                     "type": "select",
                                     "label": "Input format",
+                                    "help": "Choose how the code is provided.",
+                                    "required": true,
                                     "default": "editor",
                                     "options": [
                                         {
-                                            "label": "Code editor",
                                             "value": "editor",
+                                            "label": "Code editor",
                                             "nested": [
                                                 {
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeEditorPython",
                                                     "type": "editor",
-                                                    "label": "Code",
                                                     "editor": "monaco",
-                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
                                                     "language": "python",
-                                                    "required": true
+                                                    "required": true,
+                                                    "label": "Code",
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
                                                 }
                                             ]
                                         },
                                         {
-                                            "label": "Mapped code (useful for AI)",
                                             "value": "string",
+                                            "label": "Mapped code (useful for AI)",
                                             "nested": [
                                                 {
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                                     "name": "codeStringPython",
                                                     "type": "text",
-                                                    "label": "Code",
-                                                    "default": "# You can map dynamic code from previous modules or inputs.",
                                                     "required": true,
-                                                    "multiline": true
+                                                    "multiline": true,
+                                                    "label": "Code",
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "default": "# You can map dynamic code from previous modules or inputs."
                                                 }
                                             ]
                                         }
-                                    ],
-                                    "required": true
+                                    ]
                                 }
                             ]
                         },
@@ -2055,14 +2389,14 @@
                             "label": "Code editor",
                             "nested": [
                                 {
-                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
                                     "name": "codeEditorPython",
                                     "type": "editor",
-                                    "label": "Code",
                                     "editor": "monaco",
-                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
                                     "language": "python",
-                                    "required": true
+                                    "required": true,
+                                    "label": "Code",
+                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
                                 }
                             ]
                         }
@@ -2072,10 +2406,10 @@
                     {
                         "name": "language",
                         "type": "select",
+                        "required": true,
+                        "mappable": true,
                         "label": "Language",
                         "default": "javascript",
-                        "mappable": true,
-                        "required": true,
                         "validate": {
                             "enum": [
                                 "javascript",
@@ -2087,8 +2421,8 @@
                         "name": "inputFormat",
                         "type": "select",
                         "label": "Input format",
-                        "default": "editor",
                         "required": true,
+                        "default": "editor",
                         "validate": {
                             "enum": [
                                 "editor",
@@ -2099,67 +2433,67 @@
                     {
                         "name": "codeEditorPython",
                         "type": "editor",
-                        "label": "Code",
                         "editor": "monaco",
-                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
                         "language": "python",
-                        "required": true
+                        "required": true,
+                        "label": "Code",
+                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}"
                     },
                     {
                         "name": "input",
-                        "spec": {
-                            "spec": [
-                                {
-                                    "name": "name",
-                                    "type": "text",
-                                    "label": "Name",
-                                    "required": true,
-                                    "validate": {
-                                        "max": 32,
-                                        "min": 1,
-                                        "pattern": "^[a-zA-Z0-9_]{1,32}$"
-                                    }
-                                },
-                                {
-                                    "name": "value",
-                                    "type": "any",
-                                    "label": "Value",
-                                    "required": false
-                                }
-                            ],
-                            "type": "collection",
-                            "label": "Variable"
-                        },
                         "type": "array",
-                        "label": "Input",
-                        "labels": {
-                            "add": "Add variable"
-                        },
                         "default": [
                             {
                                 "name": "foo",
                                 "value": "bar"
                             }
-                        ]
+                        ],
+                        "spec": {
+                            "type": "collection",
+                            "label": "Variable",
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "required": true,
+                                    "validate": {
+                                        "pattern": "^[a-zA-Z0-9_]{1,32}$",
+                                        "min": 1,
+                                        "max": 32
+                                    },
+                                    "label": "Name"
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "any",
+                                    "required": false,
+                                    "label": "Value"
+                                }
+                            ]
+                        },
+                        "labels": {
+                            "add": "Add variable"
+                        },
+                        "label": "Input"
                     },
                     {
                         "name": "dependencies",
+                        "advanced": true,
+                        "type": "array",
                         "spec": {
                             "type": "text",
-                            "label": "Dependency",
                             "required": true,
+                            "label": "Dependency",
                             "validate": {
-                                "max": 214,
+                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$",
                                 "min": 1,
-                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$"
+                                "max": 214
                             }
                         },
-                        "type": "array",
-                        "label": "Additional dependencies (Enterprise plans only)",
                         "labels": {
                             "add": "Add dependency"
                         },
-                        "advanced": true
+                        "label": "Additional dependencies (Enterprise plans only)"
                     }
                 ]
             }
@@ -2174,8 +2508,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 1800,
-                    "y": 0,
+                    "x": 1530,
+                    "y": 128,
                     "name": "Iterar reportes"
                 },
                 "restore": {},
@@ -2209,8 +2543,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 2100,
-                    "y": 0
+                    "x": 1802,
+                    "y": -590
                 },
                 "restore": {
                     "expect": {
@@ -2441,8 +2775,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 2400,
-                    "y": 0,
+                    "x": 1978,
+                    "y": 377,
                     "name": "Unir adjuntos"
                 },
                 "restore": {}
@@ -2470,8 +2804,8 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 2700,
-                    "y": 0,
+                    "x": 2222,
+                    "y": -590,
                     "name": "Send Gmail"
                 },
                 "restore": {
@@ -2644,7 +2978,7 @@
             "version": 1,
             "parameters": {},
             "mapper": {
-                "body": "{\n  \"correoEnviado\": true,\n  \"mensajeId\": \"{{54.id}}\",\n  \"estado\": \"Reportes separados por país y enviados en un solo correo\",\n  \"fileName\": \"{{66.result.filename}}\",\n  \"archivoExcelBase64\": \"{{75.result.data}}\",\n  \"resumen_general\": {{66.result.resumen_general}},\n  \"bancos_procesados\": {{66.result.bancos_procesados}},\n  \"totales_globales\": {{66.result.totales_globales}}\n}",
+                "body": "{\n  \"correoEnviado\": true,\n  \"mensajeId\": \"{{54.id}}\",\n  \"estado\": \"Guatemala y El Salvador procesados con consolidado regional en USD\",\n  \"guatemala\": {{75.result.guatemala}},\n  \"el_salvador\": {{75.result.el_salvador}},\n  \"archivosExcel\": {{75.result.files}},\n  \"consolidadoGeneral\": {\"filename\": \"{{66.result.filename}}\", \"mimeType\": \"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\", \"data\": \"{{66.result.data}}\"},\n  \"fileName\": \"{{66.result.filename}}\",\n  \"tipoCambioGTQUSD\": {{66.result.tipo_cambio_gtq_usd}},\n  \"consolidadoRegionalUSD\": {{66.result.consolidado_regional_usd}},\n  \"resumen_general\": {{66.result.resumen_general}},\n  \"bancos_procesados\": {{66.result.bancos_procesados}},\n  \"totales_globales\": {{66.result.totales_globales}},\n  \"filasFuenteCompletas\": {{66.result.filas_fuente_completas}}\n}",
                 "status": 200,
                 "headers": [
                     {
@@ -2655,33 +2989,37 @@
             },
             "metadata": {
                 "designer": {
-                    "x": 3000,
-                    "y": 0
+                    "x": 2421,
+                    "y": 84
                 },
                 "restore": {},
                 "expect": [
                     {
                         "name": "status",
-                        "type": "uinteger",
                         "label": "Status",
-                        "default": 200,
+                        "type": "uinteger",
                         "required": true,
+                        "default": 200,
                         "validate": {
                             "min": 100
                         }
                     },
                     {
                         "name": "body",
-                        "type": "any",
-                        "label": "Body"
+                        "label": "Body",
+                        "type": "any"
                     },
                     {
                         "name": "headers",
+                        "label": "Custom headers",
+                        "type": "array",
+                        "editable": true,
+                        "advanced": true,
                         "spec": [
                             {
                                 "name": "key",
-                                "type": "text",
                                 "label": "Key",
+                                "type": "text",
                                 "required": true,
                                 "validate": {
                                     "max": 256
@@ -2689,18 +3027,14 @@
                             },
                             {
                                 "name": "value",
-                                "type": "text",
                                 "label": "Value",
+                                "type": "text",
                                 "required": true,
                                 "validate": {
                                     "max": 4096
                                 }
                             }
                         ],
-                        "type": "array",
-                        "label": "Custom headers",
-                        "advanced": true,
-                        "editable": true,
                         "validate": {
                             "maxItems": 16
                         }

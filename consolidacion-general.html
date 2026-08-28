@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RED INTELFON - Consolidacion General</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f8fafc;--panel:#fff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--red:#dc2626;--green:#059669;--blue:#2563eb;--amber:#b45309}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#f8fafc 0%,#eef2f7 100%);color:var(--ink);font-family:'Plus Jakarta Sans','Inter','Segoe UI',Arial,sans-serif}.page{max-width:1480px;margin:auto;padding:28px}.top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px;flex-wrap:wrap}.brand{font:800 13px Arial,sans-serif;letter-spacing:.13em;color:var(--red);text-transform:uppercase}.title{font-size:clamp(28px,4vw,46px);margin:6px 0;letter-spacing:-.04em}.subtitle{font:14px Arial,sans-serif;color:var(--muted)}.actions{display:flex;gap:9px;flex-wrap:wrap}.button{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);padding:10px 13px;text-decoration:none;font:700 12px Arial,sans-serif;cursor:pointer}.button.primary{background:var(--red);border-color:var(--red);color:#fff}.button:hover{filter:brightness(.96)}.status{font:700 12px Arial,sans-serif;padding:8px 11px;border-radius:999px;background:#fff3cd;color:var(--amber);border:1px solid #f4d28a}.status.ok{background:#dcfce7;color:#047857;border-color:#a7f3d0}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 8px 24px #17202b0d}.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:16px}.panel h2{font-size:23px;margin:0 0 5px}.panel p{font:13px Arial,sans-serif;color:var(--muted);margin:0}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.kpi{border:1px solid var(--line);border-radius:10px;padding:15px;background:#f8fafc}.kpi label{display:block;font:700 10px Arial,sans-serif;text-transform:uppercase;color:var(--muted);letter-spacing:.08em}.kpi strong{display:block;font-size:24px;margin-top:7px}.tables{display:grid;grid-template-columns:1fr 1fr;gap:18px}.table-title{font-size:17px;margin:0 0 10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;min-width:560px}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font:13px Arial,sans-serif}th{background:#f8fafc;color:#475569;font-size:10px;text-transform:uppercase;letter-spacing:.06em}td.num,th.num{text-align:right}.empty{text-align:center;color:var(--muted);padding:28px;font:13px Arial,sans-serif}.review{border-left:4px solid var(--amber);background:#fffbeb;padding:14px;font:13px Arial,sans-serif;color:#78350f}.downloads{display:flex;gap:9px;flex-wrap:wrap}.download{background:#ecfdf5;border-color:#a7f3d0;color:#047857}@media(max-width:850px){.page{padding:16px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tables{grid-template-columns:1fr}}@media(max-width:480px){.kpis{grid-template-columns:1fr}.title{font-size:30px}}
+/* Paleta oscura RED INTELFON, igual al visor bancario */
+:root{--bg:#171A21;--panel:#222631;--ink:#F8FAFC;--muted:#AAB4C3;--line:#3B4352;--red:#DC2626;--green:#34D399;--blue:#60A5FA;--amber:#FBBF24}
+body{background:radial-gradient(circle at 10% -10%,#27334a 0,transparent 35%),linear-gradient(180deg,#171A21,#12151B 80%);color:var(--ink)}
+.subtitle,.panel p{color:var(--muted)}.button{background:#2C3340;border-color:#465064;color:#F8FAFC}.button.primary{background:linear-gradient(135deg,#DC2626,#B91C1C);border-color:#EF4444}.panel{background:linear-gradient(180deg,#242A34,#1E232C);border-color:#39414F;box-shadow:0 16px 40px rgba(0,0,0,.22)}.panel-head{border-color:#3B4352}.kpi{background:#292F3A;border-color:#3B4453}.kpi label{color:#AEB8C8}.kpi strong{color:#F8FAFC}.table-wrap{border-color:#39414F}table{background:#20252E}th{background:#2D3440;color:#DCE4EF;border-color:#465061}td{color:#D6DEEA;border-color:#343C49}.status{background:#303744;color:#FBBF24;border-color:#465164}.status.ok{background:#14352c;color:#6EE7B7;border-color:#23634e}.download{background:#123b30;border-color:#2b8065;color:#6EE7B7}.review{background:#332b16;color:#FDE68A;border-color:#92712a}.empty{color:#AAB4C3}.tables>div{min-width:0}.tables table{min-width:0;width:100%}.tables th,.tables td{padding-left:9px;padding-right:9px;white-space:normal;word-break:break-word}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div><div class="brand">RED INTELFON</div><h1 class="title">Consolidacion General</h1><p class="subtitle">Vista independiente de los resultados financieros generados por Make.com.</p></div>
+    <div class="actions"><a class="button" href="index.html">Volver al dashboard</a><button class="button" id="reload">Actualizar datos</button><span class="status" id="status">Esperando reporte</span></div>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head"><div><h2>Resumen consolidado</h2><p>Valores originales por pais, sin mezclar monedas.</p></div><span class="status" id="rate">Tasa GTQ/USD: sin datos</span></div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div><h2>Consolidado General</h2><p>Archivo general generado por Make y datos originales de cada pais.</p></div></div>
+    <div class="downloads" id="general-download"></div>
+    <div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Pais</th><th>Moneda</th><th class="num">Registros</th><th class="num">Saldo final</th><th>Conciliacion</th></tr></thead><tbody id="general-table"></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div><h2>Consolidado Regional USD</h2><p>Conversion calculada por Make. Se conservan los importes originales.</p></div></div>
+    <div class="downloads" id="regional-download"></div>
+    <div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Pais</th><th>Moneda original</th><th class="num">Monto original</th><th class="num">Monto USD</th><th>Resultado</th></tr></thead><tbody id="regional-table"></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div><h2>Reportes separados por pais</h2><p>Cada tabla muestra unicamente los registros de su pais.</p></div></div>
+    <div class="tables"><div><h3 class="table-title">Guatemala</h3><div class="downloads" id="gt-download"></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Banco</th><th>Cuenta</th><th class="num">Saldo final</th><th>Estado</th></tr></thead><tbody id="gt-table"></tbody></table></div></div><div><h3 class="table-title">El Salvador</h3><div class="downloads" id="sv-download"></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Banco</th><th>Cuenta</th><th class="num">Saldo final</th><th>Estado</th></tr></thead><tbody id="sv-table"></tbody></table></div></div></div>
+  </section>
+
+  <div class="review" id="review">No hay registros pendientes de revision.</div>
+</main>
+<script>
+(function(){
+  const money=(value,currency)=>{const number=Number(value);if(!Number.isFinite(number))return 'Sin datos';return (currency==='USD'?'$':'Q')+' '+number.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})};
+  const parse=value=>{if(typeof value!=='string')return value;try{return JSON.parse(value)}catch(_){return value}};
+  const array=value=>{const parsed=parse(value);if(Array.isArray(parsed))return parsed;if(parsed&&typeof parsed==='object')return Object.values(parsed);return[]};
+  const field=(row,...names)=>{if(!row||typeof row!=='object')return'';const keys=Object.keys(row);const normalize=value=>String(value).toLowerCase().replace(/[^a-z0-9]/g,'');const key=names.map(name=>keys.find(item=>normalize(item)===normalize(name))).find(Boolean);return key?row[key]:''};
+  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+  const report=()=>{const snapshot=parse(localStorage.getItem('intelfon_current_report')||'');return snapshot?.data||snapshot||{}};
+  const download=(file,label)=>{const data=file?.data||file?.filedata||'';if(!data)return'';const name=file.filename||file.name||label+'.xlsx';const href='data:'+(file.mimeType||'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')+';base64,'+data;return '<a class="button download" href="'+href+'" download="'+esc(name)+'">Descargar '+esc(label)+'</a>'};
+  const table=(rows,currency)=>rows.length?rows.map(row=>'<tr><td>'+esc(field(row,'Banco','banco')||'Banco no identificado')+'</td><td>'+esc(field(row,'Cuenta','cuenta')||'Sin cuenta')+'</td><td class="num">'+money(field(row,'Saldo_Final','saldo_final'),currency)+'</td><td>'+esc(field(row,'Resultado','resultado')||'REVISAR')+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">Sin registros de este pais.</td></tr>';
+  function render(){
+    const data=report(),records=array(data.bancos_procesados),regional=array(data.consolidadoRegionalUSD||data.consolidado_regional_usd),files=array(data.archivosExcel||data.archivos_excel),general=data.consolidadoGeneral||data.consolidado_general;
+    const gt=records.filter(row=>String(field(row,'Pais','pais')).toLowerCase().includes('guatemala')),sv=records.filter(row=>String(field(row,'Pais','pais')).toLowerCase().includes('salvador'));
+    const revisions=array(data.registrosRevision||data.registros_revision),rate=data.tipoCambioGTQUSD??data.tipo_cambio_gtq_usd;
+    document.getElementById('status').textContent=records.length?'Datos recibidos de Make':'Esperando reporte';document.getElementById('status').className='status '+(records.length?'ok':'');document.getElementById('rate').textContent='Tasa GTQ/USD: '+(rate?Number(rate).toFixed(4):'sin datos');
+    document.getElementById('kpis').innerHTML=[['Registros',records.length],['Guatemala',gt.length],['El Salvador',sv.length],['Revisiones',revisions.length]].map(item=>'<div class="kpi"><label>'+item[0]+'</label><strong>'+item[1]+'</strong></div>').join('');
+    document.getElementById('general-download').innerHTML=download(general,'Consolidado General')||'<span class="subtitle">Make no devolvio este archivo.</span>';
+    document.getElementById('regional-download').innerHTML=files.filter(file=>/regional|usd/i.test(file.filename||file.name||'')).map(file=>download(file,'Consolidado Regional USD')).join('')||'<span class="subtitle">Make no devolvio este archivo.</span>';
+    document.getElementById('general-table').innerHTML=[['Guatemala',gt,'GTQ'],['El Salvador',sv,'USD']].map(item=>'<tr><td>'+item[0]+'</td><td>'+item[2]+'</td><td class="num">'+item[1].length+'</td><td class="num">'+(item[1].length?money(item[1].reduce((sum,row)=>sum+Number(field(row,'Saldo_Final','saldo_final')||0),0),item[2]):'Sin datos')+'</td><td>'+ (item[1].some(row=>String(field(row,'Resultado','resultado')).toUpperCase()==='REVISAR')?'REVISAR':'OK')+'</td></tr>').join('');
+    document.getElementById('regional-table').innerHTML=regional.length?regional.map(row=>'<tr><td>'+esc(field(row,'Pais','pais')||'Sin pais')+'</td><td>'+esc(field(row,'Moneda','moneda')||'Original')+'</td><td class="num">'+money(field(row,'Saldo_Final','saldo_final'),field(row,'Moneda','moneda'))+'</td><td class="num">'+money(field(row,'Saldo_Final_USD','saldo_final_usd'),'USD')+'</td><td>'+esc(field(row,'Resultado','resultado')||'REVISAR')+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">Sin registros regionales.</td></tr>';
+    document.getElementById('gt-table').innerHTML=table(gt,'GTQ');document.getElementById('sv-table').innerHTML=table(sv,'USD');
+    document.getElementById('gt-download').innerHTML=files.filter(file=>/guatemala/i.test(file.filename||file.name||'')).map(file=>download(file,'Guatemala')).join('');document.getElementById('sv-download').innerHTML=files.filter(file=>/salvador/i.test(file.filename||file.name||'')).map(file=>download(file,'El Salvador')).join('');
+    document.getElementById('review').textContent=revisions.length?revisions.length+' registro(s) requieren revision segun Make.com.':'No hay registros pendientes de revision.';
+  }
+  document.getElementById('reload').addEventListener('click',render);window.addEventListener('storage',event=>{if(event.key==='intelfon_current_report')render()});render();
+})();
+</script>
+</body>
+</html>

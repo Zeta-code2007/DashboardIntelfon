@@ -4,29 +4,41 @@ import { CONFIG } from '../config.js';
  * Envía el archivo y el tipo de reporte al Webhook de Make.com para su procesamiento real.
  * Realiza una petición POST multipart/form-data y retorna los datos JSON procesados.
  *
- * @param {File} file - Archivo seleccionado (debe ser formato .xlsx para ser compatible con openpyxl en Make).
+ * @param {File[]} files - Archivos de Guatemala y El Salvador.
  * @param {string} tipoReporte - Tipo de reporte seleccionado (Ventas, Inventario, Ejecutivo).
  * @returns {Promise<Object>} Promesa que resuelve al objeto con la estructura de respuesta de Make.
  */
-export async function enviarArchivoAMake(file, tipoReporte) {
+function readAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error(`No se pudo leer ${file.name}.`));
+        reader.readAsDataURL(file);
+    });
+}
+
+export async function enviarArchivosAMake(files, tipoReporte) {
     if (!CONFIG.MAKE_WEBHOOK_URL) {
         throw new Error('La URL del Webhook de Make (CONFIG.MAKE_WEBHOOK_URL) no está configurada.');
     }
 
-    if (!file) {
-        throw new Error('Debes seleccionar un archivo válido antes de procesar.');
+    if (!Array.isArray(files) || files.length !== 2 || files.some(file => !file)) {
+        throw new Error('Debes seleccionar un archivo de Guatemala y uno de El Salvador.');
     }
 
-    // El flujo de Make procesa el archivo con Python openpyxl y valida que sea un XLSX real
-    const fileNameLower = file.name.toLowerCase();
-    if (!fileNameLower.endsWith('.xlsx')) {
-        throw new Error('El archivo seleccionado debe ser un archivo Excel válido con extensión .xlsx (los formatos .csv o .xls no son soportados por el escenario en Make).');
+    for (const file of files) {
+        if (!file.name.toLowerCase().endsWith('.xlsx')) {
+            throw new Error(`El archivo ${file.name} debe ser un Excel .xlsx.`);
+        }
     }
 
-    // Preparar carga multipart/form-data estándar
+    const payloadFiles = await Promise.all(files.map(async file => ({
+        name: file.name,
+        data: await readAsBase64(file),
+        mimeType: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })));
     const formData = new FormData();
-    formData.append('file', file, file.name);
-    formData.append('filename', file.name);
+    formData.append('files', JSON.stringify(payloadFiles));
     formData.append('tipoReporte', tipoReporte || 'bancario');
 
     let response;
@@ -56,7 +68,7 @@ export async function enviarArchivoAMake(file, tipoReporte) {
 
     // Obtener y parsear el cuerpo de la respuesta de Make
     const responseText = await response.text();
-    console.log('[MakeService] Respuesta RAW recibida de Make (HTTP ' + response.status + '):', responseText);
+    console.log('[MakeService] Respuesta recibida de Make (HTTP ' + response.status + ', tamaño ' + responseText.length + ').');
 
     if (!responseText || responseText.trim() === '') {
         throw new Error('El Webhook de Make respondió exitosamente (200 OK) pero con el cuerpo vacío. Verifica que el módulo Webhook Respond esté activo y conectado al final de la ruta del escenario.');
@@ -81,6 +93,6 @@ export async function enviarArchivoAMake(file, tipoReporte) {
         } catch (_) { }
     }
 
-    console.log('[MakeService] Objeto final parseado:', data);
+    console.log('[MakeService] Respuesta JSON recibida correctamente.');
     return data;
 }

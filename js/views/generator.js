@@ -1,4 +1,4 @@
-import { enviarArchivoAMake } from '../services/makeService.js';
+import { enviarArchivosAMake } from '../services/makeService.js';
 import { Toast } from '../services/toastService.js';
 
 /**
@@ -104,13 +104,12 @@ export function renderGenerator() {
                     </select>
                 </div>
 
-                <!-- DROPZONE / ÁREA DE CARGA DE ARCHIVO -->
-                <div class="space-y-2">
-                    <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">Archivo Excel</label>
-                    <div id="dropzone" class="dropzone-intelfon group">
-                        <input type="file" id="file-input" class="hidden" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-                        
-                        <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">Guatemala</label>
+                        <div id="dropzone-gt" class="dropzone-intelfon group">
+                            <input type="file" id="file-input-gt" class="hidden" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                            <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
                             <div class="w-16 h-16 rounded-2xl bg-red-50 text-intelfon-red flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
                                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -118,16 +117,28 @@ export function renderGenerator() {
                             </div>
                             <div class="space-y-1">
                                 <p class="text-sm font-bold text-slate-700">
-                                    <span class="text-intelfon-red hover:underline">Haz clic para buscar</span> o arrastra tu archivo aquí
+                                    <span class="text-intelfon-red hover:underline">Seleccionar Excel GT</span>
                                 </p>
-                                <p class="text-xs text-slate-400 font-medium">De 1 a 10 archivos Microsoft Excel (.xlsx), hasta 20MB cada uno</p>
+                                <p class="text-xs text-slate-400 font-medium">Un archivo .xlsx, máximo 20 MB</p>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">El Salvador</label>
+                        <div id="dropzone-sv" class="dropzone-intelfon group">
+                            <input type="file" id="file-input-sv" class="hidden" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                            <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
+                                <div class="w-16 h-16 rounded-2xl bg-red-50 text-intelfon-red flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                </div>
+                                <div class="space-y-1"><p class="text-sm font-bold text-slate-700"><span class="text-intelfon-red hover:underline">Seleccionar Excel SV</span></p><p class="text-xs text-slate-400 font-medium">Un archivo .xlsx, máximo 20 MB</p></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- DETALLE DEL ARCHIVO SELECCIONADO (OCULTO POR DEFECTO) -->
-                <div id="file-info-container" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between transition-all">
+                <div id="file-info-gt" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between transition-all">
                     <div class="flex items-center space-x-3.5 overflow-hidden">
                         <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,21 +146,25 @@ export function renderGenerator() {
                             </svg>
                         </div>
                         <div class="truncate">
-                            <p id="file-name" class="text-sm font-bold text-slate-800 truncate"></p>
-                            <p id="file-size" class="text-xs text-slate-400 font-medium"></p>
+                            <p id="file-name-gt" class="text-sm font-bold text-slate-800 truncate"></p>
+                            <p id="file-size-gt" class="text-xs text-slate-400 font-medium"></p>
                         </div>
                     </div>
-                    <button type="button" id="btn-remove-file" class="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar archivo">
+                    <button type="button" id="btn-remove-file-gt" class="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar archivo">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
                     </button>
                 </div>
+                <div id="file-info-sv" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between transition-all">
+                    <div class="truncate"><p id="file-name-sv" class="text-sm font-bold text-slate-800 truncate"></p><p id="file-size-sv" class="text-xs text-slate-400 font-medium"></p></div>
+                    <button type="button" id="btn-remove-file-sv" class="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar archivo"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                </div>
 
                 <!-- CONTENEDOR DE ESTADO DE CARGA Y PROGRESO -->
                 <div id="status-container" class="hidden space-y-3 pt-2">
                     <div class="flex items-center justify-between text-xs">
-                        <span id="status-label" class="font-bold text-slate-700">Enviando y procesando archivo con Make...</span>
+                        <span id="status-label" class="font-bold text-slate-700">Analizando Guatemala y El Salvador simultáneamente...</span>
                         <div class="flex items-center space-x-2">
                             <span id="status-spinner" class="animate-spin w-3 h-3 border-2 border-intelfon-red border-t-transparent rounded-full inline-block"></span>
                             <span id="status-subtext" class="text-slate-400 font-medium">Ejecutando escenario...</span>
@@ -171,7 +186,7 @@ export function renderGenerator() {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                         </svg>
                     </span>
-                    <span id="btn-submit-text">Generar y Procesar Datos</span>
+                    <span id="btn-submit-text">Procesar ambos países</span>
                 </button>
                 <button type="button" id="btn-clear-dashboard" class="btn-intelfon-secondary w-full py-3 text-sm flex items-center justify-center space-x-2 border border-slate-300 dark:border-slate-700">
                     <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -315,12 +330,12 @@ export function renderGenerator() {
     `;
 
     // Referencias a los elementos del DOM
-    const dropzone = container.querySelector('#dropzone');
-    const fileInput = container.querySelector('#file-input');
-    const fileInfoContainer = container.querySelector('#file-info-container');
-    const fileNameDisplay = container.querySelector('#file-name');
-    const fileSizeDisplay = container.querySelector('#file-size');
-    const btnRemoveFile = container.querySelector('#btn-remove-file');
+    const dropzones = { GT: container.querySelector('#dropzone-gt'), SV: container.querySelector('#dropzone-sv') };
+    const fileInputs = { GT: container.querySelector('#file-input-gt'), SV: container.querySelector('#file-input-sv') };
+    const fileInfoContainers = { GT: container.querySelector('#file-info-gt'), SV: container.querySelector('#file-info-sv') };
+    const fileNameDisplays = { GT: container.querySelector('#file-name-gt'), SV: container.querySelector('#file-name-sv') };
+    const fileSizeDisplays = { GT: container.querySelector('#file-size-gt'), SV: container.querySelector('#file-size-sv') };
+    const removeFileButtons = { GT: container.querySelector('#btn-remove-file-gt'), SV: container.querySelector('#btn-remove-file-sv') };
     const form = container.querySelector('#generator-form');
 
     const errorAlert = container.querySelector('#error-alert');
@@ -355,7 +370,7 @@ export function renderGenerator() {
     const previewLoader = container.querySelector('#preview-loader');
     const excelPreviewFrame = container.querySelector('#excel-preview-frame');
 
-    let selectedFiles = [];
+    const selectedFiles = { GT: null, SV: null };
     let currentPreviewUrl = '';
     let lastProcessedData = null;
     let currentRunId = null;
@@ -451,10 +466,12 @@ export function renderGenerator() {
         btnClearDashboard.addEventListener('click', () => {
             if (!confirm('¿Deseas limpiar los datos actuales del dashboard? Esta acción no elimina el archivo original.')) return;
             purgeReportState();
-            selectedFiles = [];
+            selectedFiles.GT = null;
+            selectedFiles.SV = null;
             lastProcessedData = null;
             currentPreviewUrl = '';
-            clearFileSelection();
+            clearFileSelection('GT');
+            clearFileSelection('SV');
             resultsPanel.classList.add('hidden');
             documentPreviewSection.classList.add('hidden');
             excelPreviewFrame.src = '';
@@ -515,19 +532,14 @@ export function renderGenerator() {
     btnCloseError.addEventListener('click', hideError);
 
     // Selección de archivo
-    function handleFileSelection(files) {
+    function handleFileSelection(country, files) {
         const selected = Array.from(files || []);
         if (!selected.length) return;
-        if (selected.length > 10) {
-            showError('Demasiados archivos', 'Puedes seleccionar un máximo de 10 archivos Excel por ejecución.');
-            clearFileSelection();
-            return;
-        }
 
         const invalidFile = selected.find(file => !file.name.toLowerCase().endsWith('.xlsx'));
         if (invalidFile) {
             showError('Formato no válido', `El archivo "${invalidFile.name}" no es compatible. Solo se permiten archivos .xlsx.`);
-            clearFileSelection();
+            clearFileSelection(country);
             return;
         }
 
@@ -535,56 +547,42 @@ export function renderGenerator() {
         const oversizedFile = selected.find(file => file.size > maxSizeBytes);
         if (oversizedFile) {
             showError('Archivo demasiado grande', `El archivo "${oversizedFile.name}" (${formatFileSize(oversizedFile.size)}) supera el límite de 20 MB.`);
-            clearFileSelection();
+            clearFileSelection(country);
             return;
         }
 
-        selectedFiles = selected;
-        fileNameDisplay.textContent = selected.length === 1
-            ? selected[0].name
-            : `${selected.length} archivos seleccionados`;
-        fileSizeDisplay.textContent = selected.length === 1
-            ? formatFileSize(selected[0].size)
-            : `${formatFileSize(selected.reduce((total, file) => total + file.size, 0))} en total`;
-        fileInfoContainer.classList.remove('hidden');
+        selectedFiles[country] = selected[0];
+        fileNameDisplays[country].textContent = selected[0].name;
+        fileSizeDisplays[country].textContent = formatFileSize(selected[0].size);
+        fileInfoContainers[country].classList.remove('hidden');
         hideError();
     }
 
-    function clearFileSelection() {
-        selectedFiles = [];
-        fileInput.value = '';
-        fileInfoContainer.classList.add('hidden');
-        fileNameDisplay.textContent = '';
-        fileSizeDisplay.textContent = '';
+    function clearFileSelection(country) {
+        selectedFiles[country] = null;
+        fileInputs[country].value = '';
+        fileInfoContainers[country].classList.add('hidden');
+        fileNameDisplays[country].textContent = '';
+        fileSizeDisplays[country].textContent = '';
     }
 
-    dropzone.addEventListener('click', () => fileInput.click());
-
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleFileSelection(e.target.files);
-        }
-    });
-
-    btnRemoveFile.addEventListener('click', (e) => {
-        e.stopPropagation();
-        clearFileSelection();
-    });
-
-    // Drag & Drop
-    dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('dropzone-active');
-    });
-
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dropzone-active'));
-
-    dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dropzone-active');
-        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFileSelection(e.dataTransfer.files);
-        }
+    Object.keys(dropzones).forEach(country => {
+        dropzones[country].addEventListener('click', () => fileInputs[country].click());
+        fileInputs[country].addEventListener('change', event => handleFileSelection(country, event.target.files));
+        removeFileButtons[country].addEventListener('click', event => {
+            event.stopPropagation();
+            clearFileSelection(country);
+        });
+        dropzones[country].addEventListener('dragover', event => {
+            event.preventDefault();
+            dropzones[country].classList.add('dropzone-active');
+        });
+        dropzones[country].addEventListener('dragleave', () => dropzones[country].classList.remove('dropzone-active'));
+        dropzones[country].addEventListener('drop', event => {
+            event.preventDefault();
+            dropzones[country].classList.remove('dropzone-active');
+            handleFileSelection(country, event.dataTransfer?.files);
+        });
     });
 
     // Helper: intenta parsear un string JSON, devuelve el valor original si no es parseable
@@ -882,8 +880,8 @@ export function renderGenerator() {
         e.preventDefault();
         hideError();
 
-        if (!selectedFiles.length) {
-            showError('Archivo requerido', 'Por favor selecciona al menos un archivo Excel (.xlsx) antes de continuar.');
+        if (!selectedFiles.GT || !selectedFiles.SV) {
+            showError('Faltan archivos', 'Selecciona un archivo Excel para Guatemala y otro para El Salvador.');
             return;
         }
 
@@ -940,17 +938,10 @@ export function renderGenerator() {
         try {
             let data = null;
             try {
-                const responses = [];
-                for (let index = 0; index < selectedFiles.length; index++) {
-                    const file = selectedFiles[index];
-                    statusLabel.textContent = `Procesando archivo ${index + 1} de ${selectedFiles.length}...`;
-                    statusSubtext.textContent = file.name;
-                    progressBar.style.width = `${Math.round(25 + ((index / selectedFiles.length) * 65))}%`;
-                    const response = await enviarArchivoAMake(file, tipoReporte);
-                    if (response) responses.push(response);
-                }
-
-                data = responses.length === 1 ? responses[0] : responses;
+                statusLabel.textContent = 'Analizando Guatemala y El Salvador simultáneamente...';
+                statusSubtext.textContent = 'Esperando la respuesta conjunta de Make.com';
+                progressBar.style.width = '45%';
+                data = await enviarArchivosAMake([selectedFiles.GT, selectedFiles.SV], tipoReporte);
                 const hasResponseError = response => response?.error || response?.errorMessage || response?.status === 'error';
                 const responseError = Array.isArray(data)
                     ? data.some(response => !response || typeof response !== 'object' || Object.keys(response).length === 0 || hasResponseError(response))
@@ -1028,7 +1019,7 @@ export function renderGenerator() {
             btnSubmitIcon.innerHTML = `
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
             `;
-            btnSubmitText.textContent = 'Generar y Procesar Datos';
+            btnSubmitText.textContent = 'Procesar ambos países';
         }
     });
 

@@ -152,6 +152,41 @@
     </div>
   </section>
 
+  <!-- CONSOLIDADOS Y REPORTES SEPARADOS DEVUELTOS POR MAKE -->
+  <section class="card consolidation-panel" id="generalPanel">
+    <div class="section-heading">
+      <div>
+        <h2>Consolidado General</h2>
+        <p>Valores originales de Guatemala y El Salvador, sin conversiones ni mezclas de moneda.</p>
+      </div>
+      <span class="section-chip" id="generalStatus">Esperando datos</span>
+    </div>
+    <div class="kpis consolidation-kpis" id="generalKpis"></div>
+    <div class="consolidation-actions" id="generalActions"></div>
+    <div class="table-wrap consolidation-table-wrap">
+      <table>
+        <thead><tr><th>País</th><th>Moneda</th><th class="num">Registros</th><th class="num">Saldo final</th><th>Conciliación</th></tr></thead>
+        <tbody id="generalTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card consolidation-panel" id="regionalPanel">
+    <div class="section-heading"><div><h2>Consolidado Regional USD</h2><p>Conversión regional calculada por Make, manteniendo los valores originales.</p></div><span class="section-chip" id="regionalStatus">Esperando datos</span></div>
+    <div class="kpis consolidation-kpis" id="regionalKpis"></div>
+    <div class="consolidation-actions" id="regionalActions"></div>
+    <div class="table-wrap consolidation-table-wrap"><table><thead><tr><th>País</th><th>Moneda original</th><th class="num">Monto original</th><th class="num">Monto USD</th><th>Resultado</th></tr></thead><tbody id="regionalTable"></tbody></table></div>
+  </section>
+
+  <section class="card consolidation-panel" id="countryPanels">
+    <div class="section-heading"><div><h2>Reportes separados por país</h2><p>Cada país conserva sus bancos, cuentas, movimientos y conciliación de forma independiente.</p></div></div>
+    <div class="grid-equal country-report-grid">
+      <div><h2>🇬🇹 Guatemala</h2><div class="consolidation-actions" id="gtActions"></div><div class="table-wrap consolidation-table-wrap"><table><thead><tr><th>Banco</th><th>Cuenta</th><th class="num">Saldo final</th><th>Estado</th></tr></thead><tbody id="gtTable"></tbody></table></div></div>
+      <div><h2>🇸🇻 El Salvador</h2><div class="consolidation-actions" id="svActions"></div><div class="table-wrap consolidation-table-wrap"><table><thead><tr><th>Banco</th><th>Cuenta</th><th class="num">Saldo final</th><th>Estado</th></tr></thead><tbody id="svTable"></tbody></table></div></div>
+    </div>
+    <div class="note consolidation-review" id="consolidationReview">No hay registros pendientes de revisión.</div>
+  </section>
+
   <!-- ENCABEZADO Y FILTROS -->
   <header class="hero">
     <div class="hero-left">
@@ -374,6 +409,7 @@ let BASE_DATA_BY_COUNTRY = {
 let DATA = null;
 let downloadExcelUrl = '#';
 let loadedReportSnapshot = null;
+let CONSOLIDATION = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
 
 function createEmptyBaseData(countryCode = 'GT') {
   const cfg = COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG.GT;
@@ -642,6 +678,7 @@ function parseRawReport() {
     let allResumenList = [];
     let fileName = 'ReporteFinanciero.xlsx';
     let outerDownloadUrl = '';
+    const consolidation = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
 
     sourcesArray.forEach(src => {
       if (!src) return;
@@ -656,6 +693,22 @@ function parseRawReport() {
         || getField(raw, 'archivoExcelBase64', 'excelBase64');
       if (!outerDownloadUrl && typeof excelBase64 === 'string' && excelBase64.length > 20) {
         outerDownloadUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBase64}`;
+      }
+      const rate = getField(src, 'tipoCambioGTQUSD', 'tipo_cambio_gtq_usd') || getField(raw, 'tipoCambioGTQUSD', 'tipo_cambio_gtq_usd');
+      if (rate !== undefined && rate !== null && rate !== '') consolidation.rate = Number(rate);
+      const regional = getField(src, 'consolidadoRegionalUSD', 'consolidado_regional_usd') || getField(raw, 'consolidadoRegionalUSD', 'consolidado_regional_usd');
+      if (regional) consolidation.regional.push(...asArray(regional));
+      const totals = getField(src, 'totales_globales', 'totalesGlobales') || getField(raw, 'totales_globales', 'totalesGlobales');
+      if (totals && typeof totals === 'object') Object.assign(consolidation.globalTotals, totals);
+      const review = getField(src, 'registrosRevision', 'registros_revision', 'revisiones') || getField(raw, 'registrosRevision', 'registros_revision', 'revisiones');
+      if (review) consolidation.review.push(...asArray(review));
+      const files = getField(src, 'archivosExcel', 'archivos_excel') || getField(raw, 'archivosExcel', 'archivos_excel');
+      if (files) consolidation.files.push(...asArray(files));
+      const generalFile = getField(src, 'consolidadoGeneral', 'consolidado_general') || getField(raw, 'consolidadoGeneral', 'consolidado_general');
+      if (generalFile && typeof generalFile === 'object') consolidation.files.push({ ...generalFile, _kind: 'general' });
+      for (const [code, keys] of [['GT', ['guatemala']], ['SV', ['el_salvador', 'elsalvador']]]) {
+        const countryData = keys.map(key => getField(src, key) || getField(raw, key)).find(Boolean);
+        if (countryData) consolidation.countryData[code] = countryData;
       }
 
       // Fuentes específicas de GT / SV si vienen particionadas
@@ -681,6 +734,7 @@ function parseRawReport() {
 
     downloadExcelUrl = outerDownloadUrl || '#';
 
+    CONSOLIDATION = consolidation;
     return { bancosList, resumenList, fileName };
   } catch (e) {
     console.error('Error parseando reporte guardado:', e);
@@ -799,6 +853,7 @@ function initDataEngine() {
   const parsed = parseRawReport();
   loadedReportSnapshot = localStorage.getItem('intelfon_current_report');
   RAW_TRANSACTIONS_BY_COUNTRY = { GT: [], SV: [] };
+  CONSOLIDATION = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
 
   if (!parsed || !Array.isArray(parsed.bancosList) || parsed.bancosList.length === 0) {
     BASE_DATA_BY_COUNTRY = {
@@ -1212,7 +1267,64 @@ function renderDailyTable() {
   `).join('');
 }
 
+function renderConsolidation() {
+  const generalKpis = document.getElementById('generalKpis');
+  const generalActions = document.getElementById('generalActions');
+  const generalTable = document.getElementById('generalTable');
+  const regionalKpis = document.getElementById('regionalKpis');
+  const regionalActions = document.getElementById('regionalActions');
+  const regionalTable = document.getElementById('regionalTable');
+  const gtTable = document.getElementById('gtTable');
+  const svTable = document.getElementById('svTable');
+  const review = document.getElementById('consolidationReview');
+  if (!generalKpis || !generalActions || !generalTable || !regionalKpis || !regionalActions || !regionalTable || !gtTable || !svTable || !review) return;
+
+  const gt = BASE_DATA_BY_COUNTRY.GT;
+  const sv = BASE_DATA_BY_COUNTRY.SV;
+  const gtTotal = gt.totals.final;
+  const svTotal = sv.totals.final;
+  const reviewCount = CONSOLIDATION.review.length || Number(CONSOLIDATION.globalTotals.registros_revision || 0);
+
+  generalKpis.innerHTML = [
+    ['Total Guatemala', gt.banks.length ? money(gtTotal, 'GTQ') : 'Sin datos'],
+    ['Total El Salvador', sv.banks.length ? money(svTotal, 'USD') : 'Sin datos'],
+    ['Bancos procesados', String(gt.meta.banks + sv.meta.banks)],
+    ['Cuentas procesadas', String(gt.meta.accounts + sv.meta.accounts)]
+  ].map(([label, value]) => `<div class="kpi"><div class="label">${esc(label)}</div><div class="value neutral">${esc(String(value))}</div></div>`).join('');
+
+  generalTable.innerHTML = [
+    ['Guatemala', gt, 'GTQ'],
+    ['El Salvador', sv, 'USD']
+  ].map(([name, value, currency]) => `<tr><td><b>${name}</b></td><td>${currency}</td><td class="num">${value.meta.movementCount}</td><td class="num">${value.banks.length ? money(value.totals.final, currency) : 'Sin datos'}</td><td><span class="badge">${reviewCount ? 'REVISAR' : 'OK'}</span></td></tr>`).join('');
+
+  const fileItems = [...CONSOLIDATION.files];
+  const downloadButtons = (files, emptyText) => files.length ? files.map((file, index) => {
+      const base64 = file?.data || file?.filedata || '';
+      const name = file?.filename || file?.name || `Reporte_${index + 1}.xlsx`;
+      const href = base64 ? `data:${file?.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};base64,${base64}` : '#';
+      return `<a class="btn-excel" href="${href}" download="${esc(name)}">Descargar ${esc(name)}</a>`;
+    }).join('') : `<span class="desc">${emptyText}</span>`;
+  const generalFiles = fileItems.filter(file => file?._kind === 'general' || /consolidado general|general/i.test(file?.filename || file?.name || ''));
+  const regionalFiles = fileItems.filter(file => /regional|usd/i.test(file?.filename || file?.name || ''));
+  generalActions.innerHTML = downloadButtons(generalFiles, 'Make no devolvió el archivo Consolidado General.');
+  regionalActions.innerHTML = downloadButtons(regionalFiles, 'Make no devolvió el archivo Consolidado Regional USD.');
+
+  regionalKpis.innerHTML = [
+    ['Tasa GTQ / USD', CONSOLIDATION.rate ? Number(CONSOLIDATION.rate).toFixed(4) : 'No disponible'],
+    ['Registros regionales', String(CONSOLIDATION.regional.length)],
+    ['Registros en revisión', String(reviewCount)]
+  ].map(([label, value]) => `<div class="kpi"><div class="label">${esc(label)}</div><div class="value neutral">${esc(String(value))}</div></div>`).join('');
+  regionalTable.innerHTML = CONSOLIDATION.regional.length ? CONSOLIDATION.regional.map(row => `<tr><td>${esc(getField(row, 'Pais', 'pais') || 'Sin país')}</td><td>${esc(getField(row, 'Moneda', 'moneda') || 'Original')}</td><td class="num">${money(getField(row, 'Saldo_Final', 'Saldo_Final_Original', 'saldo_final'))}</td><td class="num">${money(getField(row, 'Saldo_Final_USD', 'saldo_final_usd'))}</td><td><span class="badge">${esc(getField(row, 'Resultado', 'resultado') || 'REVISAR')}</span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Make no devolvió registros regionales.</td></tr>';
+  const renderCountry = (base, currency) => base.accounts.length ? base.accounts.map(account => `<tr><td>${esc(account.bank)}</td><td>${esc(account.account)}</td><td class="num">${money(account.final, currency)}</td><td><span class="badge">${reviewCount ? 'REVISAR' : 'OK'}</span></td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">Sin datos de este país.</td></tr>';
+  gtTable.innerHTML = renderCountry(gt, 'GTQ');
+  svTable.innerHTML = renderCountry(sv, 'USD');
+  review.textContent = reviewCount ? `${reviewCount} registro(s) requieren revisión según la conciliación de Make.com.` : 'No hay registros pendientes de revisión.';
+  document.getElementById('generalStatus').textContent = gt.banks.length || sv.banks.length ? 'Procesado por Make' : 'Sin datos';
+  document.getElementById('regionalStatus').textContent = CONSOLIDATION.regional.length ? 'Procesado por Make' : 'Sin datos';
+}
+
 function renderAll() {
+  renderConsolidation();
   renderHeader();
   renderKpis();
   renderBankList();
