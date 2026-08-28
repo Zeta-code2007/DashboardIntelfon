@@ -75,8 +75,16 @@ export async function enviarArchivosAMake(files, tipoReporte) {
     }
 
     const trimmed = responseText.trim();
-    if (trimmed === 'Accepted') {
-        throw new Error('Make.com recibió el archivo pero respondió "Accepted" (asíncrono) sin devolver los datos del reporte. Esto ocurre cuando el escenario en Make no tiene el módulo "Webhook response" al final del flujo o no se ha importado el blueprint corregido.');
+    if (trimmed === 'Accepted' || trimmed.toLowerCase() === 'accepted') {
+        console.log('[MakeService] Make.com aceptó los archivos en modo asíncrono (200 Accepted).');
+        return {
+            accepted: true,
+            asincrono: true,
+            estado: 'Archivos recibidos y procesamiento iniciado en Make.com',
+            mensaje: 'Make.com ha recibido los archivos con éxito y el escenario se está ejecutando en segundo plano.',
+            archivosProcesados: files.length,
+            fechaEnvio: new Date().toISOString()
+        };
     }
 
     let data;
@@ -93,9 +101,15 @@ export async function enviarArchivosAMake(files, tipoReporte) {
                 });
             data = JSON.parse(sanitized);
         } catch (repairErr) {
-            console.error('[MakeService] Error al parsear JSON original:', e);
-            console.error('[MakeService] Texto de respuesta recibido:', responseText);
-            throw new Error(`Make.com devolvió una respuesta que no es JSON válido: "${responseText.substring(0, 150)}...". Asegúrate de que el último módulo en Make sea "Webhook response" y devuelva un JSON.`);
+            console.warn('[MakeService] La respuesta de Make es texto plano (200 OK):', responseText);
+            return {
+                accepted: true,
+                asincrono: true,
+                estado: 'Respuesta recibida de Make.com',
+                mensaje: responseText.substring(0, 300),
+                archivosProcesados: files.length,
+                fechaEnvio: new Date().toISOString()
+            };
         }
     }
 

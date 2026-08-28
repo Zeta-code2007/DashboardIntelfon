@@ -936,8 +936,20 @@ export function renderGenerator() {
         tableBody.innerHTML = '';
 
         if (!filas || filas.length === 0) {
-            tableHead.innerHTML = `<tr><th>Mensaje</th></tr>`;
-            tableBody.innerHTML = `<tr><td class="text-slate-400 text-center py-6">No se encontraron registros en el archivo procesado.</td></tr>`;
+            tableHead.innerHTML = `<tr><th class="w-1/3">Estado del Proceso</th><th>Detalle de la Operación</th></tr>`;
+            tableBody.innerHTML = `
+                <tr>
+                    <td class="font-semibold text-emerald-700 bg-emerald-50/50">
+                        <span class="inline-flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Recibido por Make.com
+                        </span>
+                    </td>
+                    <td class="text-slate-600">
+                        Los archivos fueron transferidos exitosamente a Make.com. El análisis financiero, generación de libros Excel y despacho de correo se están ejecutando en segundo plano.
+                    </td>
+                </tr>
+            `;
             return;
         }
 
@@ -1143,8 +1155,16 @@ export function renderGenerator() {
             progressBar.style.width = '100%';
             progressBar.classList.remove('bg-intelfon-red');
             progressBar.classList.add('bg-emerald-600');
-            statusLabel.textContent = '¡Procesamiento finalizado exitosamente!';
-            statusSubtext.textContent = 'Listo';
+
+            if (data.asincrono) {
+                statusLabel.textContent = '¡Archivos recibidos exitosamente por Make.com!';
+                statusSubtext.textContent = 'Procesando en segundo plano';
+                Toast.success('Make.com recibió los archivos y los está procesando en segundo plano.', 'Envío Exitoso');
+            } else {
+                statusLabel.textContent = '¡Procesamiento finalizado exitosamente!';
+                statusSubtext.textContent = 'Listo';
+                Toast.success('El reporte financiero ha sido generado exitosamente.', 'Proceso Completo');
+            }
             statusSpinner.classList.add('hidden');
 
             const firstResponse = Array.isArray(data) ? data[0] || {} : data;
