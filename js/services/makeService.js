@@ -22,8 +22,8 @@ export async function enviarArchivosAMake(files, tipoReporte) {
         throw new Error('La URL del Webhook de Make (CONFIG.MAKE_WEBHOOK_URL) no está configurada.');
     }
 
-    if (!Array.isArray(files) || files.length !== 2 || files.some(file => !file)) {
-        throw new Error('Debes seleccionar un archivo de Guatemala y uno de El Salvador.');
+    if (!Array.isArray(files) || files.length < 2 || files.length > 11 || files.some(file => !file)) {
+        throw new Error('Debes seleccionar 1 archivo de Guatemala y entre 1 y 10 archivos de El Salvador (máximo 11 archivos en total).');
     }
 
     for (const file of files) {
