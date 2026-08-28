@@ -398,6 +398,7 @@ export function renderGenerator() {
     let currentPreviewUrl = '';
     let lastProcessedData = null;
     let currentRunId = null;
+    let isSubmitting = false; // Candado anti doble-envío: evita que dos clics rápidos disparen dos peticiones a Make.
 
     function createRunId() {
         if (crypto.randomUUID) return crypto.randomUUID();
@@ -1270,6 +1271,13 @@ export function renderGenerator() {
         e.preventDefault();
         hideError();
 
+        // Si ya hay una ejecución en curso, ignorar este envío por completo (evita duplicados
+        // por doble clic o por reenvíos accidentales del formulario).
+        if (isSubmitting) {
+            console.warn('[Generator] Envío ignorado: ya hay un procesamiento en curso.');
+            return;
+        }
+
         if (!selectedFiles.GT) {
             showError('Falta archivo de Guatemala', 'Por favor selecciona el archivo Excel (.xlsx) para Guatemala.');
             return;
@@ -1304,6 +1312,7 @@ export function renderGenerator() {
 
         const processingId = createRunId();
         currentRunId = processingId;
+        isSubmitting = true;
         purgeReportState();
         localStorage.setItem('intelfon_processing_id', processingId);
         lastProcessedData = null;
@@ -1379,7 +1388,12 @@ export function renderGenerator() {
             }
 
             if (localStorage.getItem('intelfon_processing_id') !== processingId || currentRunId !== processingId) {
-                throw new Error('Esta respuesta pertenece a una ejecución anterior y fue descartada.');
+                // Esta petición quedó "vieja" (llegó tarde, después de que otra ejecución más
+                // reciente tomó su lugar). Esto es normal y no debe mostrarse como error al
+                // usuario: simplemente se descarta en silencio y no se toca la interfaz, porque
+                // la ejecución activa es la que debe controlar el botón y el estado en pantalla.
+                console.warn('[Generator] Respuesta de una ejecución anterior descartada en silencio (no es un error).');
+                return;
             }
 
             clearInterval(progressInterval);
@@ -1444,12 +1458,18 @@ export function renderGenerator() {
                 err?.message || 'El flujo no devolvió una respuesta válida. Verifica Make.com e inténtalo nuevamente.'
             );
         } finally {
-            btnSubmit.disabled = false;
-            btnSubmit.classList.remove('opacity-75', 'cursor-not-allowed');
-            btnSubmitIcon.innerHTML = `
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-            `;
-            btnSubmitText.textContent = 'Procesar ambos países';
+            // Si esta ejecución ya fue reemplazada por una más nueva, no tocar el botón ni el
+            // candado: la ejecución activa es la única responsable de su propio estado.
+            const isStillActiveRun = localStorage.getItem('intelfon_processing_id') === processingId && currentRunId === processingId;
+            if (isStillActiveRun) {
+                isSubmitting = false;
+                btnSubmit.disabled = false;
+                btnSubmit.classList.remove('opacity-75', 'cursor-not-allowed');
+                btnSubmitIcon.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                `;
+                btnSubmitText.textContent = 'Procesar ambos países';
+            }
         }
     });
 
