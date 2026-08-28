@@ -240,22 +240,22 @@
                 "__IMTCONN__": 14550561
             },
             "mapper": {
+                "input": "Eres un auditor bancario estricto. Analiza TODOS los archivos y TODAS las hojas y filas entregadas. No inventes bancos, cuentas, nombres, números de cuenta, monedas ni movimientos.\n\nOBJETIVO: producir un JSON completo y verificable para conciliación bancaria.\n\nREGLAS DE IDENTIFICACIÓN:\n1. Cada registro debe representar una sola combinación real de Pais, Banco, Cuenta, Moneda y archivo.\n2. Extrae Banco, Cuenta, nombres, números de cuenta, moneda, saldos y movimientos solamente del contenido de los archivos. Conserva el texto original relevante en `evidencia`.\n3. Un banco solo puede aparecer si su nombre aparece explícitamente en el archivo/hoja o si existe una evidencia textual inequívoca del propio documento. Si no se puede demostrar, usa `Banco: null` y agrega observación; nunca rellenes con un banco conocido por intuición.\n4. Una cuenta solo puede aparecer si el número o identificador aparece explícitamente. Si no existe, usa `Cuenta: null`. Nunca copies una cuenta de otro banco o de otra hoja.\n5. Separa estrictamente por Pais, Banco, Cuenta, Moneda, archivo y hoja. Nunca mezcles movimientos entre bancos o cuentas.\n6. País: usa exactamente `Guatemala`, `El Salvador` o `null`. Decide usando país explícito, dirección, teléfono, banco, encabezados, moneda y formato; la evidencia explícita tiene prioridad. La moneda por sí sola nunca decide el país.\n7. Guatemala puede usar GTQ/quetzales/Q solo con evidencia; El Salvador puede usar USD/dólares solo con evidencia o contexto inequívoco. Nunca conviertas GTQ en USD ni USD en GTQ.\n8. Incluye BANRURAL solamente si aparece en los archivos. Si aparece sin número de cuenta, conserva sus movimientos con `Cuenta: null`.\n9. Conserva todos los movimientos útiles. Elimina únicamente duplicados idénticos completos. Cada movimiento debe mantener fecha, tipo, descripción, documento, debe, haber, saldo y la fila/hoja/archivo de origen cuando existan.\n10. Calcula ingresos, egresos, neto, saldo inicial, saldo final y cantidad de movimientos por cada registro. Para conciliación: `saldo_calculado = saldo_inicial + ingresos - egresos` y `diferencia_conciliacion = saldo_calculado - saldo_final`.\n11. `totales_globales` debe agrupar solamente por Pais y Moneda; jamás crear un banco o cuenta global. Los globales no deben entrar en `bancos_procesados`, `resumen_general` ni `balance_general` como si fueran bancos.\n12. Genera periodicidad diaria, semanal (lunes como inicio) y mensual por cada registro real.\n13. Antes de responder, haz una auditoría cruzada: cada Banco/Cuenta debe poder localizarse en el texto fuente; cada movimiento debe pertenecer a la misma combinación; ningún registro puede ser solamente una suposición; revisa que no aparezcan bancos ajenos al contenido.\n\nFORMATO: devuelve únicamente JSON válido, sin Markdown ni comentarios. No cortes el JSON. Si el volumen es demasiado grande, conserva prioridad en identificación, movimientos y conciliación, pero sigue devolviendo JSON válido.\n\nEstructura requerida:\n{\n  \"bancos_procesados\": [{\"Pais\": \"Guatemala|El Salvador|null\", \"Banco\": \"string|null\", \"Cuenta\": \"string|null\", \"Moneda\": \"GTQ|USD|string|null\", \"archivo\": \"string\", \"hoja\": \"string\", \"evidencia\": [\"string\"], \"estado_cuenta\": [], \"periodicidad\": {\"diario\": [], \"semanal\": [], \"mensual\": []}}],\n  \"resumen_general\": [],\n  \"totales_globales\": {},\n  \"balance_general\": [],\n  \"observaciones\": []\n}\n\nDATOS COMPLETOS:\n{{64.result}}",
                 "model": "gpt-5.6-sol",
-                "inputContentType": "text",
-                "max_output_tokens": "24000",
-                "parallel_tool_calls": true,
-                "background": false,
-                "createConversation": true,
                 "store": true,
+                "format": {
+                    "type": "json_object"
+                },
                 "reasoning": {
                     "effort": "none",
                     "summary": "auto"
                 },
-                "format": {
-                    "type": "json_object"
-                },
-                "truncation": "auto",
-                "input": "Eres un analista profesional de estados de cuenta multiarchivo. Procesa TODOS los archivos recibidos en una sola corrida y genera un análisis consolidado separado por país.\n\nEl bloque siguiente contiene TODAS las hojas y filas. Revisa todos los archivos, no solo el primero.\n\nREGLAS OBLIGATORIAS:\n1. Para cada registro de banco/cuenta agrega el campo `Pais` con exactamente uno de estos valores: `Guatemala` o `El Salvador`.\n2. Determina el país usando el texto del archivo, banco, hoja, encabezados, dirección, teléfono, moneda y formato del estado de cuenta. No uses solo la moneda como criterio.\n3. Guatemala: identifica señales como Guatemala, GT, quetzales, GTQ, Q o bancos/formato guatemalteco.\n4. El Salvador: identifica señales como El Salvador, SV, salvadoreño, USD/dólares o bancos/formato salvadoreño.\n5. Si el documento indica explícitamente el país, esa señal tiene prioridad sobre cualquier inferencia por moneda.\n6. Si no hay evidencia suficiente, usa `Pais: null` y agrega una observación con el nombre exacto del archivo. Nunca inventes el país.\n7. Separa por país, banco, archivo, cuenta y moneda. Varias cuentas del mismo banco deben ser registros separados.\n8. Para cuentas y movimientos identificados como de El Salvador, usa USD salvo que el documento indique explícitamente otra moneda. Nunca asignes GTQ por defecto a El Salvador.\n9. Para Guatemala usa GTQ solo si el documento indica GTQ, quetzales, Q o el contexto es inequívocamente guatemalteco. Si indica USD, conserva USD.\n10. Conserva todos los movimientos útiles y elimina solo duplicados idénticos completos.\n11. `totales_globales` debe agrupar por Pais y Moneda; nunca convertir un total global en banco o cuenta.\n12. Incluye BANRURAL aunque no tenga cuenta: `Cuenta: null`, todos sus movimientos, resumen, balance y periodicidad.\n13. Crea periodicidad diaria, semanal con lunes como inicio y mensual para cada país/banco/cuenta/moneda.\n\nDevuelve únicamente un objeto JSON válido, sin Markdown, con:\n- `bancos_procesados`: lista separada por `Pais`/banco/cuenta/moneda, incluyendo `Pais`, `Banco`, `Cuenta` o null, `Moneda`, `archivo`, `hoja`, `estado_cuenta` completo y `periodicidad` (`diario`, `semanal`, `mensual`).\n- `resumen_general`: solo registros reales por Pais/banco/cuenta/moneda.\n- `totales_globales`: objeto agrupado por Pais y Moneda.\n- `balance_general`: solo registros reales por Pais/banco/cuenta/moneda.\n- `observaciones`.\n\nAntes de responder verifica que ningún archivo fue ignorado, que cada registro tiene Pais cuando existe evidencia, que las cuentas salvadoreñas no fueron tratadas como GTQ, que no se mezclaron bancos ni monedas y que la salida no contiene únicamente BI.\n\nDATOS COMPLETOS DE TODOS LOS ARCHIVOS:\n{{64.result}}"
+                "background": false,
+                "truncation": "disabled",
+                "inputContentType": "text",
+                "max_output_tokens": 60000,
+                "createConversation": true,
+                "parallel_tool_calls": true
             },
             "metadata": {
                 "designer": {
@@ -265,11 +265,7 @@
                 "restore": {
                     "parameters": {
                         "__IMTCONN__": {
-                            "label": "Intelfon's OpenAI connection",
-                            "data": {
-                                "scoped": "true",
-                                "connection": "openai-gpt-3"
-                            }
+                            "label": "Intelfon's OpenAI connection"
                         }
                     },
                     "expect": {
@@ -279,35 +275,21 @@
                         },
                         "inputContentType": {
                             "mode": "chose",
-                            "label": "Text prompt"
-                        },
-                        "tools": {
-                            "mode": "chose"
-                        },
-                        "tool_choice": {
-                            "mode": "chose",
-                            "label": "Empty"
-                        },
-                        "parallel_tool_calls": {
-                            "mode": "chose"
-                        },
-                        "background": {
-                            "mode": "chose"
-                        },
-                        "context_management": {
-                            "mode": "chose"
-                        },
-                        "createConversation": {
-                            "mode": "chose"
-                        },
-                        "store": {
-                            "mode": "chose"
+                            "label": "Text prompt",
+                            "nested": [
+                                {
+                                    "help": "A text input to the model, equivalent to a text input with the `user` role.",
+                                    "name": "input",
+                                    "type": "text",
+                                    "label": "Prompt"
+                                }
+                            ]
                         },
                         "reasoning": {
                             "nested": {
                                 "effort": {
                                     "mode": "chose",
-                                    "label": "NoneSupported by GPT-5.1 and newer models."
+                                    "label": "None"
                                 },
                                 "summary": {
                                     "mode": "chose",
@@ -325,13 +307,7 @@
                         },
                         "truncation": {
                             "mode": "chose",
-                            "label": "Auto"
-                        },
-                        "include": {
-                            "mode": "chose"
-                        },
-                        "metadata": {
-                            "mode": "chose"
+                            "label": "Disabled"
                         }
                     }
                 },
@@ -348,6 +324,7 @@
                         "name": "model",
                         "type": "select",
                         "label": "Model",
+                        "grouped": true,
                         "required": true
                     },
                     {
@@ -366,1054 +343,54 @@
                         }
                     },
                     {
+                        "name": "input",
+                        "type": "text",
+                        "label": "Prompt"
+                    },
+                    {
                         "name": "max_output_tokens",
                         "type": "integer",
                         "label": "Max Output Tokens"
                     },
                     {
                         "name": "tools",
-                        "type": "array",
-                        "label": "Tools",
                         "spec": {
                             "spec": [
                                 {
                                     "name": "type",
                                     "type": "select",
                                     "label": "Type",
-                                    "options": [
-                                        {
-                                            "label": "Skills",
-                                            "value": "skills",
-                                            "nested": [
-                                                {
-                                                    "name": "skills",
-                                                    "spec": {
-                                                        "spec": [
-                                                            {
-                                                                "name": "skill_source",
-                                                                "type": "select",
-                                                                "label": "Skill source",
-                                                                "options": [
-                                                                    {
-                                                                        "label": "Upload inline",
-                                                                        "value": "inline",
-                                                                        "nested": [
-                                                                            {
-                                                                                "name": "name",
-                                                                                "type": "text",
-                                                                                "label": "Name",
-                                                                                "required": true
-                                                                            },
-                                                                            {
-                                                                                "name": "description",
-                                                                                "type": "text",
-                                                                                "label": "Description",
-                                                                                "required": true
-                                                                            },
-                                                                            {
-                                                                                "help": "Skill archive data to upload. All files must be in the same top-level directory and must include a `SKILL.md` file at the root of that directory. For details about Skill structure, see [OpenAI Skills overview](https://developers.openai.com/api/docs/guides/tools-skills/).",
-                                                                                "name": "data",
-                                                                                "type": "buffer",
-                                                                                "label": "Data",
-                                                                                "required": true,
-                                                                                "semantic": "file:data"
-                                                                            }
-                                                                        ]
-                                                                    },
-                                                                    {
-                                                                        "label": "Skill reference",
-                                                                        "value": "skill_reference",
-                                                                        "nested": [
-                                                                            {
-                                                                                "mode": "edit",
-                                                                                "name": "skill_id",
-                                                                                "type": "select",
-                                                                                "label": "Skill ID",
-                                                                                "options": {
-                                                                                    "store": "rpc://openai-gpt-3/1/getSkills",
-                                                                                    "nested": [
-                                                                                        {
-                                                                                            "mode": "edit",
-                                                                                            "name": "version",
-                                                                                            "type": "select",
-                                                                                            "label": "Version",
-                                                                                            "options": "rpc://openai-gpt-3/1/getSkillVersions",
-                                                                                            "required": true
-                                                                                        }
-                                                                                    ]
-                                                                                },
-                                                                                "required": true
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                ],
-                                                                "required": true
-                                                            }
-                                                        ],
-                                                        "type": "collection",
-                                                        "label": "Skill"
-                                                    },
-                                                    "type": "array",
-                                                    "label": "Skills",
-                                                    "labels": {
-                                                        "add": "Add skill"
-                                                    },
-                                                    "required": true
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "File search",
-                                            "value": "file_search",
-                                            "nested": [
-                                                {
-                                                    "help": "The IDs of the vector stores to search.",
-                                                    "name": "vector_store_ids",
-                                                    "type": "select",
-                                                    "label": "Vector Store IDs",
-                                                    "options": "rpc://openai-gpt-3/1/getVectorStores",
-                                                    "multiple": true,
-                                                    "required": true,
-                                                    "validate": {
-                                                        "maxItems": 2
-                                                    }
-                                                },
-                                                {
-                                                    "help": "A filter to apply based on file attributes.",
-                                                    "name": "filters",
-                                                    "spec": [
-                                                        {
-                                                            "name": "type",
-                                                            "type": "select",
-                                                            "label": "Type",
-                                                            "options": [
-                                                                {
-                                                                    "label": "Equals",
-                                                                    "value": "eq",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The key to compare against the value.",
-                                                                            "name": "key",
-                                                                            "type": "text",
-                                                                            "label": "Key",
-                                                                            "required": true
-                                                                        },
-                                                                        {
-                                                                            "help": "The value to compare against the attribute key",
-                                                                            "name": "value",
-                                                                            "type": "any",
-                                                                            "label": "Value",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Not equal",
-                                                                    "value": "ne",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The key to compare against the value.",
-                                                                            "name": "key",
-                                                                            "type": "text",
-                                                                            "label": "Key",
-                                                                            "required": true
-                                                                        },
-                                                                        {
-                                                                            "help": "The value to compare against the attribute key",
-                                                                            "name": "value",
-                                                                            "type": "any",
-                                                                            "label": "Value",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Greater than",
-                                                                    "value": "gt",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The key to compare against the value.",
-                                                                            "name": "key",
-                                                                            "type": "text",
-                                                                            "label": "Key",
-                                                                            "required": true
-                                                                        },
-                                                                        {
-                                                                            "help": "The value to compare against the attribute key",
-                                                                            "name": "value",
-                                                                            "type": "any",
-                                                                            "label": "Value",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Greater than or equal",
-                                                                    "value": "gte",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The key to compare against the value.",
-                                                                            "name": "key",
-                                                                            "type": "text",
-                                                                            "label": "Key",
-                                                                            "required": true
-                                                                        },
-                                                                        {
-                                                                            "help": "The value to compare against the attribute key",
-                                                                            "name": "value",
-                                                                            "type": "any",
-                                                                            "label": "Value",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Less than",
-                                                                    "value": "lt",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The key to compare against the value.",
-                                                                            "name": "key",
-                                                                            "type": "text",
-                                                                            "label": "Key",
-                                                                            "required": true
-                                                                        },
-                                                                        {
-                                                                            "help": "The value to compare against the attribute key",
-                                                                            "name": "value",
-                                                                            "type": "any",
-                                                                            "label": "Value",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Less than or equal",
-                                                                    "value": "lte",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The key to compare against the value.",
-                                                                            "name": "key",
-                                                                            "type": "text",
-                                                                            "label": "Key",
-                                                                            "required": true
-                                                                        },
-                                                                        {
-                                                                            "help": "The value to compare against the attribute key",
-                                                                            "name": "value",
-                                                                            "type": "any",
-                                                                            "label": "Value",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Compound filter [and]",
-                                                                    "value": "and",
-                                                                    "nested": [
-                                                                        {
-                                                                            "name": "filters",
-                                                                            "spec": {
-                                                                                "spec": [
-                                                                                    {
-                                                                                        "name": "type",
-                                                                                        "type": "select",
-                                                                                        "label": "Type",
-                                                                                        "options": [
-                                                                                            {
-                                                                                                "label": "Equals",
-                                                                                                "value": "eq"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Not equal",
-                                                                                                "value": "ne"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Greater than",
-                                                                                                "value": "gt"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Greater than or equal",
-                                                                                                "value": "gte"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Less than",
-                                                                                                "value": "lt"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Less than or equal",
-                                                                                                "value": "lte"
-                                                                                            }
-                                                                                        ],
-                                                                                        "required": true
-                                                                                    },
-                                                                                    {
-                                                                                        "help": "The key to compare against the value.",
-                                                                                        "name": "key",
-                                                                                        "type": "text",
-                                                                                        "label": "Key",
-                                                                                        "required": true
-                                                                                    },
-                                                                                    {
-                                                                                        "help": "The value to compare against the attribute key",
-                                                                                        "name": "value",
-                                                                                        "type": "any",
-                                                                                        "label": "Value",
-                                                                                        "required": true
-                                                                                    }
-                                                                                ],
-                                                                                "type": "collection",
-                                                                                "label": "Filter"
-                                                                            },
-                                                                            "type": "array",
-                                                                            "label": "Filters",
-                                                                            "labels": {
-                                                                                "add": "Add filter"
-                                                                            },
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Compound filter [or]",
-                                                                    "value": "or",
-                                                                    "nested": [
-                                                                        {
-                                                                            "name": "filters",
-                                                                            "spec": {
-                                                                                "spec": [
-                                                                                    {
-                                                                                        "name": "type",
-                                                                                        "type": "select",
-                                                                                        "label": "Type",
-                                                                                        "options": [
-                                                                                            {
-                                                                                                "label": "Equals",
-                                                                                                "value": "eq"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Not equal",
-                                                                                                "value": "ne"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Greater than",
-                                                                                                "value": "gt"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Greater than or equal",
-                                                                                                "value": "gte"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Less than",
-                                                                                                "value": "lt"
-                                                                                            },
-                                                                                            {
-                                                                                                "label": "Less than or equal",
-                                                                                                "value": "lte"
-                                                                                            }
-                                                                                        ],
-                                                                                        "required": true
-                                                                                    },
-                                                                                    {
-                                                                                        "help": "The key to compare against the value.",
-                                                                                        "name": "key",
-                                                                                        "type": "text",
-                                                                                        "label": "Key",
-                                                                                        "required": true
-                                                                                    },
-                                                                                    {
-                                                                                        "help": "The value to compare against the attribute key",
-                                                                                        "name": "value",
-                                                                                        "type": "any",
-                                                                                        "label": "Value",
-                                                                                        "required": true
-                                                                                    }
-                                                                                ],
-                                                                                "type": "collection",
-                                                                                "label": "Filter"
-                                                                            },
-                                                                            "type": "array",
-                                                                            "label": "Filters",
-                                                                            "labels": {
-                                                                                "add": "Add filter"
-                                                                            },
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                }
-                                                            ]
-                                                        }
-                                                    ],
-                                                    "type": "collection",
-                                                    "label": "Filters"
-                                                },
-                                                {
-                                                    "name": "max_num_results",
-                                                    "type": "integer",
-                                                    "label": "Max Results Number",
-                                                    "validate": {
-                                                        "max": 50,
-                                                        "min": 1
-                                                    }
-                                                },
-                                                {
-                                                    "help": "Ranking options for search.",
-                                                    "name": "ranking_options",
-                                                    "spec": [
-                                                        {
-                                                            "help": "The ranker to use for the file search.",
-                                                            "name": "ranker",
-                                                            "type": "select",
-                                                            "label": "Ranker",
-                                                            "options": [
-                                                                {
-                                                                    "label": "auto",
-                                                                    "value": "auto"
-                                                                },
-                                                                {
-                                                                    "label": "default-2024-08-21",
-                                                                    "value": "default-2024-08-21"
-                                                                },
-                                                                {
-                                                                    "label": "default-2024-11-15",
-                                                                    "value": "default-2024-11-15"
-                                                                }
-                                                            ]
-                                                        },
-                                                        {
-                                                            "help": "The score threshold for the file search. Numbers closer to `1` will attempt to return only the most relevant results, but may return fewer results.",
-                                                            "name": "score_threshold",
-                                                            "type": "number",
-                                                            "label": "Score Threshold",
-                                                            "validate": {
-                                                                "max": 1,
-                                                                "min": 0
-                                                            }
-                                                        }
-                                                    ],
-                                                    "type": "collection",
-                                                    "label": "Ranking Options"
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Function",
-                                            "value": "function",
-                                            "nested": [
-                                                {
-                                                    "help": "The name of the function to call.",
-                                                    "name": "name",
-                                                    "type": "text",
-                                                    "label": "Name",
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "A JSON schema object describing the parameters of the function.",
-                                                    "name": "parameters",
-                                                    "type": "json",
-                                                    "label": "Parameters",
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "Whether to enforce strict parameter validation.",
-                                                    "name": "strict",
-                                                    "type": "boolean",
-                                                    "label": "Strict",
-                                                    "default": true,
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "A description of the function.",
-                                                    "name": "description",
-                                                    "type": "text",
-                                                    "label": "Description"
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Computer use preview",
-                                            "value": "computer_use_preview",
-                                            "nested": [
-                                                {
-                                                    "help": "The height of the computer display.",
-                                                    "name": "display_height",
-                                                    "type": "number",
-                                                    "label": "Display Height",
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "The width of the computer display.",
-                                                    "name": "display_width",
-                                                    "type": "number",
-                                                    "label": "Display Width",
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "The type of computer environment to control.",
-                                                    "name": "environment",
-                                                    "type": "select",
-                                                    "label": "Environment",
-                                                    "options": [
-                                                        {
-                                                            "label": "Windows",
-                                                            "value": "windows"
-                                                        },
-                                                        {
-                                                            "label": "Mac",
-                                                            "value": "mac"
-                                                        },
-                                                        {
-                                                            "label": "Linux",
-                                                            "value": "linux"
-                                                        },
-                                                        {
-                                                            "label": "Browser",
-                                                            "value": "browser"
-                                                        }
-                                                    ],
-                                                    "required": true
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Web search preview",
-                                            "value": "web_search_preview",
-                                            "nested": [
-                                                {
-                                                    "help": "High level guidance for the amount of context window space to use for the search. Medium is the default value.",
-                                                    "name": "search_context_size",
-                                                    "type": "select",
-                                                    "label": "Search Context Size",
-                                                    "options": [
-                                                        {
-                                                            "label": "Low",
-                                                            "value": "low"
-                                                        },
-                                                        {
-                                                            "label": "Medium",
-                                                            "value": "medium"
-                                                        },
-                                                        {
-                                                            "label": "High",
-                                                            "value": "high"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "help": "Approximate location parameters for the search.",
-                                                    "name": "user_location",
-                                                    "spec": [
-                                                        {
-                                                            "help": "The type of location approximation.",
-                                                            "name": "type",
-                                                            "type": "select",
-                                                            "label": "Type",
-                                                            "options": [
-                                                                {
-                                                                    "label": "Approximate",
-                                                                    "value": "approximate"
-                                                                }
-                                                            ]
-                                                        },
-                                                        {
-                                                            "help": "The city of the user, e.g. `San Francisco`.",
-                                                            "name": "city",
-                                                            "type": "text",
-                                                            "label": "City"
-                                                        },
-                                                        {
-                                                            "help": "The two-letter ISO country code of the user, e.g. `US`.",
-                                                            "name": "country",
-                                                            "type": "select",
-                                                            "label": "Country",
-                                                            "options": "rpc://openai-gpt-3/1/getCountryCodes"
-                                                        },
-                                                        {
-                                                            "help": "The region of the user, e.g. `California`.",
-                                                            "name": "region",
-                                                            "type": "text",
-                                                            "label": "Region"
-                                                        },
-                                                        {
-                                                            "help": "The timezone of the user, e.g. `America/Los_Angeles`.",
-                                                            "name": "timezone",
-                                                            "type": "timezone",
-                                                            "label": "Timezone"
-                                                        }
-                                                    ],
-                                                    "type": "collection",
-                                                    "label": "User Location"
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Web search preview (2025_03_11)",
-                                            "value": "web_search_preview_2025_03_11",
-                                            "nested": [
-                                                {
-                                                    "help": "High level guidance for the amount of context window space to use for the search. Medium is the default value.",
-                                                    "name": "search_context_size",
-                                                    "type": "select",
-                                                    "label": "Search Context Size",
-                                                    "options": [
-                                                        {
-                                                            "label": "Low",
-                                                            "value": "low"
-                                                        },
-                                                        {
-                                                            "label": "Medium",
-                                                            "value": "medium"
-                                                        },
-                                                        {
-                                                            "label": "High",
-                                                            "value": "high"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "help": "Approximate location parameters for the search.",
-                                                    "name": "user_location",
-                                                    "spec": [
-                                                        {
-                                                            "help": "The type of location approximation.",
-                                                            "name": "type",
-                                                            "type": "select",
-                                                            "label": "Type",
-                                                            "options": [
-                                                                {
-                                                                    "label": "Approximate",
-                                                                    "value": "approximate"
-                                                                }
-                                                            ]
-                                                        },
-                                                        {
-                                                            "help": "The city of the user, e.g. `San Francisco`.",
-                                                            "name": "city",
-                                                            "type": "text",
-                                                            "label": "City"
-                                                        },
-                                                        {
-                                                            "help": "The two-letter ISO country code of the user, e.g. `US`.",
-                                                            "name": "country",
-                                                            "type": "select",
-                                                            "label": "Country",
-                                                            "options": "rpc://openai-gpt-3/1/getCountryCodes"
-                                                        },
-                                                        {
-                                                            "help": "The region of the user, e.g. `California`.",
-                                                            "name": "region",
-                                                            "type": "text",
-                                                            "label": "Region"
-                                                        },
-                                                        {
-                                                            "help": "The timezone of the user, e.g. `America/Los_Angeles`.",
-                                                            "name": "timezone",
-                                                            "type": "timezone",
-                                                            "label": "Timezone"
-                                                        }
-                                                    ],
-                                                    "type": "collection",
-                                                    "label": "User Location"
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "MCP",
-                                            "value": "mcp",
-                                            "nested": [
-                                                {
-                                                    "text": "MCP requests will automatically be approved.",
-                                                    "type": "banner",
-                                                    "theme": "info"
-                                                },
-                                                {
-                                                    "name": "require_approval",
-                                                    "type": "hidden",
-                                                    "label": "Require Approval",
-                                                    "default": "never"
-                                                },
-                                                {
-                                                    "help": "A label for this MCP server, used to identify it in tool calls.",
-                                                    "name": "server_label",
-                                                    "type": "text",
-                                                    "label": "Server Label",
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "The URL for the MCP server.",
-                                                    "name": "server_url",
-                                                    "type": "url",
-                                                    "label": "Server URL",
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "List of allowed tool names.",
-                                                    "name": "allowed_tools",
-                                                    "spec": {
-                                                        "type": "text",
-                                                        "label": "Tool"
-                                                    },
-                                                    "type": "array",
-                                                    "label": "Allowed Tools",
-                                                    "labels": {
-                                                        "add": "Add allowed tool"
-                                                    }
-                                                },
-                                                {
-                                                    "help": "Optional HTTP headers to send to the MCP server. Use for authentication or other purposes.",
-                                                    "name": "headers",
-                                                    "spec": {
-                                                        "spec": [
-                                                            {
-                                                                "name": "key",
-                                                                "type": "text",
-                                                                "label": "Key"
-                                                            },
-                                                            {
-                                                                "name": "value",
-                                                                "type": "text",
-                                                                "label": "Value"
-                                                            }
-                                                        ],
-                                                        "type": "collection",
-                                                        "label": "Header"
-                                                    },
-                                                    "type": "array",
-                                                    "label": "Headers",
-                                                    "labels": {
-                                                        "add": "Add header"
-                                                    }
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Code interpreter",
-                                            "value": "code_interpreter",
-                                            "nested": [
-                                                {
-                                                    "help": "**Container**\nA container is a fully sandboxed virtual machine where the model runs Python code.\n\n**Expiration Time**\nContainers expire if unused for 20 minutes. The expiration timer is reset after any operation on the container.",
-                                                    "name": "container_type",
-                                                    "type": "select",
-                                                    "label": "Container type",
-                                                    "options": [
-                                                        {
-                                                            "label": "Use existing container",
-                                                            "value": "existing_container",
-                                                            "nested": [
-                                                                {
-                                                                    "name": "container",
-                                                                    "type": "select",
-                                                                    "label": "Container",
-                                                                    "options": {
-                                                                        "store": "rpc://openai-gpt-3/1/getContainers"
-                                                                    },
-                                                                    "mappable": {
-                                                                        "help": "Map the container ID. For example: `cntr_6878d51b5ffc8191b7c32c11c747cf4e`."
-                                                                    },
-                                                                    "required": true
-                                                                }
-                                                            ]
-                                                        },
-                                                        {
-                                                            "label": "Create new container",
-                                                            "value": "new_container",
-                                                            "nested": [
-                                                                {
-                                                                    "name": "container",
-                                                                    "spec": [
-                                                                        {
-                                                                            "help": "An optional list of uploaded files to make available to your code.",
-                                                                            "name": "file_ids",
-                                                                            "spec": {
-                                                                                "type": "select",
-                                                                                "label": "File ID",
-                                                                                "options": "rpc://openai-gpt-3/1/getFiles"
-                                                                            },
-                                                                            "type": "array",
-                                                                            "label": "File IDs",
-                                                                            "labels": {
-                                                                                "add": "Add file ID"
-                                                                            }
-                                                                        }
-                                                                    ],
-                                                                    "type": "collection",
-                                                                    "label": "Container"
-                                                                }
-                                                            ]
-                                                        }
-                                                    ],
-                                                    "required": true
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Image generation",
-                                            "value": "image_generation",
-                                            "nested": [
-                                                {
-                                                    "help": "Background type for the generated image.",
-                                                    "name": "background",
-                                                    "type": "select",
-                                                    "label": "Background",
-                                                    "options": [
-                                                        {
-                                                            "label": "Auto",
-                                                            "value": "auto"
-                                                        },
-                                                        {
-                                                            "label": "Transparent",
-                                                            "value": "transparent"
-                                                        },
-                                                        {
-                                                            "label": "Opaque",
-                                                            "value": "opaque"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "help": "Controls how much effort the model will exert to match the style and features of input images, especially facial features.",
-                                                    "name": "input_fidelity",
-                                                    "type": "select",
-                                                    "label": "Input Fidelity",
-                                                    "options": [
-                                                        {
-                                                            "label": "Low",
-                                                            "value": "low"
-                                                        },
-                                                        {
-                                                            "label": "High",
-                                                            "value": "high"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "help": "Optional mask for inpainting.",
-                                                    "name": "input_image_mask",
-                                                    "spec": [
-                                                        {
-                                                            "name": "mask_input_type",
-                                                            "type": "select",
-                                                            "label": "Mask Input Type",
-                                                            "options": [
-                                                                {
-                                                                    "label": "File ID",
-                                                                    "value": "id",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The ID of the file to be sent to the model.",
-                                                                            "name": "file_id",
-                                                                            "type": "select",
-                                                                            "label": "File ID",
-                                                                            "options": "rpc://openai-gpt-3/1/getFiles",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                },
-                                                                {
-                                                                    "label": "Image URL",
-                                                                    "value": "url",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The URL of the image to be sent to the model.",
-                                                                            "name": "image_url",
-                                                                            "type": "url",
-                                                                            "label": "Image URL",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                }
-                                                            ]
-                                                        }
-                                                    ],
-                                                    "type": "collection",
-                                                    "label": "Input Image Mask"
-                                                },
-                                                {
-                                                    "help": "Moderation level for the generated image.",
-                                                    "name": "moderation",
-                                                    "type": "select",
-                                                    "label": "Moderation",
-                                                    "options": [
-                                                        {
-                                                            "label": "Auto",
-                                                            "value": "auto"
-                                                        },
-                                                        {
-                                                            "label": "Low",
-                                                            "value": "low"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "help": "The output format of the generated image.",
-                                                    "name": "output_format",
-                                                    "type": "select",
-                                                    "label": "Output Format",
-                                                    "options": [
-                                                        {
-                                                            "label": "PNG",
-                                                            "value": "png"
-                                                        },
-                                                        {
-                                                            "label": "WEBP",
-                                                            "value": "webp",
-                                                            "nested": [
-                                                                {
-                                                                    "help": "Compression level for the output image.",
-                                                                    "name": "output_compression",
-                                                                    "type": "number",
-                                                                    "label": "Output Compression",
-                                                                    "validate": {
-                                                                        "max": 100,
-                                                                        "min": 0
-                                                                    }
-                                                                }
-                                                            ]
-                                                        },
-                                                        {
-                                                            "label": "JPEG",
-                                                            "value": "jpeg",
-                                                            "nested": [
-                                                                {
-                                                                    "help": "Compression level for the output image.",
-                                                                    "name": "output_compression",
-                                                                    "type": "number",
-                                                                    "label": "Output Compression",
-                                                                    "validate": {
-                                                                        "max": 100,
-                                                                        "min": 0
-                                                                    }
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "help": "The quality of the generated image.",
-                                                    "name": "quality",
-                                                    "type": "select",
-                                                    "label": "Quality",
-                                                    "options": [
-                                                        {
-                                                            "label": "Auto",
-                                                            "value": "auto"
-                                                        },
-                                                        {
-                                                            "label": "Low",
-                                                            "value": "low"
-                                                        },
-                                                        {
-                                                            "label": "Medium",
-                                                            "value": "medium"
-                                                        },
-                                                        {
-                                                            "label": "High",
-                                                            "value": "high"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "help": "The size of the generated image.",
-                                                    "name": "size",
-                                                    "type": "select",
-                                                    "label": "Size",
-                                                    "options": [
-                                                        {
-                                                            "label": "1024x1024",
-                                                            "value": "1024x1024"
-                                                        },
-                                                        {
-                                                            "label": "1024x1536",
-                                                            "value": "1024x1536"
-                                                        },
-                                                        {
-                                                            "label": "1536x1024",
-                                                            "value": "1536x1024"
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Custom",
-                                            "value": "custom",
-                                            "nested": [
-                                                {
-                                                    "help": "The name of the custom tool, used to identify it in tool calls, for example: `abc`, `abc_defg`.",
-                                                    "name": "name",
-                                                    "type": "text",
-                                                    "label": "Name",
-                                                    "required": true
-                                                },
-                                                {
-                                                    "help": "Description of the custom tool, used to provide more context.",
-                                                    "name": "description",
-                                                    "type": "text",
-                                                    "label": "Description"
-                                                },
-                                                {
-                                                    "name": "format",
-                                                    "spec": [
-                                                        {
-                                                            "name": "type",
-                                                            "type": "select",
-                                                            "label": "Type",
-                                                            "options": [
-                                                                {
-                                                                    "label": "Text",
-                                                                    "value": "text"
-                                                                },
-                                                                {
-                                                                    "label": "Grammar",
-                                                                    "value": "grammar",
-                                                                    "nested": [
-                                                                        {
-                                                                            "help": "The syntax of the grammar definition.",
-                                                                            "name": "syntax",
-                                                                            "type": "select",
-                                                                            "label": "Syntax",
-                                                                            "options": [
-                                                                                {
-                                                                                    "label": "Lark",
-                                                                                    "value": "lark"
-                                                                                },
-                                                                                {
-                                                                                    "label": "Regex",
-                                                                                    "value": "regex"
-                                                                                }
-                                                                            ],
-                                                                            "required": true
-                                                                        },
-                                                                        {
-                                                                            "help": "The grammar definition.",
-                                                                            "name": "definition",
-                                                                            "type": "text",
-                                                                            "label": "Definition",
-                                                                            "required": true
-                                                                        }
-                                                                    ]
-                                                                }
-                                                            ]
-                                                        }
-                                                    ],
-                                                    "type": "collection",
-                                                    "label": "Format"
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    "required": true
+                                    "required": true,
+                                    "validate": {
+                                        "enum": [
+                                            "skills",
+                                            "file_search",
+                                            "function",
+                                            "computer_use_preview",
+                                            "web_search_preview",
+                                            "web_search_preview_2025_03_11",
+                                            "mcp",
+                                            "code_interpreter",
+                                            "image_generation",
+                                            "custom"
+                                        ]
+                                    }
                                 }
                             ],
                             "type": "collection",
-                            "label": "Tool",
-                            "name": "value"
+                            "label": "Tool"
+                        },
+                        "type": "array",
+                        "label": "Tools",
+                        "labels": {
+                            "add": "Add tool"
                         }
                     },
                     {
                         "name": "tool_choice",
                         "type": "select",
                         "label": "Tool Choice",
+                        "advanced": true,
                         "validate": {
                             "enum": [
                                 "none",
@@ -1432,63 +409,63 @@
                     {
                         "name": "parallel_tool_calls",
                         "type": "boolean",
-                        "label": "Parallel Tool Calls"
+                        "label": "Parallel Tool Calls",
+                        "default": true,
+                        "advanced": true
                     },
                     {
                         "name": "background",
                         "type": "boolean",
-                        "label": "Run in Background"
+                        "label": "Run in Background",
+                        "default": false,
+                        "advanced": true
                     },
                     {
                         "name": "context_management",
-                        "type": "array",
-                        "label": "Context management",
                         "spec": {
                             "spec": [
                                 {
                                     "name": "type",
                                     "type": "select",
                                     "label": "Context entry type",
-                                    "options": [
-                                        {
-                                            "label": "Compaction",
-                                            "value": "compaction",
-                                            "nested": [
-                                                {
-                                                    "help": "The threshold for compacting the context. When the number of tokens in the context exceeds this threshold, the context will be compacted to reduce token usage. See [OpenAI compaction guide](https://developers.openai.com/api/docs/guides/compaction#server-side-compaction).",
-                                                    "name": "compact_threshold",
-                                                    "type": "integer",
-                                                    "label": "Compact threshold",
-                                                    "validate": {
-                                                        "min": 1000
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    "required": true
+                                    "default": "compaction",
+                                    "required": true,
+                                    "validate": {
+                                        "enum": [
+                                            "compaction"
+                                        ]
+                                    }
                                 }
                             ],
                             "type": "collection",
-                            "label": "Context entry",
-                            "name": "value"
-                        }
+                            "label": "Context entry"
+                        },
+                        "type": "array",
+                        "label": "Context management",
+                        "labels": {
+                            "add": "Add context entry"
+                        },
+                        "advanced": true
                     },
                     {
                         "name": "conversationId",
                         "type": "text",
-                        "label": "Conversation ID"
+                        "label": "Conversation ID",
+                        "advanced": true
                     },
                     {
                         "name": "createConversation",
                         "type": "boolean",
                         "label": "Create a new conversation",
+                        "default": true,
+                        "advanced": true,
                         "required": true
                     },
                     {
                         "name": "temperature",
                         "type": "number",
                         "label": "Temperature",
+                        "advanced": true,
                         "validate": {
                             "max": 2,
                             "min": 0
@@ -1497,27 +474,30 @@
                     {
                         "name": "top_p",
                         "type": "number",
-                        "label": "Top P"
+                        "label": "Top P",
+                        "advanced": true
                     },
                     {
                         "name": "store",
                         "type": "boolean",
-                        "label": "Store"
+                        "label": "Store",
+                        "default": true,
+                        "advanced": true
                     },
                     {
                         "name": "previous_response_id",
                         "type": "text",
-                        "label": "Previous Response ID"
+                        "label": "Previous Response ID",
+                        "advanced": true
                     },
                     {
                         "name": "instructions",
                         "type": "text",
-                        "label": "Instructions"
+                        "label": "Instructions",
+                        "advanced": true
                     },
                     {
                         "name": "reasoning",
-                        "type": "collection",
-                        "label": "Reasoning",
                         "spec": [
                             {
                                 "name": "effort",
@@ -1547,12 +527,13 @@
                                     ]
                                 }
                             }
-                        ]
+                        ],
+                        "type": "collection",
+                        "label": "Reasoning",
+                        "advanced": true
                     },
                     {
                         "name": "format",
-                        "type": "collection",
-                        "label": "Output Format",
                         "spec": [
                             {
                                 "name": "type",
@@ -1566,12 +547,17 @@
                                     ]
                                 }
                             }
-                        ]
+                        ],
+                        "type": "collection",
+                        "label": "Output Format",
+                        "advanced": true
                     },
                     {
                         "name": "truncation",
                         "type": "select",
                         "label": "Truncation",
+                        "default": "auto",
+                        "advanced": true,
                         "validate": {
                             "enum": [
                                 "auto",
@@ -1583,6 +569,7 @@
                         "name": "include",
                         "type": "select",
                         "label": "Include",
+                        "advanced": true,
                         "multiple": true,
                         "validate": {
                             "enum": [
@@ -1595,8 +582,6 @@
                     },
                     {
                         "name": "metadata",
-                        "type": "array",
-                        "label": "Metadata",
                         "spec": {
                             "spec": [
                                 {
@@ -1611,14 +596,14 @@
                                 }
                             ],
                             "type": "collection",
-                            "label": "Metadata",
-                            "name": "value"
-                        }
-                    },
-                    {
-                        "name": "input",
-                        "type": "text",
-                        "label": "Prompt"
+                            "label": "Metadata"
+                        },
+                        "type": "array",
+                        "label": "Metadata",
+                        "labels": {
+                            "add": "Add metadata"
+                        },
+                        "advanced": true
                     }
                 ],
                 "interface": [
@@ -2819,202 +1804,12 @@
                 ],
                 "language": "python",
                 "inputFormat": "editor",
-                "codeEditorPython": "import base64\nimport io\nimport json\nimport re\nimport unicodedata\nfrom copy import copy\nfrom datetime import datetime, date\nfrom decimal import Decimal, InvalidOperation, ROUND_HALF_UP\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\nfrom openpyxl.styles import Font, PatternFill, Border, Side, Alignment\n\ndef normalizar(valor):\n    texto = \"\" if valor is None else str(valor)\n    texto = unicodedata.normalize(\"NFKD\", texto).encode(\"ascii\", \"ignore\").decode(\"ascii\")\n    return re.sub(r\"[^a-z0-9]+\", \"\", texto.lower())\n\ndef obtener(registro, *claves, default=None):\n    if not isinstance(registro, dict):\n        return default\n    normalizados = {normalizar(k): v for k, v in registro.items()}\n    for clave in claves:\n        n = normalizar(clave)\n        if n in normalizados:\n            return normalizados[n]\n    return default\n\ndef lista(valor):\n    if valor is None:\n        return []\n    return valor if isinstance(valor, list) else [valor]\n\ndef es_global(valor):\n    n = normalizar(valor)\n    return n in {\"global\", \"cuentaglobal\", \"cuentageneral\", \"consolidadogeneral\", \"consolidado\", \"totalgeneral\"} or \"cuentaglobal\" in n or \"consolidadogeneral\" in n\n\ndef cuenta_visible(valor):\n    return \"Cuenta no identificada\" if valor is None or not str(valor).strip() else valor\n\ndef numero(valor):\n    if valor is None or isinstance(valor, bool):\n        return Decimal(\"0\")\n    if isinstance(valor, (int, float, Decimal)):\n        return Decimal(str(valor))\n    texto = str(valor).strip()\n    if not texto:\n        return Decimal(\"0\")\n    negativo = texto.startswith(\"(\") and texto.endswith(\")\")\n    texto = re.sub(r\"[^0-9,.-]\", \"\", texto)\n    if not texto:\n        return Decimal(\"0\")\n    if \",\" in texto and \".\" in texto:\n        if texto.rfind(\",\") > texto.rfind(\".\"):\n            texto = texto.replace(\".\", \"\").replace(\",\", \".\")\n        else:\n            texto = texto.replace(\",\", \"\")\n    elif \",\" in texto:\n        partes = texto.split(\",\")\n        texto = \"\".join(partes[:-1]) + \".\" + partes[-1] if len(partes[-1]) in (1, 2) else \"\".join(partes)\n    try:\n        valor_decimal = Decimal(texto)\n        return -valor_decimal if negativo else valor_decimal\n    except InvalidOperation:\n        return Decimal(\"0\")\n\ndef moneda(valor):\n    return float(Decimal(valor).quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP))\n\ndef firma(valor):\n    return json.dumps(valor, ensure_ascii=False, sort_keys=True, default=str)\n\ndef a_bytes(valor, vistos=None):\n    if vistos is None:\n        vistos = set()\n    if valor is None:\n        return None\n    if isinstance(valor, bytes):\n        return valor\n    if isinstance(valor, bytearray):\n        return bytes(valor)\n    if isinstance(valor, (list, tuple)):\n        if valor and all(isinstance(x, int) and 0 <= x <= 255 for x in valor):\n            return bytes(valor)\n        for item in valor:\n            salida = a_bytes(item, vistos)\n            if salida:\n                return salida\n        return None\n    if isinstance(valor, dict):\n        if id(valor) in vistos:\n            return None\n        vistos.add(id(valor))\n        for clave in (\"data\", \"content\", \"body\", \"buffer\", \"value\", \"base64\"):\n            if clave in valor:\n                salida = a_bytes(valor[clave], vistos)\n                if salida:\n                    return salida\n        for item in valor.values():\n            salida = a_bytes(item, vistos)\n            if salida:\n                return salida\n        return None\n    texto = str(valor).strip()\n    match = re.search(r\"IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)\", texto)\n    if match:\n        try:\n            return bytes.fromhex(match.group(1))\n        except Exception:\n            pass\n    if texto.startswith(\"data:\") and \",\" in texto:\n        texto = texto.split(\",\", 1)[1]\n    try:\n        return base64.b64decode(re.sub(r\"\\\\s+\", \"\", texto) + \"=\" * (-len(re.sub(r\"\\\\s+\", \"\", texto)) % 4), validate=False)\n    except Exception:\n        return None\n\ndef celda(hoja, fila, columna):\n    c = hoja.cell(fila, columna)\n    return None if isinstance(c, MergedCell) else c\n\ndef escribir(hoja, fila, columna, valor):\n    c = celda(hoja, fila, columna)\n    if c is None:\n        return\n    if isinstance(valor, (dict, list, tuple)):\n        valor = json.dumps(valor, ensure_ascii=False, default=str)\n    if isinstance(valor, (datetime, date)):\n        valor = valor.strftime(\"%d/%m/%Y\")\n    c.value = valor\n\ndef limpiar(hoja, desde, hasta, columnas):\n    for fila in range(desde, hasta + 1):\n        for columna in range(1, columnas + 1):\n            c = celda(hoja, fila, columna)\n            if c is not None:\n                c.value = None\n\ndef copiar_estilo(hoja, origen, destino, columnas):\n    for columna in range(1, columnas + 1):\n        a = celda(hoja, origen, columna)\n        b = celda(hoja, destino, columna)\n        if a is not None and b is not None and a.has_style:\n            b._style = copy(a._style)\n            b.number_format = a.number_format\n            b.alignment = copy(a.alignment)\n\ndef encabezado(hoja, requeridos, desde=1):\n    req = [normalizar(x) for x in requeridos]\n    for fila in range(desde, hoja.max_row + 1):\n        textos = [normalizar(hoja.cell(fila, col).value) for col in range(1, hoja.max_column + 1)]\n        if all(any(r in texto for texto in textos) for r in req):\n            return fila\n    return None\n\ndef poner_encabezados(hoja, fila, valores):\n    for col, valor in enumerate(valores, 1):\n        c = celda(hoja, fila, col)\n        if c is None:\n            continue\n        c.value = valor\n        c.font = Font(bold=True, color=\"FFFFFF\")\n        c.fill = PatternFill(fill_type=\"solid\", fgColor=\"1A365D\")\n        c.border = Border(left=Side(style=\"thin\"), right=Side(style=\"thin\"), top=Side(style=\"thin\"), bottom=Side(style=\"thin\"))\n        c.alignment = Alignment(horizontal=\"center\", vertical=\"center\", wrap_text=True)\n\ndef movimiento_totales(movimientos):\n    ingresos = Decimal(\"0\")\n    egresos = Decimal(\"0\")\n    vistos = set()\n    limpios = []\n    for movimiento in lista(movimientos):\n        if not isinstance(movimiento, dict):\n            continue\n        f = firma(movimiento)\n        if f in vistos:\n            continue\n        vistos.add(f)\n        limpios.append(movimiento)\n        ingreso = numero(obtener(movimiento, \"Ingreso\", \"Ingresos\", \"Abono\", \"Haber\", \"Credito\", \"Crédito\", \"Credit\", \"Deposit\", \"Deposito\"))\n        egreso = numero(obtener(movimiento, \"Egreso\", \"Egresos\", \"Cargo\", \"Debe\", \"Debito\", \"Débito\", \"Debit\", \"Withdrawal\", \"Retiro\"))\n        if ingreso == 0 and egreso == 0:\n            tipo = normalizar(obtener(movimiento, \"TT\", \"Tipo\", \"Tipo_Transaccion\", \"Tipo de Transacción\", default=\"\"))\n            importe = numero(obtener(movimiento, \"Monto\", \"Importe\", \"Valor\", \"Amount\"))\n            if tipo in {\"de\", \"nc\", \"deposito\", \"abono\", \"credito\", \"credit\", \"income\", \"ingreso\"}:\n                ingreso = abs(importe)\n            elif tipo in {\"cq\", \"nd\", \"retiro\", \"cargo\", \"debito\", \"debit\", \"expense\", \"egreso\"}:\n                egreso = abs(importe)\n        ingresos += abs(ingreso)\n        egresos += abs(egreso)\n    return limpios, ingresos, egresos\n\ndef a_registros(data):\n    registros = []\n    for banco in lista(data.get(\"bancos_procesados\")):\n        if not isinstance(banco, dict):\n            continue\n        nombre = obtener(banco, \"Banco\", \"banco\", default=\"Banco\")\n        cuenta_base = cuenta_visible(obtener(banco, \"Cuenta\", \"cuenta\", default=\"\"))\n        if es_global(nombre):\n            continue\n        cuentas = lista(obtener(banco, \"cuentas\", \"Cuentas\", default=[]))\n        fuentes = cuentas if cuentas else [banco]\n        for cuenta in fuentes:\n            registro = dict(banco)\n            if isinstance(cuenta, dict) and cuenta is not banco:\n                registro.update(cuenta)\n            cuenta_nombre = cuenta_visible(obtener(registro, \"Cuenta\", \"cuenta\", default=cuenta_base))\n            if es_global(cuenta_nombre):\n                continue\n            movimientos = obtener(registro, \"estado_cuenta\", \"Movimientos\", \"movimientos\", \"transacciones\", \"movimientos_bancarios\", default=[])\n            movimientos, ingresos, egresos = movimiento_totales(movimientos)\n            registro[\"Banco\"] = nombre\n            registro[\"Cuenta\"] = cuenta_nombre\n            registro[\"estado_cuenta\"] = movimientos\n            registro[\"Total_Ingresos\"] = moneda(ingresos)\n            registro[\"Total_Egresos\"] = moneda(egresos)\n            registro[\"Neto\"] = moneda(ingresos - egresos)\n            registros.append(registro)\n    return registros\n\ndef resumen_corregido(data, registros):\n    salida = []\n    usados = set()\n    existentes = lista(data.get(\"resumen_general\"))\n    for registro in registros:\n        banco = registro[\"Banco\"]\n        cuenta = registro[\"Cuenta\"]\n        moneda_nombre = obtener(registro, \"Moneda\", \"moneda\")\n        clave = (normalizar(banco), normalizar(cuenta), normalizar(moneda_nombre))\n        base = None\n        for candidato in existentes:\n            if not isinstance(candidato, dict):\n                continue\n            ck = (normalizar(obtener(candidato, \"Banco\", \"banco\")), normalizar(cuenta_visible(obtener(candidato, \"Cuenta\", \"cuenta\"))), normalizar(obtener(candidato, \"Moneda\", \"moneda\")))\n            if ck == clave:\n                base = dict(candidato)\n                break\n        if base is None:\n            base = {\"Banco\": banco, \"Cuenta\": cuenta, \"Moneda\": moneda_nombre}\n        base.update({\"Banco\": banco, \"Cuenta\": cuenta, \"Moneda\": moneda_nombre, \"Total_Ingresos\": registro[\"Total_Ingresos\"], \"Total_Egresos\": registro[\"Total_Egresos\"], \"Neto\": registro[\"Neto\"], \"Cantidad_Movimientos\": len(registro[\"estado_cuenta\"])})\n        salida.append(base)\n    return salida\n\ndef escribir_periodo(wb, nombre, registros, headers):\n    hoja = wb[nombre] if nombre in wb.sheetnames else wb.create_sheet(nombre)\n    h = encabezado(hoja, [\"Banco\", \"Cuenta\"], 1) or 1\n    poner_encabezados(hoja, h, headers)\n    limpiar(hoja, h + 1, hoja.max_row, len(headers))\n    for fila, registro in enumerate(registros, h + 1):\n        if fila > h + 1:\n            copiar_estilo(hoja, fila - 1, fila, len(headers))\n        valores = [obtener(registro, \"Banco\", \"banco\"), obtener(registro, \"Cuenta\", \"cuenta\"), obtener(registro, \"Moneda\", \"moneda\"), obtener(registro, \"Periodo\", \"periodo\", \"Fecha\", \"fecha\"), obtener(registro, \"Ingresos\", \"ingresos\", \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Egresos\", \"egresos\", \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Neto\", \"neto\", \"Resultado\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\"), obtener(registro, \"Cantidad_Movimientos\", \"Cantidad Movimientos\", \"Cantidad\"), obtener(registro, \"Observacion\", \"Observación\")]\n        for col, valor in enumerate(valores, 1):\n            escribir(hoja, fila, col, valor)\n\nopenai_result = input.get(\"openai_result\")\nplantilla_excel = input.get(\"plantilla_excel\")\nraw_extract = input.get(\"raw_extract\")\nif not openai_result or not plantilla_excel:\n    raise Exception(\"Faltan el análisis o la plantilla de salida.\")\ntry:\n    data = json.loads(openai_result) if isinstance(openai_result, str) else openai_result\nexcept Exception as error:\n    raise Exception(f\"El análisis no es JSON válido: {error}\")\nif not isinstance(data, dict):\n    raise Exception(\"El análisis debe ser un objeto JSON.\")\nplantilla_bytes = a_bytes(plantilla_excel)\nif not plantilla_bytes or plantilla_bytes[:2] != b\"PK\":\n    raise Exception(\"La plantilla no es un XLSX válido.\")\nwb = openpyxl.load_workbook(io.BytesIO(plantilla_bytes))\n\ntry:\n    raw = json.loads(raw_extract) if isinstance(raw_extract, str) else raw_extract\nexcept Exception:\n    raw = {}\nws_raw = wb[\"Datos Completos\"] if \"Datos Completos\" in wb.sheetnames else wb.create_sheet(\"Datos Completos\", 0)\nlimpiar(ws_raw, 2, ws_raw.max_row, max(ws_raw.max_column, 40))\nponer_encabezados(ws_raw, 1, [\"Archivo\", \"Hoja\", \"Fila\"] + [f\"Columna {i}\" for i in range(1, 31)])\nraw_row = 2\nfor hoja_data in lista(obtener(raw, \"hojas\", default=[])):\n    nombre_hoja = obtener(hoja_data, \"nombre\", default=\"\")\n    for fila_data in lista(obtener(hoja_data, \"filas\", default=[])):\n        valores = obtener(fila_data, \"valores\", default=[]) or []\n        escribir(ws_raw, raw_row, 1, obtener(raw, \"archivo\", default=\"\"))\n        escribir(ws_raw, raw_row, 2, nombre_hoja)\n        escribir(ws_raw, raw_row, 3, obtener(fila_data, \"fila\", default=raw_row - 1))\n        for col, valor in enumerate(valores[:30], 4):\n            escribir(ws_raw, raw_row, col, valor)\n        raw_row += 1\n\nregistros = a_registros(data)\nresumenes = resumen_corregido(data, registros)\nws_general = wb[\"Consolidado General\"] if \"Consolidado General\" in wb.sheetnames else wb.create_sheet(\"Consolidado General\", 1)\nheader_general = encabezado(ws_general, [\"Banco\", \"Cuenta\"], 1) or 1\nif not encabezado(ws_general, [\"Banco\", \"Cuenta\"], 1):\n    poner_encabezados(ws_general, header_general, [\"Banco\", \"Cuenta\", \"Moneda\", \"Fecha Inicial\", \"Fecha Final\", \"Saldo Inicial\", \"Total Ingresos\", \"Total Egresos\", \"Saldo Final\", \"Neto\", \"Cantidad Movimientos\"])\nlimpiar(ws_general, header_general + 1, ws_general.max_row, 11)\nfor fila, registro in enumerate(resumenes, header_general + 1):\n    if fila > header_general + 1:\n        copiar_estilo(ws_general, fila - 1, fila, 11)\n    valores = [obtener(registro, \"Banco\"), obtener(registro, \"Cuenta\"), obtener(registro, \"Moneda\"), obtener(registro, \"Fecha_Inicial\", \"Fecha Inicial\"), obtener(registro, \"Fecha_Final\", \"Fecha Final\"), obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"), obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"), obtener(registro, \"Total_Egresos\", \"Total Egresos\"), obtener(registro, \"Saldo_Final\", \"Saldo Final\"), obtener(registro, \"Neto\"), obtener(registro, \"Cantidad_Movimientos\", \"Cantidad Movimientos\")]\n    for col, valor in enumerate(valores, 1):\n        escribir(ws_general, fila, col, valor)\n\nfor campo, hoja, headers in [(\"diario\", \"Detalle Diario\", [\"Banco\", \"Cuenta\", \"Moneda\", \"Día\", \"Ingresos\", \"Egresos\", \"Neto\", \"Saldo Inicial\", \"Saldo Final\", \"Cantidad Movimientos\", \"Observación\"]), (\"semanal\", \"Detalle Semanal\", [\"Banco\", \"Cuenta\", \"Moneda\", \"Semana\", \"Ingresos\", \"Egresos\", \"Neto\", \"Saldo Inicial\", \"Saldo Final\", \"Cantidad Movimientos\", \"Observación\"]), (\"mensual\", \"Detalle Mensual\", [\"Banco\", \"Cuenta\", \"Moneda\", \"Mes\", \"Ingresos\", \"Egresos\", \"Neto\", \"Saldo Inicial\", \"Saldo Final\", \"Cantidad Movimientos\", \"Observación\"])]:\n    filas = []\n    for registro in registros:\n        periodicidad = obtener(registro, \"periodicidad\", \"Periodicidad\", default={}) or {}\n        filas.extend(lista(obtener(periodicidad, campo, campo.capitalize(), default=[])))\n    escribir_periodo(wb, hoja, filas, headers)\n\nws_balance = wb[\"Balance General Detallado\"] if \"Balance General Detallado\" in wb.sheetnames else wb.create_sheet(\"Balance General Detallado\")\nheaders_balance = [\"Banco\", \"Cuenta\", \"Moneda\", \"Período\", \"Saldo Inicial\", \"Total Ingresos\", \"Total Egresos\", \"Saldo Final\", \"Saldo Calculado\", \"Resultado Conciliación\", \"Observación\"]\nheader_balance = encabezado(ws_balance, [\"Banco\", \"Cuenta\", \"Saldo Inicial\"], 1) or 1\nif not encabezado(ws_balance, [\"Banco\", \"Cuenta\", \"Saldo Inicial\"], 1):\n    poner_encabezados(ws_balance, header_balance, headers_balance)\nlimpiar(ws_balance, header_balance + 1, ws_balance.max_row, len(headers_balance))\nfor fila, registro in enumerate(resumenes, header_balance + 1):\n    if fila > header_balance + 1:\n        copiar_estilo(ws_balance, fila - 1, fila, len(headers_balance))\n    saldo_inicial = numero(obtener(registro, \"Saldo_Inicial\", \"Saldo Inicial\"))\n    saldo_final = numero(obtener(registro, \"Saldo_Final\", \"Saldo Final\"))\n    ingresos = numero(obtener(registro, \"Total_Ingresos\", \"Total Ingresos\"))\n    egresos = numero(obtener(registro, \"Total_Egresos\", \"Total Egresos\"))\n    saldo_calculado = saldo_inicial + ingresos - egresos\n    valores = [obtener(registro, \"Banco\"), obtener(registro, \"Cuenta\"), obtener(registro, \"Moneda\"), obtener(registro, \"Periodo\", \"Período\"), moneda(saldo_inicial), moneda(ingresos), moneda(egresos), moneda(saldo_final), moneda(saldo_calculado), moneda(saldo_calculado - saldo_final), obtener(registro, \"Observacion\", \"Observación\")]\n    for col, valor in enumerate(valores, 1):\n        escribir(ws_balance, fila, col, valor)\n\nws_obs = wb[\"Observaciones\"] if \"Observaciones\" in wb.sheetnames else wb.create_sheet(\"Observaciones\")\nlimpiar(ws_obs, 3, ws_obs.max_row, 4)\nescribir(ws_obs, 1, 1, \"Observaciones del proceso\")\nfor fila, observacion in enumerate(lista(data.get(\"observaciones\")), 3):\n    if isinstance(observacion, dict):\n        escribir(ws_obs, fila, 1, obtener(observacion, \"Banco\", default=\"\"))\n        escribir(ws_obs, fila, 2, obtener(observacion, \"Cuenta\", default=\"\"))\n        escribir(ws_obs, fila, 3, obtener(observacion, \"Campo\", default=\"\"))\n        escribir(ws_obs, fila, 4, obtener(observacion, \"Detalle\", default=\"\"))\n    else:\n        escribir(ws_obs, fila, 1, str(observacion))\n\nsalida = io.BytesIO()\nwb.save(salida)\nsalida.seek(0)\nreturn {\"filename\": \"ReporteFinancieroIntelfon.xlsx\", \"data\": base64.b64encode(salida.getvalue()).decode(\"ascii\"), \"resumen_general\": json.dumps(resumenes, ensure_ascii=False, default=str), \"bancos_procesados\": json.dumps(registros, ensure_ascii=False, default=str), \"totales_globales\": json.dumps(data.get(\"totales_globales\") or {}, ensure_ascii=False, default=str), \"total_registros\": len(resumenes), \"filas_fuente_completas\": max(0, raw_row - 2)}"
+                "codeEditorPython": "import base64, io, json, re, unicodedata\nfrom datetime import datetime, date\nfrom decimal import Decimal, InvalidOperation, ROUND_HALF_UP\nimport openpyxl\nfrom openpyxl.cell.cell import MergedCell\n\ndef norm(v):\n    s = '' if v is None else str(v)\n    s = unicodedata.normalize('NFKD', s).encode('ascii','ignore').decode('ascii').lower()\n    return re.sub(r'[^a-z0-9]+','',s)\n\ndef items(v): return [] if v is None else (v if isinstance(v,list) else [v])\n\ndef get(o,*names,default=None):\n    if not isinstance(o,dict): return default\n    nmap={norm(k):v for k,v in o.items()}\n    for name in names:\n        if norm(name) in nmap: return nmap[norm(name)]\n    return default\n\ndef num(v):\n    if v is None or isinstance(v,bool): return Decimal('0')\n    if isinstance(v,(int,float,Decimal)): return Decimal(str(v))\n    s=re.sub(r'[^0-9,.-]','',str(v).strip())\n    if not s:return Decimal('0')\n    if ',' in s and '.' in s:s=s.replace('.','').replace(',','.') if s.rfind(',')>s.rfind('.') else s.replace(',','')\n    elif ',' in s:\n        p=s.split(',');s=''.join(p[:-1])+'.'+p[-1] if len(p[-1]) in (1,2) else ''.join(p)\n    try:return Decimal(s)\n    except InvalidOperation:return Decimal('0')\n\ndef money(v):return float(Decimal(v).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP))\n\ndef parse_json(v):\n    if isinstance(v,dict):return v\n    if not isinstance(v,str):raise Exception('La respuesta del análisis no es texto JSON.')\n    s=v.strip().replace('```json','').replace('```','').strip();p=s.find('{')\n    if p<0:raise Exception('La respuesta del análisis no contiene un objeto JSON.')\n    s=s[p:]\n    try:return json.loads(s)\n    except Exception:\n        try:return json.loads(re.sub(r',\\s*([}\\]])',r'\\1',s))\n        except Exception as e:raise Exception(f'El análisis no es JSON válido y no se pudo reparar: {e}')\n\ndef decode(v):\n    if isinstance(v,bytes):return v\n    if isinstance(v,bytearray):return bytes(v)\n    if isinstance(v,dict):\n        for k in ('data','content','body','buffer','value','base64'):\n            if k in v:\n                b=decode(v[k])\n                if b:return b\n        return None\n    if isinstance(v,(list,tuple)) and v and all(isinstance(x,int) and 0<=x<=255 for x in v):return bytes(v)\n    s=str(v or '').strip();m=re.search(r'IMTBuffer\\\\([^)]*\\\\):\\\\s*([0-9a-fA-F]+)',s)\n    if m:\n        try:return bytes.fromhex(m.group(1))\n        except Exception:pass\n    if s.startswith('data:') and ',' in s:s=s.split(',',1)[1]\n    s=re.sub(r'\\s+','',s)\n    try:return base64.b64decode(s+'='*(-len(s)%4),validate=False)\n    except Exception:return None\n\ndef source_text(raw):\n    if isinstance(raw,str):\n        try:raw=json.loads(raw)\n        except Exception:pass\n    return norm(json.dumps(raw,ensure_ascii=False,default=str))\n\ndef source_has(text,value):\n    n=norm(value);return bool(n) and n in text\n\ndef movement_totals(movs):\n    seen=set();clean=[];inc=Decimal('0');out=Decimal('0')\n    for m in items(movs):\n        if not isinstance(m,dict):continue\n        sig=json.dumps(m,ensure_ascii=False,sort_keys=True,default=str)\n        if sig in seen:continue\n        seen.add(sig);clean.append(m)\n        a=num(get(m,'Ingreso','Ingresos','Abono','Haber','Credito','Crédito','Deposit','Deposito'));b=num(get(m,'Egreso','Egresos','Cargo','Debe','Debito','Débito','Debit','Withdrawal','Retiro'))\n        if a==0 and b==0:\n            typ=norm(get(m,'TT','Tipo','Tipo_Transaccion','Tipo de Transacción',default=''));amount=abs(num(get(m,'Monto','Importe','Valor','Amount')))\n            if typ in ('de','nc','deposito','abono','credito','credit','income','ingreso'):a=amount\n            elif typ in ('cq','nd','retiro','cargo','debito','debit','expense','egreso'):b=amount\n        inc+=abs(a);out+=abs(b)\n    return clean,inc,out\n\ndef write_row(ws,row,values):\n    for col,v in enumerate(values,1):\n        cell=ws.cell(row,col)\n        if isinstance(cell,MergedCell):continue\n        if isinstance(v,(dict,list)):v=json.dumps(v,ensure_ascii=False,default=str)\n        if isinstance(v,(datetime,date)):v=v.strftime('%d/%m/%Y')\n        cell.value=v\n\ndef fill_sheet(wb,name,headers,rows):\n    ws=wb[name] if name in wb.sheetnames else wb.create_sheet(name)\n    for r in range(1,ws.max_row+1):\n        for c in range(1,max(ws.max_column,len(headers))+1):\n            cell=ws.cell(r,c)\n            if not isinstance(cell,MergedCell):cell.value=None\n    write_row(ws,1,headers)\n    for r,row in enumerate(rows,2):write_row(ws,r,row)\n\nopenai_result=input.get('openai_result');template=input.get('plantilla_excel');raw=input.get('raw_extract')\nif not openai_result or not template:raise Exception('Faltan el análisis o la plantilla de salida.')\ndata=parse_json(openai_result)\nif not isinstance(data,dict):raise Exception('El análisis debe ser un objeto JSON.')\nrawtxt=source_text(raw);observations=items(data.get('observaciones'));records=[]\nfor bank in items(data.get('bancos_procesados')):\n    if not isinstance(bank,dict):continue\n    bank_name=get(bank,'Banco','banco');account=get(bank,'Cuenta','cuenta');evidence=items(get(bank,'evidencia',default=[]))\n    bank_missing=bank_name is None or str(bank_name).strip()==''\n    bank_ok=bank_missing or source_has(rawtxt,bank_name) or any(source_has(rawtxt,e) for e in evidence)\n    account_ok=account is None or str(account).strip()=='' or source_has(rawtxt,account)\n    if bank_missing:observations.append({'Campo':'Banco','Detalle':'El documento no muestra un nombre de banco verificable; se conserva como Banco no identificado y no se inventa uno.'})\n    elif not bank_ok:\n        observations.append({'Campo':'Banco','Detalle':f'Se omitió un banco sin evidencia textual en los archivos: {bank_name}'});continue\n    if not account_ok:\n        observations.append({'Banco':bank_name,'Campo':'Cuenta','Detalle':f'Se omitió una cuenta sin evidencia textual en los archivos: {account}'});continue\n    movs,inc,out=movement_totals(get(bank,'estado_cuenta','Movimientos','movimientos','transacciones',default=[]))\n    rec=dict(bank);rec['Banco']=bank_name if not bank_missing else 'Banco no identificado';rec['Cuenta']=account;rec['estado_cuenta']=movs;rec['Total_Ingresos']=money(inc);rec['Total_Egresos']=money(out);rec['Neto']=money(inc-out);records.append(rec)\nsummary=[{'Pais':get(r,'Pais','pais'),'Banco':r.get('Banco'),'Cuenta':r.get('Cuenta'),'Moneda':get(r,'Moneda','moneda'),'Total_Ingresos':r['Total_Ingresos'],'Total_Egresos':r['Total_Egresos'],'Neto':r['Neto'],'Cantidad_Movimientos':len(r['estado_cuenta']),'Saldo_Inicial':get(r,'Saldo_Inicial','Saldo Inicial'),'Saldo_Final':get(r,'Saldo_Final','Saldo Final')} for r in records]\nraw_bytes=decode(template)\nif not raw_bytes or raw_bytes[:2]!=b'PK':raise Exception('La plantilla no es un XLSX válido.')\nwb=openpyxl.load_workbook(io.BytesIO(raw_bytes))\nfill_sheet(wb,'Consolidado General',['Pais','Banco','Cuenta','Moneda','Saldo Inicial','Total Ingresos','Total Egresos','Saldo Final','Neto','Cantidad Movimientos'],[[get(r,'Pais','pais'),r.get('Banco'),r.get('Cuenta'),get(r,'Moneda','moneda'),get(r,'Saldo_Inicial','Saldo Inicial'),r['Total_Ingresos'],r['Total_Egresos'],get(r,'Saldo_Final','Saldo Final'),r['Neto'],len(r['estado_cuenta'])] for r in records])\nfill_sheet(wb,'Balance General Detallado',['Pais','Banco','Cuenta','Moneda','Saldo Inicial','Total Ingresos','Total Egresos','Saldo Final','Saldo Calculado','Diferencia Conciliacion','Resultado'],[[get(r,'Pais','pais'),r.get('Banco'),r.get('Cuenta'),get(r,'Moneda','moneda'),money(num(get(r,'Saldo_Inicial','Saldo Inicial'))),r['Total_Ingresos'],r['Total_Egresos'],money(num(get(r,'Saldo_Final','Saldo Final'))),money(num(get(r,'Saldo_Inicial','Saldo Inicial'))+Decimal(str(r['Total_Ingresos']))-Decimal(str(r['Total_Egresos']))),money(num(get(r,'Saldo_Inicial','Saldo Inicial'))+Decimal(str(r['Total_Ingresos']))-Decimal(str(r['Total_Egresos']))-num(get(r,'Saldo_Final','Saldo Final'))),'OK' if money(num(get(r,'Saldo_Inicial','Saldo Inicial'))+Decimal(str(r['Total_Ingresos']))-Decimal(str(r['Total_Egresos']))-num(get(r,'Saldo_Final','Saldo Final')))==0 else 'REVISAR'] for r in records])\ndetail_rows=[]\nfor r in records:\n    for m in r['estado_cuenta']:\n        detail_rows.append([get(r,'Pais','pais'),r.get('Banco'),r.get('Cuenta'),get(r,'Moneda','moneda'),get(m,'Fecha','fecha'),get(m,'TT','Tipo'),get(m,'Descripcion','Descripción','description'),get(m,'No. Doc','Documento','documento'),get(m,'Debe','debe','Egreso','Egresos'),get(m,'Haber','haber','Ingreso','Ingresos'),get(m,'Saldo','saldo')])\nfill_sheet(wb,'Detalle Movimientos',['Pais','Banco','Cuenta','Moneda','Fecha','Tipo','Descripcion','Documento','Debe','Haber','Saldo'],detail_rows)\nfill_sheet(wb,'Observaciones',['Tipo','Detalle'],[[get(o,'Campo','Tipo',default='Observacion'),get(o,'Detalle',default=o if not isinstance(o,dict) else '')] for o in observations])\nout=io.BytesIO();wb.save(out);out.seek(0);b64=base64.b64encode(out.getvalue()).decode('ascii')\nreturn {'result':{'filename':'ReporteFinancieroIntelfon.xlsx','data':b64},'filename':'ReporteFinancieroIntelfon.xlsx','data':b64,'resumen_general':json.dumps(summary,ensure_ascii=False,default=str),'bancos_procesados':json.dumps(records,ensure_ascii=False,default=str),'totales_globales':json.dumps(data.get('totales_globales') or {},ensure_ascii=False,default=str),'total_registros':len(summary),'filas_fuente_completas':0}"
             },
             "metadata": {
                 "designer": {
                     "x": 1200,
                     "y": 0
-                },
-                "restore": {
-                    "expect": {
-                        "language": {
-                            "mode": "chose",
-                            "label": "Python",
-                            "nested": [
-                                {
-                                    "help": "Choose how the code is provided.",
-                                    "name": "inputFormat",
-                                    "type": "select",
-                                    "label": "Input format",
-                                    "default": "editor",
-                                    "options": [
-                                        {
-                                            "label": "Code editor",
-                                            "value": "editor",
-                                            "nested": [
-                                                {
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "name": "codeEditorPython",
-                                                    "type": "editor",
-                                                    "label": "Code",
-                                                    "editor": "monaco",
-                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
-                                                    "language": "python",
-                                                    "required": true
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            "label": "Mapped code (useful for AI)",
-                                            "value": "string",
-                                            "nested": [
-                                                {
-                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                                    "name": "codeStringPython",
-                                                    "type": "text",
-                                                    "label": "Code",
-                                                    "default": "# You can map dynamic code from previous modules or inputs.",
-                                                    "required": true,
-                                                    "multiline": true
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    "required": true
-                                }
-                            ]
-                        },
-                        "inputFormat": {
-                            "mode": "chose",
-                            "label": "Code editor",
-                            "nested": [
-                                {
-                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
-                                    "name": "codeEditorPython",
-                                    "type": "editor",
-                                    "label": "Code",
-                                    "editor": "monaco",
-                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
-                                    "language": "python",
-                                    "required": true
-                                }
-                            ]
-                        }
-                    }
-                },
-                "expect": [
-                    {
-                        "name": "language",
-                        "type": "select",
-                        "label": "Language",
-                        "default": "javascript",
-                        "mappable": true,
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                "javascript",
-                                "python"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "inputFormat",
-                        "type": "select",
-                        "label": "Input format",
-                        "default": "editor",
-                        "required": true,
-                        "validate": {
-                            "enum": [
-                                "editor",
-                                "string"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "codeEditorPython",
-                        "type": "editor",
-                        "label": "Code",
-                        "editor": "monaco",
-                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
-                        "language": "python",
-                        "required": true
-                    },
-                    {
-                        "name": "input",
-                        "spec": {
-                            "spec": [
-                                {
-                                    "name": "name",
-                                    "type": "text",
-                                    "label": "Name",
-                                    "required": true,
-                                    "validate": {
-                                        "max": 32,
-                                        "min": 1,
-                                        "pattern": "^[a-zA-Z0-9_]{1,32}$"
-                                    }
-                                },
-                                {
-                                    "name": "value",
-                                    "type": "any",
-                                    "label": "Value",
-                                    "required": false
-                                }
-                            ],
-                            "type": "collection",
-                            "label": "Variable"
-                        },
-                        "type": "array",
-                        "label": "Input",
-                        "labels": {
-                            "add": "Add variable"
-                        },
-                        "default": [
-                            {
-                                "name": "foo",
-                                "value": "bar"
-                            }
-                        ]
-                    },
-                    {
-                        "name": "dependencies",
-                        "spec": {
-                            "type": "text",
-                            "label": "Dependency",
-                            "required": true,
-                            "validate": {
-                                "max": 214,
-                                "min": 1,
-                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$"
-                            }
-                        },
-                        "type": "array",
-                        "label": "Additional dependencies (Enterprise plans only)",
-                        "labels": {
-                            "add": "Add dependency"
-                        },
-                        "advanced": true
-                    }
-                ]
-            }
-        },
-        {
-            "id": 75,
-            "module": "code:ExecuteCode",
-            "version": 1,
-            "parameters": {},
-            "filter": null,
-            "mapper": {
-                "input": [
-                    {
-                        "name": "base_file",
-                        "value": "{{66.result.data}}"
-                    },
-                    {
-                        "name": "records_json",
-                        "value": "{{66.result.bancos_procesados}}"
-                    }
-                ],
-                "language": "python",
-                "inputFormat": "editor",
-                "codeEditorPython": "import base64, io, json, re, unicodedata\nimport openpyxl\nfrom copy import copy\n\ndef norm(v):\n    s = '' if v is None else str(v)\n    s = unicodedata.normalize('NFKD', s).encode('ascii','ignore').decode('ascii')\n    return re.sub(r'[^a-z0-9]+','',s.lower())\n\ndef as_list(v):\n    if v is None: return []\n    return v if isinstance(v,list) else [v]\n\ndef get(d,*keys):\n    if not isinstance(d,dict): return None\n    by={norm(k):v for k,v in d.items()}\n    for k in keys:\n        if norm(k) in by: return by[norm(k)]\n    return None\n\ndef country(record):\n    explicit=get(record,'Pais','País','Country','pais')\n    n=norm(explicit)\n    if 'elsalvador' in n or n in ('sv','salvador'): return 'El Salvador'\n    if 'guatemala' in n or n=='gt': return 'Guatemala'\n    text=' '.join(str(get(record,k) or '') for k in ('Banco','Cuenta','Moneda','archivo','hoja','Descripcion','Dirección','Direccion','Pais'))\n    n=norm(text)\n    if 'elsalvador' in n or 'salvador' in n or 'elsalvadoreno' in n or 'sv' in n: return 'El Salvador'\n    if 'guatemala' in n or 'guatemalteco' in n or 'gt' in n: return 'Guatemala'\n    currency=norm(get(record,'Moneda','moneda'))\n    if currency in ('usd','us dollar','dolares','dollar'): return 'El Salvador'\n    if currency in ('gtq','quetzal','quetzales','q'): return 'Guatemala'\n    return None\n\ndef row_country(row, keyset):\n    if len(row) < 2: return False\n    return (norm(row[0]), norm(row[1])) in keyset\n\nbase=input.get('base_file')\nrecords=input.get('records_json')\nif not base or not records: raise Exception('Faltan el Excel base o los registros clasificados.')\ntry: records=json.loads(records) if isinstance(records,str) else records\nexcept Exception as e: raise Exception(f'Los registros no son JSON válido: {e}')\nraw=base64.b64decode(str(base).strip() + '=' * (-len(str(base).strip()) % 4))\nwb0=openpyxl.load_workbook(io.BytesIO(raw))\nby_country={'Guatemala':[],'El Salvador':[]}\nfor r in as_list(records):\n    if not isinstance(r,dict): continue\n    c=country(r)\n    if c: by_country[c].append(r)\n\noutputs=[]\nfor c in ('Guatemala','El Salvador'):\n    items=by_country[c]\n    if not items: continue\n    wb=openpyxl.load_workbook(io.BytesIO(raw))\n    keys={(norm(get(r,'Banco','banco')),norm(get(r,'Cuenta','cuenta'))) for r in items}\n    files={norm(get(r,'archivo','Archivo','file')) for r in items if get(r,'archivo','Archivo','file')}\n    for sheet in wb.worksheets:\n        title=norm(sheet.title)\n        if title in (norm('Consolidado General'),norm('Detalle Diario'),norm('Detalle Semanal'),norm('Detalle Mensual'),norm('Balance General Detallado')):\n            for i in range(sheet.max_row,1,-1):\n                row=[sheet.cell(i,j).value for j in range(1,min(sheet.max_column,2)+1)]\n                if not row_country(row,keys): sheet.delete_rows(i,1)\n        elif title==norm('Datos Completos'):\n            for i in range(sheet.max_row,1,-1):\n                file_value=norm(sheet.cell(i,1).value)\n                if files and file_value not in files: sheet.delete_rows(i,1)\n    ws=wb['Observaciones'] if 'Observaciones' in wb.sheetnames else wb.create_sheet('Observaciones')\n    ws.cell(1,1).value=f'País del reporte: {c}'\n    out=io.BytesIO(); wb.save(out); out.seek(0)\n    safe='Guatemala' if c=='Guatemala' else 'ElSalvador'\n    outputs.append({'country':c,'filename':f'ReporteFinanciero_{safe}.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':base64.b64encode(out.getvalue()).decode('ascii')})\nif not outputs:\n    outputs=[{'country':'Sin clasificar','filename':'ReporteFinancieroIntelfon.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':str(base)}]\nreturn {'files':outputs,'files_count':len(outputs),'countries':[x['country'] for x in outputs]}"
-            },
-            "metadata": {
-                "designer": {
-                    "x": 1500,
-                    "y": 0,
-                    "name": "Separar por país"
                 },
                 "restore": {
                     "expect": {
@@ -3180,6 +1975,196 @@
             }
         },
         {
+            "id": 75,
+            "module": "code:ExecuteCode",
+            "version": 1,
+            "parameters": {},
+            "filter": null,
+            "mapper": {
+                "input": [
+                    {
+                        "name": "base_file",
+                        "value": "{{66.result.data}}"
+                    },
+                    {
+                        "name": "records_json",
+                        "value": "{{66.result.bancos_procesados}}"
+                    }
+                ],
+                "language": "python",
+                "inputFormat": "editor",
+                "codeEditorPython": "import base64, io, json, re, unicodedata\nimport openpyxl\nfrom copy import copy\n\ndef norm(v):\n    s = '' if v is None else str(v)\n    s = unicodedata.normalize('NFKD', s).encode('ascii','ignore').decode('ascii')\n    return re.sub(r'[^a-z0-9]+','',s.lower())\n\ndef as_list(v):\n    if v is None: return []\n    return v if isinstance(v,list) else [v]\n\ndef get(d,*keys):\n    if not isinstance(d,dict): return None\n    by={norm(k):v for k,v in d.items()}\n    for k in keys:\n        if norm(k) in by: return by[norm(k)]\n    return None\n\ndef country(record):\n    explicit=get(record,'Pais','País','Country','pais')\n    n=norm(explicit)\n    if 'elsalvador' in n or n in ('sv','salvador'): return 'El Salvador'\n    if 'guatemala' in n or n=='gt': return 'Guatemala'\n    text=' '.join(str(get(record,k) or '') for k in ('Banco','Cuenta','Moneda','archivo','hoja','Descripcion','Dirección','Direccion','Pais'))\n    n=norm(text)\n    if 'elsalvador' in n or 'salvador' in n or 'elsalvadoreno' in n or 'sv' in n: return 'El Salvador'\n    if 'guatemala' in n or 'guatemalteco' in n or 'gt' in n: return 'Guatemala'\n    currency=norm(get(record,'Moneda','moneda'))\n    if currency in ('usd','us dollar','dolares','dollar'): return 'El Salvador'\n    if currency in ('gtq','quetzal','quetzales','q'): return 'Guatemala'\n    return None\n\ndef row_country(row, keyset):\n    if len(row) < 2: return False\n    return (norm(row[0]), norm(row[1])) in keyset\n\nbase=input.get('base_file')\nrecords=input.get('records_json')\nif not base or not records: raise Exception('Faltan el Excel base o los registros clasificados.')\ntry: records=json.loads(records) if isinstance(records,str) else records\nexcept Exception as e: raise Exception(f'Los registros no son JSON válido: {e}')\nraw=base64.b64decode(str(base).strip() + '=' * (-len(str(base).strip()) % 4))\nwb0=openpyxl.load_workbook(io.BytesIO(raw))\nby_country={'Guatemala':[],'El Salvador':[]}\nfor r in as_list(records):\n    if not isinstance(r,dict): continue\n    c=country(r)\n    if c: by_country[c].append(r)\n\noutputs=[]\nfor c in ('Guatemala','El Salvador'):\n    items=by_country[c]\n    if not items: continue\n    wb=openpyxl.load_workbook(io.BytesIO(raw))\n    keys={(norm(get(r,'Banco','banco')),norm(get(r,'Cuenta','cuenta'))) for r in items}\n    files={norm(get(r,'archivo','Archivo','file')) for r in items if get(r,'archivo','Archivo','file')}\n    for sheet in wb.worksheets:\n        title=norm(sheet.title)\n        if title in (norm('Consolidado General'),norm('Detalle Diario'),norm('Detalle Semanal'),norm('Detalle Mensual'),norm('Balance General Detallado')):\n            for i in range(sheet.max_row,1,-1):\n                row=[sheet.cell(i,j).value for j in range(1,min(sheet.max_column,2)+1)]\n                if not row_country(row,keys): sheet.delete_rows(i,1)\n        elif title==norm('Datos Completos'):\n            for i in range(sheet.max_row,1,-1):\n                file_value=norm(sheet.cell(i,1).value)\n                if files and file_value not in files: sheet.delete_rows(i,1)\n    ws=wb['Observaciones'] if 'Observaciones' in wb.sheetnames else wb.create_sheet('Observaciones')\n    ws.cell(1,1).value=f'País del reporte: {c}'\n    out=io.BytesIO(); wb.save(out); out.seek(0)\n    safe='Guatemala' if c=='Guatemala' else 'ElSalvador'\n    outputs.append({'country':c,'filename':f'ReporteFinanciero_{safe}.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':base64.b64encode(out.getvalue()).decode('ascii')})\nif not outputs:\n    outputs=[{'country':'Sin clasificar','filename':'ReporteFinancieroIntelfon.xlsx','mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','data':str(base)}]\nreturn {'files':outputs,'files_count':len(outputs),'countries':[x['country'] for x in outputs]}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 1500,
+                    "y": 0,
+                    "name": "Separar por país"
+                },
+                "restore": {
+                    "expect": {
+                        "language": {
+                            "mode": "chose",
+                            "label": "Python",
+                            "nested": [
+                                {
+                                    "help": "Choose how the code is provided.",
+                                    "name": "inputFormat",
+                                    "type": "select",
+                                    "label": "Input format",
+                                    "default": "editor",
+                                    "options": [
+                                        {
+                                            "label": "Code editor",
+                                            "value": "editor",
+                                            "nested": [
+                                                {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "name": "codeEditorPython",
+                                                    "type": "editor",
+                                                    "label": "Code",
+                                                    "editor": "monaco",
+                                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                                    "language": "python",
+                                                    "required": true
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "label": "Mapped code (useful for AI)",
+                                            "value": "string",
+                                            "nested": [
+                                                {
+                                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                                    "name": "codeStringPython",
+                                                    "type": "text",
+                                                    "label": "Code",
+                                                    "default": "# You can map dynamic code from previous modules or inputs.",
+                                                    "required": true,
+                                                    "multiline": true
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            ]
+                        },
+                        "inputFormat": {
+                            "mode": "chose",
+                            "label": "Code editor",
+                            "nested": [
+                                {
+                                    "help": "Code to be executed. Note: Your code runs inside a generated wrapper, so error line numbers are offset by 10. For example, an error on your line 1 will be reported as line 11.",
+                                    "name": "codeEditorPython",
+                                    "type": "editor",
+                                    "label": "Code",
+                                    "editor": "monaco",
+                                    "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                                    "language": "python",
+                                    "required": true
+                                }
+                            ]
+                        }
+                    }
+                },
+                "expect": [
+                    {
+                        "name": "language",
+                        "type": "select",
+                        "label": "Language",
+                        "default": "javascript",
+                        "mappable": true,
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "javascript",
+                                "python"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "inputFormat",
+                        "type": "select",
+                        "label": "Input format",
+                        "default": "editor",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "editor",
+                                "string"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "codeEditorPython",
+                        "type": "editor",
+                        "label": "Code",
+                        "editor": "monaco",
+                        "default": "# Example how to import a dependency\n# import datetime\n\n# Retrieve input variables from the scenario\nfoo = input.get('foo')\n\n# Note: This runs in a resource-limited environment, so avoid heavy computations.\n\n# Return values to the scenario\nreturn {\n    'foo': foo\n}",
+                        "language": "python",
+                        "required": true
+                    },
+                    {
+                        "name": "input",
+                        "spec": {
+                            "spec": [
+                                {
+                                    "name": "name",
+                                    "type": "text",
+                                    "label": "Name",
+                                    "required": true,
+                                    "validate": {
+                                        "max": 32,
+                                        "min": 1,
+                                        "pattern": "^[a-zA-Z0-9_]{1,32}$"
+                                    }
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "any",
+                                    "label": "Value",
+                                    "required": false
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Variable"
+                        },
+                        "type": "array",
+                        "label": "Input",
+                        "labels": {
+                            "add": "Add variable"
+                        },
+                        "default": [
+                            {
+                                "name": "foo",
+                                "value": "bar"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "dependencies",
+                        "spec": {
+                            "type": "text",
+                            "label": "Dependency",
+                            "required": true,
+                            "validate": {
+                                "max": 214,
+                                "min": 1,
+                                "pattern": "^[A-Za-z0-9_@\\./<>=!~\\^+-]{1,214}$"
+                            }
+                        },
+                        "type": "array",
+                        "label": "Additional dependencies (Enterprise plans only)",
+                        "labels": {
+                            "add": "Add dependency"
+                        },
+                        "advanced": true
+                    }
+                ]
+            }
+        },
+        {
             "id": 73,
             "module": "builtin:BasicFeeder",
             "version": 1,
@@ -3196,12 +2181,12 @@
                 "restore": {},
                 "expect": [
                     {
+                        "mode": "edit",
                         "name": "array",
-                        "type": "array",
                         "spec": [],
+                        "type": "array",
                         "label": "Array",
-                        "editable": true,
-                        "mode": "edit"
+                        "editable": true
                     }
                 ]
             }
@@ -3228,11 +2213,6 @@
                     "y": 0
                 },
                 "restore": {
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "Joses's Google Drive connection"
-                        }
-                    },
                     "expect": {
                         "select": {
                             "mode": "chose",
@@ -3333,6 +2313,16 @@
                                 }
                             ]
                         },
+                        "folderId": {
+                            "mode": "chose",
+                            "path": [
+                                "ReportesBancariosIntelfon(Guatemala)",
+                                "Reportes listos"
+                            ]
+                        },
+                        "targetType": {
+                            "mode": "edit"
+                        },
                         "destination": {
                             "mode": "chose",
                             "label": "My Drive",
@@ -3348,16 +2338,11 @@
                                     "required": true
                                 }
                             ]
-                        },
-                        "folderId": {
-                            "mode": "chose",
-                            "path": [
-                                "ReportesBancariosIntelfon(Guatemala)",
-                                "Reportes listos"
-                            ]
-                        },
-                        "targetType": {
-                            "mode": "edit"
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "label": "Joses's Google Drive connection"
                         }
                     }
                 },
@@ -3446,13 +2431,13 @@
             "module": "builtin:BasicAggregator",
             "version": 1,
             "parameters": {
-                "target": "54.attachments",
-                "feeder": 73
+                "feeder": 73,
+                "target": "54.attachments"
             },
             "filter": null,
             "mapper": {
-                "filename": "{{73.filename}}",
-                "data": "{{toBinary(73.data; \"base64\")}}"
+                "data": "{{toBinary(73.data; \"base64\")}}",
+                "filename": "{{73.filename}}"
             },
             "metadata": {
                 "designer": {
@@ -3490,11 +2475,6 @@
                     "name": "Send Gmail"
                 },
                 "restore": {
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "Joses's Gmail connection"
-                        }
-                    },
                     "expect": {
                         "bodyType": {
                             "mode": "chose",
@@ -3507,6 +2487,11 @@
                                     "label": "Content"
                                 }
                             ]
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "label": "Joses's Gmail connection"
                         }
                     }
                 },
@@ -3659,7 +2644,7 @@
             "version": 1,
             "parameters": {},
             "mapper": {
-                "body": "{\n  \"correoEnviado\": true,\n  \"mensajeId\": \"{{54.id}}\",\n  \"estado\": \"Reportes separados por país y enviados en un solo correo\"\n}",
+                "body": "{\n  \"correoEnviado\": true,\n  \"mensajeId\": \"{{54.id}}\",\n  \"estado\": \"Reportes separados por país y enviados en un solo correo\",\n  \"fileName\": \"{{66.result.filename}}\",\n  \"archivoExcelBase64\": \"{{75.result.data}}\",\n  \"resumen_general\": {{66.result.resumen_general}},\n  \"bancos_procesados\": {{66.result.bancos_procesados}},\n  \"totales_globales\": {{66.result.totales_globales}}\n}",
                 "status": 200,
                 "headers": [
                     {
@@ -3677,30 +2662,26 @@
                 "expect": [
                     {
                         "name": "status",
-                        "label": "Status",
                         "type": "uinteger",
-                        "required": true,
+                        "label": "Status",
                         "default": 200,
+                        "required": true,
                         "validate": {
                             "min": 100
                         }
                     },
                     {
                         "name": "body",
-                        "label": "Body",
-                        "type": "any"
+                        "type": "any",
+                        "label": "Body"
                     },
                     {
                         "name": "headers",
-                        "label": "Custom headers",
-                        "type": "array",
-                        "editable": true,
-                        "advanced": true,
                         "spec": [
                             {
                                 "name": "key",
-                                "label": "Key",
                                 "type": "text",
+                                "label": "Key",
                                 "required": true,
                                 "validate": {
                                     "max": 256
@@ -3708,14 +2689,18 @@
                             },
                             {
                                 "name": "value",
-                                "label": "Value",
                                 "type": "text",
+                                "label": "Value",
                                 "required": true,
                                 "validate": {
                                     "max": 4096
                                 }
                             }
                         ],
+                        "type": "array",
+                        "label": "Custom headers",
+                        "advanced": true,
+                        "editable": true,
                         "validate": {
                             "maxItems": 16
                         }

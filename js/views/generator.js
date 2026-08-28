@@ -603,7 +603,7 @@ export function renderGenerator() {
         if (!data) return [];
 
         // Parsear campos que pueden venir como strings JSON
-        const fields = ['filas', 'resumen_general', 'bancos_procesados', 'balance_general', 'totales_globales', 'resultado', 'data'];
+        const fields = ['filas', 'resumen_general', 'bancos_procesados', 'balance_general', 'totales_globales', 'resultado', 'data', 'result'];
         for (const field of fields) {
             if (typeof data[field] === 'string') {
                 data[field] = tryParseJSON(data[field]);
@@ -616,6 +616,17 @@ export function renderGenerator() {
             if (Array.isArray(data.resultado.bancos_procesados)) return data.resultado.bancos_procesados;
             if (Array.isArray(data.resultado.filas)) return data.resultado.filas;
             if (Array.isArray(data.resultado)) return data.resultado;
+        }
+
+        // Si viene envuelto en result desde el módulo ExecuteCode de Make
+        if (data.result && typeof data.result === 'object') {
+            for (const field of ['filas', 'resumen_general', 'bancos_procesados', 'totales_globales']) {
+                if (typeof data.result[field] === 'string') data.result[field] = tryParseJSON(data.result[field]);
+            }
+            if (Array.isArray(data.result.resumen_general)) return data.result.resumen_general;
+            if (Array.isArray(data.result.bancos_procesados)) return data.result.bancos_procesados;
+            if (Array.isArray(data.result.filas)) return data.result.filas;
+            if (Array.isArray(data.result)) return data.result;
         }
 
         // Si viene envuelto en data
@@ -849,6 +860,12 @@ export function renderGenerator() {
         documentPreviewSection.classList.remove('hidden');
     }
 
+    function createExcelDownloadUrl(response) {
+        const base64 = response?.archivoExcelBase64 || response?.excelBase64 || response?.result?.data;
+        if (!base64 || typeof base64 !== 'string' || base64.length < 20) return '';
+        return `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+    }
+
     // Botón para recargar el iframe en caso de demora
     if (btnReloadPreview) {
         btnReloadPreview.addEventListener('click', () => {
@@ -942,6 +959,9 @@ export function renderGenerator() {
                 if (!data || typeof data !== 'object' || !hasResponseContent || responseError) {
                     throw new Error('La respuesta no contiene datos válidos.');
                 }
+                if (!extractRows(data).length) {
+                    throw new Error('Make terminó, pero no devolvió registros del Excel procesado. Revisa el mapeo de Webhook response.');
+                }
             } catch (makeError) {
                 throw makeError;
             }
@@ -959,7 +979,7 @@ export function renderGenerator() {
             statusSpinner.classList.add('hidden');
 
             const firstResponse = Array.isArray(data) ? data[0] || {} : data;
-            const urlDescarga = firstResponse.urlDescarga || firstResponse.downloadUrl || firstResponse.webViewLink || firstResponse.fileUrl || firstResponse.url || firstResponse.link || '#';
+            const urlDescarga = firstResponse.urlDescarga || firstResponse.downloadUrl || firstResponse.webViewLink || firstResponse.fileUrl || firstResponse.url || firstResponse.link || createExcelDownloadUrl(firstResponse) || '#';
             currentPreviewUrl = urlDescarga;
             lastProcessedData = data;
 

@@ -652,6 +652,11 @@ function parseRawReport() {
       const dUrl = getField(src, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link')
         || getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
       if (dUrl && dUrl !== '#') outerDownloadUrl = dUrl;
+      const excelBase64 = getField(src, 'archivoExcelBase64', 'excelBase64')
+        || getField(raw, 'archivoExcelBase64', 'excelBase64');
+      if (!outerDownloadUrl && typeof excelBase64 === 'string' && excelBase64.length > 20) {
+        outerDownloadUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBase64}`;
+      }
 
       // Fuentes específicas de GT / SV si vienen particionadas
       const gtSpecific = collectFields(src, ['guatemala', 'gt', 'bancos_gt', 'bancos_guatemala', 'cuentas_gt']);
