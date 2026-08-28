@@ -31,13 +31,7 @@ export function renderReportSection(target, title, options = {}) {
     const compactParam = options.compact ? '&compact=1' : '';
 
     function getViewerUrl() {
-        let runId = '';
-        try {
-            const stored = JSON.parse(localStorage.getItem('intelfon_current_report') || 'null');
-            runId = stored?.runId || '';
-        } catch (_) {}
-        const runParam = runId ? `&runId=${encodeURIComponent(runId)}` : '';
-        return `report-viewer.html?v=4.8&t=${Date.now()}${runParam}${compactParam}#${target}`;
+        return `report-viewer.html#${target}`;
     }
 
     viewer.src = getViewerUrl();

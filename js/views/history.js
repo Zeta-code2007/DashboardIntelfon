@@ -1,5 +1,5 @@
 import { obtenerHistorialReportes } from '../services/historyService.js';
-import { Toast } from '../services/toastService.js?v=3.2';
+import { Toast } from '../services/toastService.js';
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({

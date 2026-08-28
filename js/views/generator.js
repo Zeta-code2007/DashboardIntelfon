@@ -401,7 +401,7 @@ export function renderGenerator() {
             return;
         }
         replaceCurrentReport(dataToOpen, runIdToOpen);
-        window.open(`report-viewer.html?t=${Date.now()}&runId=${encodeURIComponent(runIdToOpen)}`, '_blank');
+        window.open('report-viewer.html#resumen', '_blank');
     }
 
     function transferirAlOverview() {
