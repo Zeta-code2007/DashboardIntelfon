@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('intelfon-report-updated', (event) => {
         if (event.detail && event.detail.key === 'intelfon_current_report') {
             const activeView = document.querySelector('.nav-btn.active')?.dataset.view || 'overview';
-            loadView(activeView);
+            if (activeView !== 'generator') loadView(activeView);
         }
     });
 

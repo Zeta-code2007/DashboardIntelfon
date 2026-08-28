@@ -501,7 +501,10 @@ export function renderGenerator() {
         errorTitle.textContent = title;
         errorMessage.textContent = message;
         errorAlert.classList.remove('hidden');
-        resultsPanel.classList.add('hidden');
+        resultsPanel.classList.remove('hidden');
+        if (btnTransferOverview) btnTransferOverview.disabled = true;
+        if (btnViewFullReport) btnViewFullReport.disabled = true;
+        if (btnOpenInteractiveViewer) btnOpenInteractiveViewer.disabled = true;
     }
 
     function hideError() {
@@ -969,6 +972,9 @@ export function renderGenerator() {
             renderTableRows(filas);
             loadDocumentPreview(urlDescarga);
             resultsPanel.classList.remove('hidden');
+            if (btnTransferOverview) btnTransferOverview.disabled = false;
+            if (btnViewFullReport) btnViewFullReport.disabled = false;
+            if (btnOpenInteractiveViewer) btnOpenInteractiveViewer.disabled = false;
 
             setTimeout(() => {
                 resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
