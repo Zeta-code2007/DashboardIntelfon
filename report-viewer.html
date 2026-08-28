@@ -152,41 +152,6 @@
     </div>
   </section>
 
-  <!-- CONSOLIDADOS Y REPORTES SEPARADOS DEVUELTOS POR MAKE -->
-  <section class="card consolidation-panel" id="generalPanel">
-    <div class="section-heading">
-      <div>
-        <h2>Consolidado General</h2>
-        <p>Valores originales de Guatemala y El Salvador, sin conversiones ni mezclas de moneda.</p>
-      </div>
-      <span class="section-chip" id="generalStatus">Esperando datos</span>
-    </div>
-    <div class="kpis consolidation-kpis" id="generalKpis"></div>
-    <div class="consolidation-actions" id="generalActions"></div>
-    <div class="table-wrap consolidation-table-wrap">
-      <table>
-        <thead><tr><th>País</th><th>Moneda</th><th class="num">Registros</th><th class="num">Saldo final</th><th>Conciliación</th></tr></thead>
-        <tbody id="generalTable"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="card consolidation-panel" id="regionalPanel">
-    <div class="section-heading"><div><h2>Consolidado Regional USD</h2><p>Conversión regional calculada por Make, manteniendo los valores originales.</p></div><span class="section-chip" id="regionalStatus">Esperando datos</span></div>
-    <div class="kpis consolidation-kpis" id="regionalKpis"></div>
-    <div class="consolidation-actions" id="regionalActions"></div>
-    <div class="table-wrap consolidation-table-wrap"><table><thead><tr><th>País</th><th>Moneda original</th><th class="num">Monto original</th><th class="num">Monto USD</th><th>Resultado</th></tr></thead><tbody id="regionalTable"></tbody></table></div>
-  </section>
-
-  <section class="card consolidation-panel" id="countryPanels">
-    <div class="section-heading"><div><h2>Reportes separados por país</h2><p>Cada país conserva sus bancos, cuentas, movimientos y conciliación de forma independiente.</p></div></div>
-    <div class="grid-equal country-report-grid">
-      <div><h2>🇬🇹 Guatemala</h2><div class="consolidation-actions" id="gtActions"></div><div class="table-wrap consolidation-table-wrap"><table><thead><tr><th>Banco</th><th>Cuenta</th><th class="num">Saldo final</th><th>Estado</th></tr></thead><tbody id="gtTable"></tbody></table></div></div>
-      <div><h2>🇸🇻 El Salvador</h2><div class="consolidation-actions" id="svActions"></div><div class="table-wrap consolidation-table-wrap"><table><thead><tr><th>Banco</th><th>Cuenta</th><th class="num">Saldo final</th><th>Estado</th></tr></thead><tbody id="svTable"></tbody></table></div></div>
-    </div>
-    <div class="note consolidation-review" id="consolidationReview">No hay registros pendientes de revisión.</div>
-  </section>
-
   <!-- ENCABEZADO Y FILTROS -->
   <header class="hero">
     <div class="hero-left">
@@ -1324,7 +1289,6 @@ function renderConsolidation() {
 }
 
 function renderAll() {
-  renderConsolidation();
   renderHeader();
   renderKpis();
   renderBankList();
