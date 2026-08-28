@@ -35,9 +35,21 @@ export function renderReportSection(target, title, options = {}) {
     }
 
     viewer.src = getViewerUrl();
-    const refreshViewer = () => { viewer.src = getViewerUrl(); };
+    const refreshViewer = () => {
+        const currentSrc = viewer.src;
+        viewer.src = 'about:blank';
+        requestAnimationFrame(() => {
+            viewer.src = getViewerUrl();
+            if (currentSrc === viewer.src) {
+                viewer.contentWindow?.location?.reload?.();
+            }
+        });
+    };
     window.addEventListener('storage', event => {
         if (event.key === 'intelfon_current_report') refreshViewer();
+    });
+    window.addEventListener('intelfon-report-updated', event => {
+        if (event.detail && event.detail.key === 'intelfon_current_report') refreshViewer();
     });
     window.addEventListener('focus', refreshViewer);
     viewer.loading = 'eager';

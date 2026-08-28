@@ -401,6 +401,14 @@ function createEmptyBaseData(countryCode = 'GT') {
 window.addEventListener('storage', event => {
   if (event.key === 'intelfon_current_report') initDataEngine();
 });
+window.addEventListener('intelfon-report-updated', event => {
+  if (event.detail && event.detail.key === 'intelfon_current_report') initDataEngine();
+});
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'intelfon-report-updated') {
+    initDataEngine();
+  }
+});
 window.addEventListener('focus', () => initDataEngine());
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) initDataEngine();
@@ -617,7 +625,7 @@ function mergeAccountRecords(...sources) {
 }
 
 function parseRawReport() {
-  const saved = localStorage.getItem('intelfon_current_report');
+  const saved = localStorage.getItem('intelfon_current_report') || sessionStorage.getItem('intelfon_current_report');
   if (!saved) return null;
 
   try {
@@ -1820,6 +1828,9 @@ if (btnClearDashboard) {
     }
     localStorage.removeItem('intelfon_current_report');
     localStorage.removeItem('intelfon_processing_id');
+    window.dispatchEvent(new CustomEvent('intelfon-report-updated', {
+      detail: { key: 'intelfon_current_report', value: null }
+    }));
     downloadExcelUrl = '#';
     initDataEngine();
   });

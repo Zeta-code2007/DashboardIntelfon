@@ -374,11 +374,36 @@ export function renderGenerator() {
 
     function replaceCurrentReport(data, runId) {
         purgeReportState();
-        localStorage.setItem('intelfon_current_report', JSON.stringify({
+        const snapshot = {
             runId,
             createdAt: new Date().toISOString(),
             data
-        }));
+        };
+        const snapshotJson = JSON.stringify(snapshot);
+
+        localStorage.setItem('intelfon_current_report', snapshotJson);
+        sessionStorage.setItem('intelfon_current_report', snapshotJson);
+
+        const updateEvent = new CustomEvent('intelfon-report-updated', {
+            detail: { key: 'intelfon_current_report', value: snapshot }
+        });
+        window.dispatchEvent(updateEvent);
+
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'intelfon-report-updated',
+                    key: 'intelfon_current_report',
+                    payload: snapshot
+                }, '*');
+            }
+        } catch (_) {}
+
+        window.postMessage({
+            type: 'intelfon-report-updated',
+            key: 'intelfon_current_report',
+            payload: snapshot
+        }, '*');
     }
 
     // Función para abrir el visor interactivo de código en nueva pestaña / pantalla completa

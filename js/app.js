@@ -232,8 +232,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('message', (event) => {
-        if (!event.data || event.data.type !== 'intelfon-navigate') return;
-        if (typeof event.data.view === 'string') loadView(event.data.view);
+        if (!event.data) return;
+
+        if (event.data.type === 'intelfon-navigate' && typeof event.data.view === 'string') {
+            loadView(event.data.view);
+            return;
+        }
+
+        if (event.data.type === 'intelfon-report-updated') {
+            const activeView = document.querySelector('.nav-btn.active')?.dataset.view || 'overview';
+            loadView(activeView);
+        }
+    });
+
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'intelfon_current_report') {
+            const activeView = document.querySelector('.nav-btn.active')?.dataset.view || 'overview';
+            loadView(activeView);
+        }
     });
 
     navButtons.forEach(btn => {
