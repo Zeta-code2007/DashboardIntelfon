@@ -1,5 +1,7 @@
 import { enviarArchivosAMake } from '../services/makeService.js';
 import { Toast } from '../services/toastService.js';
+import { SyncService } from '../services/syncService.js';
+import { RegionService } from '../services/regionService.js';
 
 /**
  * Función auxiliar para sanitizar cadenas y prevenir inyecciones HTML.
@@ -398,7 +400,6 @@ export function renderGenerator() {
     let currentPreviewUrl = '';
     let lastProcessedData = null;
     let currentRunId = null;
-    let isSubmitting = false; // Candado anti doble-envío: evita que dos clics rápidos disparen dos peticiones a Make.
 
     function createRunId() {
         if (crypto.randomUUID) return crypto.randomUUID();
@@ -656,6 +657,7 @@ export function renderGenerator() {
             if (fileSizeDisplays.GT) fileSizeDisplays.GT.textContent = formatFileSize(file.size);
             if (fileInfoContainers.GT) fileInfoContainers.GT.classList.remove('hidden');
             hideError();
+            SyncService.setDocumentStatus('GT', { uploaded: true, fileName: file.name });
         } else if (country === 'SV') {
             const validFiles = [];
             const invalidFormatFiles = [];
@@ -702,6 +704,11 @@ export function renderGenerator() {
 
             renderSvFilesList();
             hideError();
+            SyncService.setDocumentStatus('SV', {
+                uploaded: selectedFiles.SV.length > 0,
+                fileName: selectedFiles.SV[0]?.name,
+                count: selectedFiles.SV.length
+            });
         }
     }
 
@@ -712,10 +719,12 @@ export function renderGenerator() {
             if (fileInfoContainers.GT) fileInfoContainers.GT.classList.add('hidden');
             if (fileNameDisplays.GT) fileNameDisplays.GT.textContent = '';
             if (fileSizeDisplays.GT) fileSizeDisplays.GT.textContent = '';
+            SyncService.setDocumentStatus('GT', { uploaded: false });
         } else if (country === 'SV') {
             selectedFiles.SV = [];
             if (fileInputs.SV) fileInputs.SV.value = '';
             renderSvFilesList();
+            SyncService.setDocumentStatus('SV', { uploaded: false, count: 0 });
         }
     }
 
@@ -1271,13 +1280,6 @@ export function renderGenerator() {
         e.preventDefault();
         hideError();
 
-        // Si ya hay una ejecución en curso, ignorar este envío por completo (evita duplicados
-        // por doble clic o por reenvíos accidentales del formulario).
-        if (isSubmitting) {
-            console.warn('[Generator] Envío ignorado: ya hay un procesamiento en curso.');
-            return;
-        }
-
         if (!selectedFiles.GT) {
             showError('Falta archivo de Guatemala', 'Por favor selecciona el archivo Excel (.xlsx) para Guatemala.');
             return;
@@ -1290,6 +1292,22 @@ export function renderGenerator() {
 
         if (selectedFiles.SV.length > 10) {
             showError('Límite de archivos excedido', 'El Salvador permite un máximo de 10 archivos Excel.');
+            return;
+        }
+
+        // Gate de sincronización regional: exige que el país contrario esté conectado
+        // y haya confirmado su documento, salvo que el switch "Ignorar [país]" esté activo
+        const myRegion = RegionService.getActiveRegion();
+        const syncCheck = SyncService.canProceed(myRegion);
+        if (!syncCheck.allowed) {
+            const otherMeta = RegionService.getRegionMeta(syncCheck.otherRegion);
+            const reasonText = syncCheck.reason === 'offline'
+                ? `${otherMeta.name} figura como Desconectado`
+                : `${otherMeta.name} aún no ha confirmado su documento`;
+            showError(
+                'Sincronización pendiente',
+                `${reasonText}. Activa el switch "Ignorar ${otherMeta.name}" en la barra de sincronización si deseas continuar sin esperar, o espera a que se conecte.`
+            );
             return;
         }
 
@@ -1312,7 +1330,6 @@ export function renderGenerator() {
 
         const processingId = createRunId();
         currentRunId = processingId;
-        isSubmitting = true;
         purgeReportState();
         localStorage.setItem('intelfon_processing_id', processingId);
         lastProcessedData = null;
@@ -1388,12 +1405,7 @@ export function renderGenerator() {
             }
 
             if (localStorage.getItem('intelfon_processing_id') !== processingId || currentRunId !== processingId) {
-                // Esta petición quedó "vieja" (llegó tarde, después de que otra ejecución más
-                // reciente tomó su lugar). Esto es normal y no debe mostrarse como error al
-                // usuario: simplemente se descarta en silencio y no se toca la interfaz, porque
-                // la ejecución activa es la que debe controlar el botón y el estado en pantalla.
-                console.warn('[Generator] Respuesta de una ejecución anterior descartada en silencio (no es un error).');
-                return;
+                throw new Error('Esta respuesta pertenece a una ejecución anterior y fue descartada.');
             }
 
             clearInterval(progressInterval);
@@ -1458,18 +1470,12 @@ export function renderGenerator() {
                 err?.message || 'El flujo no devolvió una respuesta válida. Verifica Make.com e inténtalo nuevamente.'
             );
         } finally {
-            // Si esta ejecución ya fue reemplazada por una más nueva, no tocar el botón ni el
-            // candado: la ejecución activa es la única responsable de su propio estado.
-            const isStillActiveRun = localStorage.getItem('intelfon_processing_id') === processingId && currentRunId === processingId;
-            if (isStillActiveRun) {
-                isSubmitting = false;
-                btnSubmit.disabled = false;
-                btnSubmit.classList.remove('opacity-75', 'cursor-not-allowed');
-                btnSubmitIcon.innerHTML = `
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                `;
-                btnSubmitText.textContent = 'Procesar ambos países';
-            }
+            btnSubmit.disabled = false;
+            btnSubmit.classList.remove('opacity-75', 'cursor-not-allowed');
+            btnSubmitIcon.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            `;
+            btnSubmitText.textContent = 'Procesar ambos países';
         }
     });
 

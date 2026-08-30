@@ -25,6 +25,10 @@
     <!-- html2pdf.js CDN para Descarga Directa de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+    <!-- Firebase CDN (compat) para sincronización en tiempo real Guatemala <-> El Salvador -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
     <!-- Estilos Locales -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/theme-intelfon.css">
@@ -233,6 +237,9 @@
                 </span>
             </div>
         </header>
+
+        <!-- Barra de Sincronización Regional (Guatemala <-> El Salvador) -->
+        <div id="region-sync-bar"></div>
 
         <!-- Contenedor Dinámico de Vistas -->
         <main id="app-content" class="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/80">

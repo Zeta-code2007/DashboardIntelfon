@@ -8,7 +8,8 @@ const USERS_DB_KEY = 'intelfon_registered_users_db';
  */
 export const AuthService = {
     /**
-     * Inicializa la base de datos de usuarios con el usuario Master "intelfon" si está vacía.
+     * Inicializa la base de datos de usuarios con el usuario Master "intelfon" (global)
+     * y los Masters regionales "masterguatemala" / "mastersalvador" si no existen.
      */
     _getUsersDB() {
         const stored = localStorage.getItem(USERS_DB_KEY);
@@ -22,18 +23,17 @@ export const AuthService = {
             } catch (_) {}
         }
 
-        // Asegurar que el Usuario Master "intelfon" siempre exista como único Master
+        // Asegurar que el Usuario Master global "intelfon" siempre exista
         const masterUsername = String(CONFIG.AUTH.masterUsername || 'intelfon').toLowerCase();
         const masterEmail = String(CONFIG.AUTH.masterEmail || 'admin@intelfon.com').toLowerCase();
         const masterPass = String(CONFIG.AUTH.defaultPassword || 'intelfon2026');
 
-        const masterIndex = users.findIndex(u => 
-            String(u.username || '').toLowerCase() === masterUsername || 
+        const masterIndex = users.findIndex(u =>
+            String(u.username || '').toLowerCase() === masterUsername ||
             String(u.email || '').toLowerCase() === masterEmail
         );
 
         if (masterIndex === -1) {
-            // Insertar Master al inicio
             users.unshift({
                 id: 'USR-MASTER',
                 name: 'Master INTELFON',
@@ -42,31 +42,62 @@ export const AuthService = {
                 password: masterPass,
                 role: 'Super Admin',
                 isMaster: true,
+                region: null,
                 createdAt: new Date().toISOString()
             });
-            localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
         } else {
-            // Asegurar que mantenga atributos de Master
             users[masterIndex].role = 'Super Admin';
             users[masterIndex].isMaster = true;
             users[masterIndex].username = masterUsername;
-            localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
         }
 
+        // Asegurar que existan los Masters regionales (Guatemala / El Salvador)
+        const regionalMasters = Array.isArray(CONFIG.AUTH.masters) ? CONFIG.AUTH.masters : [];
+        regionalMasters.forEach((masterDef, idx) => {
+            const uname = String(masterDef.username || '').toLowerCase();
+            if (!uname) return;
+            const email = String(masterDef.email || `${uname}@intelfon.com`).toLowerCase();
+
+            const existingIndex = users.findIndex(u =>
+                String(u.username || '').toLowerCase() === uname ||
+                String(u.email || '').toLowerCase() === email
+            );
+
+            if (existingIndex === -1) {
+                users.push({
+                    id: `USR-MASTER-${masterDef.region || idx}`,
+                    name: masterDef.name || `Master ${masterDef.region || ''}`.trim(),
+                    username: uname,
+                    email,
+                    password: String(masterDef.password || ''),
+                    role: 'Super Admin',
+                    isMaster: true,
+                    region: masterDef.region || null,
+                    createdAt: new Date().toISOString()
+                });
+            } else {
+                users[existingIndex].role = 'Super Admin';
+                users[existingIndex].isMaster = true;
+                users[existingIndex].region = masterDef.region || null;
+                if (masterDef.name) users[existingIndex].name = users[existingIndex].name || masterDef.name;
+            }
+        });
+
+        localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
         return users;
     },
 
     /**
      * Guarda la base de datos completa de usuarios.
-     * @param {Array} users 
+     * @param {Array} users
      */
     _saveUsersDB(users) {
         localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
     },
 
     /**
-     * Verifica si un usuario es el Master Admin "intelfon".
-     * @param {Object} user 
+     * Verifica si un usuario tiene rol Master (intelfon, masterguatemala o mastersalvador).
+     * @param {Object} user
      * @returns {boolean}
      */
     isMasterAdmin(user = null) {
@@ -76,9 +107,9 @@ export const AuthService = {
         const uEmail = String(current.email || '').toLowerCase().trim();
         const uRole = String(current.role || '').toLowerCase().trim();
 
-        return uName === 'intelfon' || 
-               uEmail === 'admin@intelfon.com' || 
-               uRole === 'super admin' || 
+        return uName === 'intelfon' ||
+               uEmail === 'admin@intelfon.com' ||
+               uRole === 'super admin' ||
                !!current.isMaster;
     },
 
@@ -107,9 +138,8 @@ export const AuthService = {
 
         const users = this._getUsersDB();
 
-        // Verificar si el usuario o username ya existe
-        const existing = users.find(u => 
-            String(u.email || '').toLowerCase() === cleanEmail || 
+        const existing = users.find(u =>
+            String(u.email || '').toLowerCase() === cleanEmail ||
             String(u.username || '').toLowerCase() === cleanEmail
         );
 
@@ -123,8 +153,9 @@ export const AuthService = {
             email: cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@intelfon.com`,
             username: cleanEmail.split('@')[0],
             password: cleanPass,
-            role: role === 'Super Admin' ? 'Analista' : role, // Solo 'intelfon' es Super Admin
+            role: role === 'Super Admin' ? 'Analista' : role,
             isMaster: false,
+            region: null,
             createdAt: new Date().toISOString()
         };
 
@@ -150,7 +181,6 @@ export const AuthService = {
 
         const users = this._getUsersDB();
 
-        // Buscar coincidencia flexible: por username, email o nombre
         const matchedUser = users.find(u => {
             const uEmail = String(u.email || '').toLowerCase().trim();
             const uUsername = String(u.username || '').toLowerCase().trim();
@@ -179,6 +209,7 @@ export const AuthService = {
             username: matchedUser.username,
             role: matchedUser.role || 'Analista',
             isMaster: isMaster,
+            region: matchedUser.region || null,
             avatar: 'assets/logo-intelfon.png',
             loginTime: new Date().toISOString()
         };
@@ -245,17 +276,17 @@ export const AuthService = {
     },
 
     /**
-     * Elimina un usuario por correo o id (protege al Master Admin).
-     * @param {string} emailOrId 
+     * Elimina un usuario por correo o id (protege a los usuarios Master).
+     * @param {string} emailOrId
      * @returns {boolean}
      */
     deleteUser(emailOrId) {
         let users = this._getUsersDB();
         const target = users.find(u => u.email === emailOrId || u.id === emailOrId || u.username === emailOrId);
-        
+
         if (!target) return false;
         if (this.isMasterAdmin(target)) {
-            console.warn('[AuthService] No se puede eliminar al usuario Master Admin.');
+            console.warn('[AuthService] No se puede eliminar a un usuario Master.');
             return false;
         }
 

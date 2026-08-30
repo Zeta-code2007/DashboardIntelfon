@@ -166,12 +166,26 @@ export function renderLogin(onLoginSuccess) {
                 </button>
             </form>
 
-            <!-- Acceso Rápido Master Demo (Exclusivo para la cuenta Master intelfon) -->
-            <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Acceso Master Admin:</span>
-                <button type="button" id="btn-fill-master" class="text-red-400 hover:text-red-300 font-bold hover:underline">
-                    Autocompletar (intelfon)
-                </button>
+            <!-- Acceso Rápido Masters Demo -->
+            <div class="pt-3 border-t border-slate-800/80 space-y-2 text-[11px] text-slate-500">
+                <div class="flex items-center justify-between">
+                    <span>Master Global:</span>
+                    <button type="button" id="btn-fill-master" class="text-red-400 hover:text-red-300 font-bold hover:underline">
+                        Autocompletar (intelfon)
+                    </button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span>Master Guatemala:</span>
+                    <button type="button" id="btn-fill-master-gt" class="text-red-400 hover:text-red-300 font-bold hover:underline">
+                        Autocompletar (masterguatemala)
+                    </button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span>Master El Salvador:</span>
+                    <button type="button" id="btn-fill-master-sv" class="text-red-400 hover:text-red-300 font-bold hover:underline">
+                        Autocompletar (mastersalvador)
+                    </button>
+                </div>
             </div>
 
             <!-- Footer Corporativo -->
@@ -244,12 +258,39 @@ export function renderLogin(onLoginSuccess) {
         btnSwitchToRegister.addEventListener('click', () => setMode('register'));
     }
 
-    // Autocompletar solo para el Master Admin intelfon
+    // Autocompletar para el Master Admin global (intelfon)
     if (btnFillMaster) {
         btnFillMaster.addEventListener('click', () => {
             setMode('login');
             inputLoginUser.value = CONFIG.AUTH.masterUsername;
             inputLoginPass.value = CONFIG.AUTH.defaultPassword;
+            authAlert.classList.add('hidden');
+        });
+    }
+
+    // Autocompletar para los Masters regionales (Guatemala / El Salvador)
+    const btnFillMasterGT = container.querySelector('#btn-fill-master-gt');
+    const btnFillMasterSV = container.querySelector('#btn-fill-master-sv');
+    const regionalMasters = CONFIG.AUTH.masters || [];
+
+    if (btnFillMasterGT) {
+        btnFillMasterGT.addEventListener('click', () => {
+            const master = regionalMasters.find(m => m.region === 'GT');
+            if (!master) return;
+            setMode('login');
+            inputLoginUser.value = master.username;
+            inputLoginPass.value = master.password;
+            authAlert.classList.add('hidden');
+        });
+    }
+
+    if (btnFillMasterSV) {
+        btnFillMasterSV.addEventListener('click', () => {
+            const master = regionalMasters.find(m => m.region === 'SV');
+            if (!master) return;
+            setMode('login');
+            inputLoginUser.value = master.username;
+            inputLoginPass.value = master.password;
             authAlert.classList.add('hidden');
         });
     }

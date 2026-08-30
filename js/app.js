@@ -6,6 +6,9 @@ import { renderUsers } from './views/users.js';
 import { renderReportSection } from './views/reportSection.js';
 import { AuthService } from './services/authService.js';
 import { Toast } from './services/toastService.js';
+import { RegionService } from './services/regionService.js';
+import { SyncService } from './services/syncService.js';
+import { mountRegionStatusBar } from './views/regionStatusBar.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const appContent = document.getElementById('app-content');
@@ -94,6 +97,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Sincronización regional: determinar Guatemala o El Salvador según el usuario
+        // y redirigir por defecto al Dashboard de esa región
+        const activeRegion = RegionService.getActiveRegion();
+        const regionMeta = RegionService.getRegionMeta(activeRegion);
+        SyncService.initSync(activeRegion, currentUser);
+
+        const syncBarContainer = document.getElementById('region-sync-bar');
+        if (syncBarContainer) mountRegionStatusBar(syncBarContainer);
+
+        const pageSubtitle = document.querySelector('header p.text-xs.text-slate-500');
+        if (pageSubtitle) {
+            pageSubtitle.textContent = `Dashboard ${regionMeta.name} (${regionMeta.currency}) · Gestión automatizada de reportes bancarios con Make.com`;
+        }
+
         // Cargar vista inicial
         loadView('overview');
     }
@@ -102,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                SyncService.teardownSync();
                 AuthService.logout();
                 Toast.info('Has cerrado sesión correctamente.', 'Sesión Finalizada');
                 showLoginScreen();
