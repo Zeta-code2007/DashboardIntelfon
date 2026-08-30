@@ -4,7 +4,7 @@ import { CONFIG } from '../config.js';
  * Envía el archivo y el tipo de reporte al Webhook de Make.com para su procesamiento real.
  * Realiza una petición POST multipart/form-data y retorna los datos JSON procesados.
  *
- * @param {File[]} files - Archivos de Guatemala y El Salvador.
+ * @param {File[]} files - Archivos del país de la sesión activa (Guatemala o El Salvador).
  * @param {string} tipoReporte - Tipo de reporte seleccionado (Ventas, Inventario, Ejecutivo).
  * @returns {Promise<Object>} Promesa que resuelve al objeto con la estructura de respuesta de Make.
  */
@@ -22,8 +22,8 @@ export async function enviarArchivosAMake(files, tipoReporte) {
         throw new Error('La URL del Webhook de Make (CONFIG.MAKE_WEBHOOK_URL) no está configurada.');
     }
 
-    if (!Array.isArray(files) || files.length < 2 || files.length > 11 || files.some(file => !file)) {
-        throw new Error('Debes seleccionar 1 archivo de Guatemala y entre 1 y 10 archivos de El Salvador (máximo 11 archivos en total).');
+    if (!Array.isArray(files) || files.length < 1 || files.length > 10 || files.some(file => !file)) {
+        throw new Error('Debes seleccionar entre 1 y 10 archivos Excel (.xlsx).');
     }
 
     for (const file of files) {

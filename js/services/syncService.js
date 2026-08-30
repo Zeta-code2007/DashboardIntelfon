@@ -30,13 +30,15 @@ export const SyncService = {
 
         const presencePath = `${ROOT}/presence/${region}`;
         const markOnline = () => {
-            FirebaseService.set(presencePath, {
-                online: true,
+            // Se registra primero el "onDisconnect" y luego el estado "online" (orden recomendado
+            // por Firebase) para evitar que una desconexión temprana quede sin marcar.
+            FirebaseService.onDisconnectSet(presencePath, {
+                online: false,
                 user: user?.username || region,
                 lastChange: Date.now()
             });
-            FirebaseService.onDisconnectSet(presencePath, {
-                online: false,
+            FirebaseService.set(presencePath, {
+                online: true,
                 user: user?.username || region,
                 lastChange: Date.now()
             });

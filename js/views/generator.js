@@ -70,12 +70,18 @@ export function renderGenerator() {
     const container = document.createElement('div');
     container.className = 'max-w-5xl mx-auto space-y-8';
 
+    // La región activa determina exclusivamente qué país puede subir/procesar archivos.
+    // Cada sesión (Guatemala o El Salvador) solo ve y gestiona los datos de su propio país.
+    const activeRegion = RegionService.getActiveRegion();
+    const regionMeta = RegionService.getRegionMeta(activeRegion);
+    const isGT = activeRegion === 'GT';
+
     container.innerHTML = `
         <!-- TARJETA PRINCIPAL DEL FORMULARIO -->
         <div class="card-intelfon p-8 space-y-6">
             <div class="border-b border-slate-100 pb-4">
-                <h3 class="text-xl font-extrabold text-slate-800 tracking-tight">Generar Nuevo Reporte Excel</h3>
-                <p class="text-sm text-slate-500 mt-1">Sube el archivo bancario en formato Excel (.xlsx) para procesarlo con el flujo automatizado en Make.com.</p>
+                <h3 class="text-xl font-extrabold text-slate-800 tracking-tight">Generar Nuevo Reporte Excel · ${regionMeta.flag} ${regionMeta.name}</h3>
+                <p class="text-sm text-slate-500 mt-1">Sube el/los archivo(s) bancario(s) de ${regionMeta.name} en formato Excel (.xlsx) para procesarlos con el flujo automatizado en Make.com.</p>
             </div>
 
             <!-- ALERTA VISUAL DE ERROR (OCULTA POR DEFECTO) -->
@@ -106,71 +112,29 @@ export function renderGenerator() {
                     </select>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">Guatemala</label>
-                            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">1 archivo</span>
-                        </div>
-                        <div id="dropzone-gt" class="dropzone-intelfon group">
-                            <input type="file" id="file-input-gt" class="hidden" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-                            <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
+                <!-- ZONA DE CARGA: solo el país de la sesión activa. Cada dashboard gestiona
+                     únicamente sus propios archivos; no existe forma de subir los del otro país. -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">${regionMeta.flag} ${regionMeta.name}</label>
+                        <span id="sv-counter-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">${isGT ? '1 archivo' : '1 a 10 archivos'}</span>
+                    </div>
+                    <div id="dropzone-sv" class="dropzone-intelfon group">
+                        <input type="file" id="file-input-sv" class="hidden" ${isGT ? '' : 'multiple'} accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                        <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
                             <div class="w-16 h-16 rounded-2xl bg-red-50 text-intelfon-red flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                </svg>
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                             </div>
-                            <div class="space-y-1">
-                                <p class="text-sm font-bold text-slate-700">
-                                    <span class="text-intelfon-red hover:underline">Seleccionar Excel GT</span>
-                                </p>
-                                <p class="text-xs text-slate-400 font-medium">Un archivo .xlsx, máximo 20 MB</p>
-                            </div>
+                            <div class="space-y-1"><p class="text-sm font-bold text-slate-700"><span class="text-intelfon-red hover:underline">Seleccionar Excel${isGT ? '' : '(es)'} ${regionMeta.code}</span></p><p class="text-xs text-slate-400 font-medium">${isGT ? 'Un archivo .xlsx, máximo 20 MB' : 'De 1 a 10 archivos .xlsx (máx. 20 MB c/u)'}</p></div>
                         </div>
                     </div>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <label class="block text-xs font-bold uppercase text-slate-600 tracking-wider">El Salvador</label>
-                            <span id="sv-counter-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">1 a 10 archivos</span>
-                        </div>
-                        <div id="dropzone-sv" class="dropzone-intelfon group">
-                            <input type="file" id="file-input-sv" class="hidden" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-                            <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
-                                <div class="w-16 h-16 rounded-2xl bg-red-50 text-intelfon-red flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-xs">
-                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                                </div>
-                                <div class="space-y-1"><p class="text-sm font-bold text-slate-700"><span class="text-intelfon-red hover:underline">Seleccionar Excel(s) SV</span></p><p class="text-xs text-slate-400 font-medium">De 1 a 10 archivos .xlsx (máx. 20 MB c/u)</p></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="file-info-gt" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between transition-all">
-                    <div class="flex items-center space-x-3.5 overflow-hidden">
-                        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                        </div>
-                        <div class="truncate">
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Archivo Guatemala</p>
-                            <p id="file-name-gt" class="text-sm font-bold text-slate-800 truncate"></p>
-                            <p id="file-size-gt" class="text-xs text-slate-400 font-medium"></p>
-                        </div>
-                    </div>
-                    <button type="button" id="btn-remove-file-gt" class="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar archivo">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    </button>
                 </div>
 
                 <div id="file-info-sv" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3 transition-all">
                     <div class="flex items-center justify-between pb-2 border-b border-slate-200/70">
                         <div class="flex items-center space-x-2">
-                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Archivos El Salvador:</span>
-                            <span id="sv-files-count-badge" class="text-xs font-semibold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full">0 / 10 seleccionados</span>
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Archivos ${regionMeta.name}:</span>
+                            <span id="sv-files-count-badge" class="text-xs font-semibold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full">0 / ${isGT ? '1' : '10'} seleccionados</span>
                         </div>
                         <button type="button" id="btn-remove-all-sv" class="text-xs font-semibold text-red-500 hover:text-red-700 hover:underline transition-colors flex items-center space-x-1">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -179,14 +143,14 @@ export function renderGenerator() {
                     </div>
                     <div id="sv-files-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
                     <div class="pt-1 flex items-center justify-between text-xs text-slate-400">
-                        <span>Haz clic o arrastra más archivos en el recuadro para añadir hasta 10.</span>
+                        <span>${isGT ? 'Haz clic o arrastra tu archivo en el recuadro.' : 'Haz clic o arrastra más archivos en el recuadro para añadir hasta 10.'}</span>
                     </div>
                 </div>
 
                 <!-- CONTENEDOR DE ESTADO DE CARGA Y PROGRESO -->
                 <div id="status-container" class="hidden space-y-3 pt-2">
                     <div class="flex items-center justify-between text-xs">
-                        <span id="status-label" class="font-bold text-slate-700">Analizando Guatemala y El Salvador simultáneamente...</span>
+                        <span id="status-label" class="font-bold text-slate-700">Analizando ${regionMeta.name}...</span>
                         <div class="flex items-center space-x-2">
                             <span id="status-spinner" class="animate-spin w-3 h-3 border-2 border-intelfon-red border-t-transparent rounded-full inline-block"></span>
                             <span id="status-subtext" class="text-slate-400 font-medium">Ejecutando escenario...</span>
@@ -208,7 +172,7 @@ export function renderGenerator() {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                         </svg>
                     </span>
-                    <span id="btn-submit-text">Procesar ambos países</span>
+                    <span id="btn-submit-text">Procesar reporte de ${regionMeta.name}</span>
                 </button>
                 <button type="button" id="btn-clear-dashboard" class="btn-intelfon-secondary w-full py-3 text-sm flex items-center justify-center space-x-2 border border-slate-300 dark:border-slate-700">
                     <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -351,13 +315,12 @@ export function renderGenerator() {
         </div>
     `;
 
-    // Referencias a los elementos del DOM
-    const dropzones = { GT: container.querySelector('#dropzone-gt'), SV: container.querySelector('#dropzone-sv') };
-    const fileInputs = { GT: container.querySelector('#file-input-gt'), SV: container.querySelector('#file-input-sv') };
-    const fileInfoContainers = { GT: container.querySelector('#file-info-gt'), SV: container.querySelector('#file-info-sv') };
-    const fileNameDisplays = { GT: container.querySelector('#file-name-gt') };
-    const fileSizeDisplays = { GT: container.querySelector('#file-size-gt') };
-    const removeFileButtons = { GT: container.querySelector('#btn-remove-file-gt') };
+    // Referencias a los elementos del DOM.
+    // Solo existe UN dropzone en el DOM: el del país de la sesión activa.
+    const maxFiles = isGT ? 1 : 10;
+    const dropzone = container.querySelector('#dropzone-sv');
+    const fileInput = container.querySelector('#file-input-sv');
+    const fileInfoContainer = container.querySelector('#file-info-sv');
     const svCounterBadge = container.querySelector('#sv-counter-badge');
     const svFilesCountBadge = container.querySelector('#sv-files-count-badge');
     const svFilesList = container.querySelector('#sv-files-list');
@@ -396,7 +359,8 @@ export function renderGenerator() {
     const previewLoader = container.querySelector('#preview-loader');
     const excelPreviewFrame = container.querySelector('#excel-preview-frame');
 
-    const selectedFiles = { GT: null, SV: [] };
+    // Un solo arreglo: los archivos del país de la sesión activa (máx. 1 si es GT, hasta 10 si es SV).
+    const selectedFiles = [];
     let currentPreviewUrl = '';
     let lastProcessedData = null;
     let currentRunId = null;
@@ -492,12 +456,9 @@ export function renderGenerator() {
         btnClearDashboard.addEventListener('click', () => {
             if (!confirm('¿Deseas limpiar los datos actuales del dashboard? Esta acción no elimina el archivo original.')) return;
             purgeReportState();
-            selectedFiles.GT = null;
-            selectedFiles.SV = [];
             lastProcessedData = null;
             currentPreviewUrl = '';
-            clearFileSelection('GT');
-            clearFileSelection('SV');
+            clearFileSelection();
             resultsPanel.classList.add('hidden');
             documentPreviewSection.classList.add('hidden');
             excelPreviewFrame.src = '';
@@ -557,34 +518,34 @@ export function renderGenerator() {
 
     btnCloseError.addEventListener('click', hideError);
 
-    // Renderiza la lista de archivos de El Salvador
+    // Renderiza la lista de archivos del país de la sesión activa
     function renderSvFilesList() {
         if (!svFilesList) return;
         svFilesList.innerHTML = '';
 
-        const count = selectedFiles.SV.length;
+        const count = selectedFiles.length;
         if (svCounterBadge) {
             if (count > 0) {
-                svCounterBadge.textContent = `${count} / 10 seleccionado${count > 1 ? 's' : ''}`;
+                svCounterBadge.textContent = `${count} / ${maxFiles} seleccionado${count > 1 ? 's' : ''}`;
                 svCounterBadge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
             } else {
-                svCounterBadge.textContent = '1 a 10 archivos';
+                svCounterBadge.textContent = isGT ? '1 archivo' : '1 a 10 archivos';
                 svCounterBadge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500';
             }
         }
 
         if (count === 0) {
-            fileInfoContainers.SV.classList.add('hidden');
-            if (fileInputs.SV) fileInputs.SV.value = '';
+            fileInfoContainer.classList.add('hidden');
+            if (fileInput) fileInput.value = '';
             return;
         }
 
-        fileInfoContainers.SV.classList.remove('hidden');
+        fileInfoContainer.classList.remove('hidden');
         if (svFilesCountBadge) {
-            svFilesCountBadge.textContent = `${count} / 10 seleccionado${count > 1 ? 's' : ''}`;
+            svFilesCountBadge.textContent = `${count} / ${maxFiles} seleccionado${count > 1 ? 's' : ''}`;
         }
 
-        selectedFiles.SV.forEach((file, index) => {
+        selectedFiles.forEach((file, index) => {
             const item = document.createElement('div');
             item.className = 'flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-colors';
             item.innerHTML = `
@@ -614,149 +575,116 @@ export function renderGenerator() {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const idx = parseInt(btn.getAttribute('data-index'), 10);
-                if (!isNaN(idx) && idx >= 0 && idx < selectedFiles.SV.length) {
-                    const removed = selectedFiles.SV.splice(idx, 1);
+                if (!isNaN(idx) && idx >= 0 && idx < selectedFiles.length) {
+                    const removed = selectedFiles.splice(idx, 1);
                     renderSvFilesList();
+                    syncDocumentStatus();
                     Toast.info(`Se quitó "${removed[0]?.name}".`, 'Archivo removido');
                 }
             });
         });
     }
 
-    if (btnRemoveAllSv) {
-        btnRemoveAllSv.addEventListener('click', (e) => {
-            e.stopPropagation();
-            clearFileSelection('SV');
-            Toast.info('Se eliminaron todos los archivos de El Salvador.', 'Lista vaciada');
+    // Reporta a Firebase (Realtime Database) el estado del/los documento(s) del país activo
+    function syncDocumentStatus() {
+        SyncService.setDocumentStatus(activeRegion, {
+            uploaded: selectedFiles.length > 0,
+            fileName: selectedFiles[0]?.name,
+            count: selectedFiles.length
         });
     }
 
-    // Selección de archivo
-    function handleFileSelection(country, files) {
+    if (btnRemoveAllSv) {
+        btnRemoveAllSv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearFileSelection();
+            Toast.info(`Se eliminaron todos los archivos de ${regionMeta.name}.`, 'Lista vaciada');
+        });
+    }
+
+    // Selección de archivo(s) — siempre para el país de la sesión activa
+    function handleFileSelection(files) {
         const selected = Array.from(files || []);
         if (!selected.length) return;
 
         const maxSizeBytes = 20 * 1024 * 1024;
+        const validFiles = [];
+        const invalidFormatFiles = [];
+        const oversizedFiles = [];
 
-        if (country === 'GT') {
-            const file = selected[0];
+        for (const file of selected) {
             if (!file.name.toLowerCase().endsWith('.xlsx')) {
-                showError('Formato no válido', `El archivo "${file.name}" no es compatible. Solo se permiten archivos .xlsx.`);
-                clearFileSelection('GT');
-                return;
-            }
-
-            if (file.size > maxSizeBytes) {
-                showError('Archivo demasiado grande', `El archivo "${file.name}" (${formatFileSize(file.size)}) supera el límite de 20 MB.`);
-                clearFileSelection('GT');
-                return;
-            }
-
-            selectedFiles.GT = file;
-            if (fileNameDisplays.GT) fileNameDisplays.GT.textContent = file.name;
-            if (fileSizeDisplays.GT) fileSizeDisplays.GT.textContent = formatFileSize(file.size);
-            if (fileInfoContainers.GT) fileInfoContainers.GT.classList.remove('hidden');
-            hideError();
-            SyncService.setDocumentStatus('GT', { uploaded: true, fileName: file.name });
-        } else if (country === 'SV') {
-            const validFiles = [];
-            const invalidFormatFiles = [];
-            const oversizedFiles = [];
-
-            for (const file of selected) {
-                if (!file.name.toLowerCase().endsWith('.xlsx')) {
-                    invalidFormatFiles.push(file.name);
-                } else if (file.size > maxSizeBytes) {
-                    oversizedFiles.push(`${file.name} (${formatFileSize(file.size)})`);
-                } else {
-                    validFiles.push(file);
-                }
-            }
-
-            if (invalidFormatFiles.length > 0) {
-                Toast.error(`Los siguientes archivos no son .xlsx y fueron omitidos: ${invalidFormatFiles.join(', ')}`, 'Formato no compatible');
-            }
-            if (oversizedFiles.length > 0) {
-                Toast.error(`Los siguientes archivos superan los 20 MB y fueron omitidos: ${oversizedFiles.join(', ')}`, 'Archivo muy pesado');
-            }
-
-            if (validFiles.length === 0) return;
-
-            // Evitar duplicados exactos (mismo nombre y tamaño)
-            const currentSv = selectedFiles.SV || [];
-            const newlyAdded = [];
-            for (const vf of validFiles) {
-                if (!currentSv.some(f => f.name === vf.name && f.size === vf.size)) {
-                    newlyAdded.push(vf);
-                }
-            }
-
-            const combined = [...currentSv, ...newlyAdded];
-            if (combined.length > 10) {
-                Toast.warning('El Salvador permite un máximo de 10 archivos. Se tomaron los primeros 10.', 'Límite de 10 archivos');
-                selectedFiles.SV = combined.slice(0, 10);
+                invalidFormatFiles.push(file.name);
+            } else if (file.size > maxSizeBytes) {
+                oversizedFiles.push(`${file.name} (${formatFileSize(file.size)})`);
             } else {
-                selectedFiles.SV = combined;
-                if (newlyAdded.length > 0) {
-                    Toast.success(`Se agregaron ${newlyAdded.length} archivo(s) para El Salvador (Total: ${selectedFiles.SV.length}/10).`, 'Archivos cargados');
-                }
+                validFiles.push(file);
             }
-
-            renderSvFilesList();
-            hideError();
-            SyncService.setDocumentStatus('SV', {
-                uploaded: selectedFiles.SV.length > 0,
-                fileName: selectedFiles.SV[0]?.name,
-                count: selectedFiles.SV.length
-            });
         }
+
+        if (invalidFormatFiles.length > 0) {
+            Toast.error(`Los siguientes archivos no son .xlsx y fueron omitidos: ${invalidFormatFiles.join(', ')}`, 'Formato no compatible');
+        }
+        if (oversizedFiles.length > 0) {
+            Toast.error(`Los siguientes archivos superan los 20 MB y fueron omitidos: ${oversizedFiles.join(', ')}`, 'Archivo muy pesado');
+        }
+
+        if (validFiles.length === 0) return;
+
+        // Evitar duplicados exactos (mismo nombre y tamaño)
+        const newlyAdded = [];
+        for (const vf of validFiles) {
+            if (!selectedFiles.some(f => f.name === vf.name && f.size === vf.size)) {
+                newlyAdded.push(vf);
+            }
+        }
+
+        const combined = [...selectedFiles, ...newlyAdded];
+        if (combined.length > maxFiles) {
+            Toast.warning(`${regionMeta.name} permite un máximo de ${maxFiles} archivo${maxFiles > 1 ? 's' : ''}. Se tomaron los primeros ${maxFiles}.`, `Límite de ${maxFiles} archivo${maxFiles > 1 ? 's' : ''}`);
+            selectedFiles.length = 0;
+            selectedFiles.push(...combined.slice(0, maxFiles));
+        } else {
+            selectedFiles.length = 0;
+            selectedFiles.push(...combined);
+            if (newlyAdded.length > 0) {
+                Toast.success(`Se agregaron ${newlyAdded.length} archivo(s) para ${regionMeta.name} (Total: ${selectedFiles.length}/${maxFiles}).`, 'Archivos cargados');
+            }
+        }
+
+        renderSvFilesList();
+        hideError();
+        syncDocumentStatus();
     }
 
-    function clearFileSelection(country) {
-        if (country === 'GT') {
-            selectedFiles.GT = null;
-            if (fileInputs.GT) fileInputs.GT.value = '';
-            if (fileInfoContainers.GT) fileInfoContainers.GT.classList.add('hidden');
-            if (fileNameDisplays.GT) fileNameDisplays.GT.textContent = '';
-            if (fileSizeDisplays.GT) fileSizeDisplays.GT.textContent = '';
-            SyncService.setDocumentStatus('GT', { uploaded: false });
-        } else if (country === 'SV') {
-            selectedFiles.SV = [];
-            if (fileInputs.SV) fileInputs.SV.value = '';
-            renderSvFilesList();
-            SyncService.setDocumentStatus('SV', { uploaded: false, count: 0 });
-        }
+    function clearFileSelection() {
+        selectedFiles.length = 0;
+        if (fileInput) fileInput.value = '';
+        renderSvFilesList();
+        SyncService.setDocumentStatus(activeRegion, { uploaded: false, count: 0 });
     }
 
-    Object.keys(dropzones).forEach(country => {
-        if (dropzones[country]) {
-            dropzones[country].addEventListener('click', () => {
-                if (fileInputs[country]) {
-                    fileInputs[country].value = '';
-                    fileInputs[country].click();
-                }
-            });
-            dropzones[country].addEventListener('dragover', event => {
-                event.preventDefault();
-                dropzones[country].classList.add('dropzone-active');
-            });
-            dropzones[country].addEventListener('dragleave', () => dropzones[country].classList.remove('dropzone-active'));
-            dropzones[country].addEventListener('drop', event => {
-                event.preventDefault();
-                dropzones[country].classList.remove('dropzone-active');
-                handleFileSelection(country, event.dataTransfer?.files);
-            });
-        }
-        if (fileInputs[country]) {
-            fileInputs[country].addEventListener('change', event => handleFileSelection(country, event.target.files));
-        }
-        if (removeFileButtons[country]) {
-            removeFileButtons[country].addEventListener('click', event => {
-                event.stopPropagation();
-                clearFileSelection(country);
-            });
-        }
-    });
+    if (dropzone) {
+        dropzone.addEventListener('click', () => {
+            if (fileInput) {
+                fileInput.value = '';
+                fileInput.click();
+            }
+        });
+        dropzone.addEventListener('dragover', event => {
+            event.preventDefault();
+            dropzone.classList.add('dropzone-active');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dropzone-active'));
+        dropzone.addEventListener('drop', event => {
+            event.preventDefault();
+            dropzone.classList.remove('dropzone-active');
+            handleFileSelection(event.dataTransfer?.files);
+        });
+    }
+    if (fileInput) {
+        fileInput.addEventListener('change', event => handleFileSelection(event.target.files));
+    }
 
     // Parser directo de Excel (cliente) para extraer saldos, movimientos y bancos al instante
     async function parseExcelFilesToReport(gtFile, svFiles) {
@@ -946,7 +874,7 @@ export function renderGenerator() {
         regional.push(['TOTAL REGIONAL', 'Todos', 'Todas', 'USD', 'USD', rateGTQ, '', parseFloat(grandTotalIngresosUSD.toFixed(2)), parseFloat(grandTotalEgresosUSD.toFixed(2)), parseFloat(grandTotalSaldoFinalUSD.toFixed(2)), '', parseFloat(grandTotalNetoUSD.toFixed(2)), '']);
 
         return {
-            estado: 'Guatemala y El Salvador procesados con consolidado regional en USD',
+            estado: `${regionMeta.name} procesado (vista previa local)`,
             fileName: 'ReporteFinancieroIntelfon.xlsx',
             bancos_procesados: bancosProcesados,
             resumen_general: bancosProcesados,
@@ -1280,25 +1208,22 @@ export function renderGenerator() {
         e.preventDefault();
         hideError();
 
-        if (!selectedFiles.GT) {
-            showError('Falta archivo de Guatemala', 'Por favor selecciona el archivo Excel (.xlsx) para Guatemala.');
+        if (!selectedFiles.length) {
+            showError(
+                `Falta${isGT ? '' : 'n'} archivo${isGT ? '' : 's'} de ${regionMeta.name}`,
+                `Por favor selecciona ${isGT ? 'el archivo Excel (.xlsx)' : 'entre 1 y 10 archivos Excel (.xlsx)'} para ${regionMeta.name}.`
+            );
             return;
         }
 
-        if (!selectedFiles.SV || selectedFiles.SV.length === 0) {
-            showError('Faltan archivos de El Salvador', 'Por favor selecciona entre 1 y 10 archivos Excel (.xlsx) para El Salvador.');
-            return;
-        }
-
-        if (selectedFiles.SV.length > 10) {
-            showError('Límite de archivos excedido', 'El Salvador permite un máximo de 10 archivos Excel.');
+        if (selectedFiles.length > maxFiles) {
+            showError('Límite de archivos excedido', `${regionMeta.name} permite un máximo de ${maxFiles} archivo${maxFiles > 1 ? 's' : ''} Excel.`);
             return;
         }
 
         // Gate de sincronización regional: exige que el país contrario esté conectado
         // y haya confirmado su documento, salvo que el switch "Ignorar [país]" esté activo
-        const myRegion = RegionService.getActiveRegion();
-        const syncCheck = SyncService.canProceed(myRegion);
+        const syncCheck = SyncService.canProceed(activeRegion);
         if (!syncCheck.allowed) {
             const otherMeta = RegionService.getRegionMeta(syncCheck.otherRegion);
             const reasonText = syncCheck.reason === 'offline'
@@ -1312,7 +1237,7 @@ export function renderGenerator() {
         }
 
         const tipoReporte = container.querySelector('#tipo-reporte').value;
-        const totalArchivos = 1 + selectedFiles.SV.length;
+        const totalArchivos = selectedFiles.length;
 
         // Estado inicial de carga
         statusContainer.classList.remove('hidden');
@@ -1347,7 +1272,7 @@ export function renderGenerator() {
         let currentStep = 0;
         const steps = [
             { width: '35%', label: `Enviando ${totalArchivos} archivos a Make.com...`, sub: 'Cargando datos...' },
-            { width: '55%', label: 'Analizando cuentas y transacciones con IA...', sub: 'Extracción financiera multipaís...' },
+            { width: '55%', label: 'Analizando cuentas y transacciones con IA...', sub: `Extracción financiera de ${regionMeta.name}...` },
             { width: '75%', label: 'Calculando saldos y conciliación contable...', sub: 'Procesando balances...' },
             { width: '90%', label: 'Sincronizando con Google Sheets y Drive...', sub: 'Finalizando informe...' }
         ];
@@ -1365,7 +1290,10 @@ export function renderGenerator() {
         let localReport = null;
         try {
             statusLabel.textContent = 'Extrayendo saldos, transacciones y bancos de los archivos Excel...';
-            localReport = await parseExcelFilesToReport(selectedFiles.GT, selectedFiles.SV);
+            localReport = await parseExcelFilesToReport(
+                isGT ? selectedFiles[0] : null,
+                isGT ? [] : selectedFiles
+            );
             if (localReport && localReport.bancos_procesados && localReport.bancos_procesados.length > 0) {
                 console.log('[Generator] Datos de Excel extraídos exitosamente:', localReport);
                 replaceCurrentReport(localReport, processingId);
@@ -1384,10 +1312,10 @@ export function renderGenerator() {
         try {
             let data = null;
             try {
-                statusLabel.textContent = `Analizando Guatemala (1 archivo) y El Salvador (${selectedFiles.SV.length} archivo${selectedFiles.SV.length > 1 ? 's' : ''}) con Make...`;
+                statusLabel.textContent = `Analizando ${regionMeta.name} (${totalArchivos} archivo${totalArchivos > 1 ? 's' : ''}) con Make...`;
                 statusSubtext.textContent = 'Enviando y sincronizando con Make.com';
                 progressBar.style.width = '65%';
-                data = await enviarArchivosAMake([selectedFiles.GT, ...selectedFiles.SV], tipoReporte);
+                data = await enviarArchivosAMake(selectedFiles, tipoReporte);
                 const hasResponseError = response => response?.error || response?.errorMessage || response?.status === 'error';
                 const responseError = Array.isArray(data)
                     ? data.some(response => !response || typeof response !== 'object' || Object.keys(response).length === 0 || hasResponseError(response))
@@ -1475,7 +1403,7 @@ export function renderGenerator() {
             btnSubmitIcon.innerHTML = `
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
             `;
-            btnSubmitText.textContent = 'Procesar ambos países';
+            btnSubmitText.textContent = `Procesar reporte de ${regionMeta.name}`;
         }
     });
 
