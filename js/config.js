@@ -57,6 +57,7 @@ export const CONFIG = {
     FIREBASE: {
         apiKey: "AIzaSyAnh2AINDxk5Dqw7QXZ577mFfYAuR2j63E",
         authDomain: "reportes-bancarios.firebaseapp.com",
+        databaseURL: "https://reportes-bancarios-default-rtdb.firebaseio.com",
         projectId: "reportes-bancarios",
         storageBucket: "reportes-bancarios.firebasestorage.app",
         messagingSenderId: "457368392091",
