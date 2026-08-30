@@ -55,14 +55,14 @@ export const CONFIG = {
     // Configuración de tu proyecto de Firebase (Realtime Database)
     // Reemplaza estos valores con los de TU proyecto (Firebase Console -> Configuración del proyecto -> Tus apps)
     FIREBASE: {
-        apiKey: 'TU_API_KEY_AQUI',
-        authDomain: 'TU_PROYECTO.firebaseapp.com',
-        databaseURL: 'https://TU_PROYECTO-default-rtdb.firebaseio.com',
-        projectId: 'TU_PROYECTO',
-        storageBucket: 'TU_PROYECTO.appspot.com',
-        messagingSenderId: '000000000000',
-        appId: '1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx'
-    },
+        apiKey: "AIzaSyAnh2AINDxk5Dqw7QXZ577mFfYAuR2j63E",
+        authDomain: "reportes-bancarios.firebaseapp.com",
+        projectId: "reportes-bancarios",
+        storageBucket: "reportes-bancarios.firebasestorage.app",
+        messagingSenderId: "457368392091",
+        appId: "1:457368392091:web:0cb70fbb766bbdc5a6913e",
+        measurementId: "G-RX3B70LFWS"
+        },
 
     // Ruta raíz en Firebase donde se guarda el estado de sincronización
     SYNC: {
