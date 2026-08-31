@@ -102,6 +102,30 @@ export const SyncService = {
     },
 
     /**
+     * Fuerza una relectura directa del servidor (no depende del listener en vivo)
+     * para presencia/documentos/overrides de ambas regiones. Los navegadores pueden
+     * retrasar los listeners en tiempo real de una pestaña que está en segundo plano
+     * (sin foco); esto permite refrescar el estado real al instante, sin recargar
+     * la página, apenas la pestaña vuelve a estar activa o el usuario lo pide.
+     */
+    async refreshNow() {
+        await Promise.all(['GT', 'SV'].flatMap((code) => [
+            FirebaseService.getOnce(`${ROOT}/presence/${code}`).then((val) => {
+                cache.presence[code] = val || { online: false };
+                document.dispatchEvent(new CustomEvent('intelfon-sync-presence', { detail: { region: code, value: cache.presence[code] } }));
+            }),
+            FirebaseService.getOnce(`${ROOT}/documents/${code}`).then((val) => {
+                cache.documents[code] = val || { uploaded: false };
+                document.dispatchEvent(new CustomEvent('intelfon-sync-document', { detail: { region: code, value: cache.documents[code] } }));
+            }),
+            FirebaseService.getOnce(`${ROOT}/overrides/${code}`).then((val) => {
+                cache.overrides[code] = val || { ignoreOther: false };
+                document.dispatchEvent(new CustomEvent('intelfon-sync-override', { detail: { region: code, value: cache.overrides[code] } }));
+            })
+        ]));
+    },
+
+    /**
      * Actualiza el estado de "documento subido" para una región (GT o SV).
      * @param {'GT'|'SV'} region
      * @param {{uploaded: boolean, fileName?: string, count?: number}} payload

@@ -32,6 +32,9 @@ export function mountRegionStatusBar(targetEl) {
             <span class="font-bold text-slate-600">Sincronización ${otherMeta.name}:</span>
             <span id="sync-presence-badge"></span>
             <span id="sync-document-badge"></span>
+            <button type="button" id="sync-refresh-btn" title="Forzar refresco desde el servidor" class="p-1 rounded-md text-slate-400 hover:text-intelfon-red hover:bg-red-50 transition-colors">
+                <svg id="sync-refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
             <label class="ml-auto inline-flex items-center gap-2 cursor-pointer select-none">
                 <span class="font-semibold text-slate-500">Ignorar ${otherMeta.name}</span>
                 <span class="relative inline-block w-9 h-5">
@@ -46,6 +49,8 @@ export function mountRegionStatusBar(targetEl) {
     const presenceBadge = targetEl.querySelector('#sync-presence-badge');
     const documentBadge = targetEl.querySelector('#sync-document-badge');
     const overrideToggle = targetEl.querySelector('#sync-override-toggle');
+    const refreshBtn = targetEl.querySelector('#sync-refresh-btn');
+    const refreshIcon = targetEl.querySelector('#sync-refresh-icon');
 
     function refreshPresence() {
         presenceBadge.innerHTML = presenceBadgeHtml(!!SyncService.getPresence(otherRegion).online);
@@ -78,5 +83,20 @@ export function mountRegionStatusBar(targetEl) {
             overrideToggle.checked = !value;
             Toast.error('No se pudo actualizar el switch. Verifica tu configuración de Firebase.', 'Error de sincronización');
         }
+    });
+
+    // Refresco manual: lee directo del servidor, sin depender del listener en vivo
+    async function forceRefresh() {
+        if (refreshIcon) refreshIcon.classList.add('animate-spin');
+        await SyncService.refreshNow();
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+    }
+    if (refreshBtn) refreshBtn.addEventListener('click', forceRefresh);
+
+    // Los navegadores pueden retrasar los listeners en tiempo real de una pestaña sin foco.
+    // Al volver a esta pestaña, se refresca de inmediato para evitar un estado "Desconectado"
+    // desactualizado que en realidad ya cambió mientras la pestaña estaba en segundo plano.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') forceRefresh();
     });
 }

@@ -58,6 +58,22 @@ export const FirebaseService = {
         return () => r.off('value', handler);
     },
 
+    /**
+     * Lee el valor actual UNA sola vez, directo del servidor (no depende de que el
+     * listener en vivo esté al día). Útil para forzar un refresco manual.
+     */
+    async getOnce(path) {
+        const r = this.ref(path);
+        if (!r) return null;
+        try {
+            const snap = await r.once('value');
+            return snap.val();
+        } catch (err) {
+            console.error(`[FirebaseService] Error al leer "${path}":`, err);
+            return null;
+        }
+    },
+
     onDisconnectSet(path, value) {
         const r = this.ref(path);
         if (!r) return;
