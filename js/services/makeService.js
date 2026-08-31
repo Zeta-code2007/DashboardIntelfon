@@ -1,13 +1,5 @@
 import { CONFIG } from '../config.js';
 
-/**
- * Envía el archivo y el tipo de reporte al Webhook de Make.com para su procesamiento real.
- * Realiza una petición POST multipart/form-data y retorna los datos JSON procesados.
- *
- * @param {File[]} files - Archivos del país de la sesión activa (Guatemala o El Salvador).
- * @param {string} tipoReporte - Tipo de reporte seleccionado (Ventas, Inventario, Ejecutivo).
- * @returns {Promise<Object>} Promesa que resuelve al objeto con la estructura de respuesta de Make.
- */
 function readAsBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -17,7 +9,14 @@ function readAsBase64(file) {
     });
 }
 
-export async function enviarArchivosAMake(files, tipoReporte) {
+/**
+ * Envía archivos a Make.
+ * options:
+ *  - region: 'GT' | 'SV'
+ *  - country: 'Guatemala' | 'El Salvador'
+ *  - executionId: id único de la ejecución
+ */
+export async function enviarArchivosAMake(files, tipoReporte, options = {}) {
     if (!CONFIG.MAKE_WEBHOOK_URL) {
         throw new Error('La URL del Webhook de Make (CONFIG.MAKE_WEBHOOK_URL) no está configurada.');
     }
@@ -32,14 +31,24 @@ export async function enviarArchivosAMake(files, tipoReporte) {
         }
     }
 
+    const region = options.region === 'SV' ? 'SV' : 'GT';
+    const country = options.country || (region === 'SV' ? 'El Salvador' : 'Guatemala');
+    const executionId = String(options.executionId || '').trim();
+
     const payloadFiles = await Promise.all(files.map(async file => ({
         name: file.name,
         data: await readAsBase64(file),
         mimeType: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     })));
+
     const formData = new FormData();
     formData.append('files', JSON.stringify(payloadFiles));
     formData.append('tipoReporte', tipoReporte || 'bancario');
+
+    // Campos que el blueprint ya utiliza (72.pais / 72.ejecucion_id).
+    formData.append('pais', country);
+    formData.append('region', region);
+    if (executionId) formData.append('ejecucion_id', executionId);
 
     let response;
     try {
@@ -60,29 +69,30 @@ export async function enviarArchivosAMake(files, tipoReporte) {
         }
 
         if (response.status === 500) {
-            throw new Error(`El escenario en Make.com falló internamente durante la ejecución (HTTP 500: Scenario failed to complete). Por favor revisa el historial de ejecuciones en Make.com ("History / Incomplete executions") para identificar el módulo específico que falló (ej. Python, OpenAI, Google Drive o Gmail).`);
+            throw new Error('El escenario en Make.com falló internamente durante la ejecución (HTTP 500). Revisa History / Incomplete executions.');
         }
 
         throw new Error(`Error en el servidor de Make (${response.status}): ${errorDetails || response.statusText || 'Petición no completada'}`);
     }
 
-    // Obtener y parsear el cuerpo de la respuesta de Make
     const responseText = await response.text();
-    console.log('[MakeService] Respuesta recibida de Make (HTTP ' + response.status + ', tamaño ' + responseText.length + ').');
+    console.log(`[MakeService] Respuesta recibida (HTTP ${response.status}, ${responseText.length} bytes).`);
 
     if (!responseText || responseText.trim() === '') {
-        throw new Error('El Webhook de Make respondió exitosamente (200 OK) pero con el cuerpo vacío. Verifica que el módulo Webhook Respond esté activo y conectado al final de la ruta del escenario.');
+        throw new Error('El Webhook de Make respondió sin cuerpo.');
     }
 
     const trimmed = responseText.trim();
-    if (trimmed === 'Accepted' || trimmed.toLowerCase() === 'accepted') {
-        console.log('[MakeService] Make.com aceptó los archivos en modo asíncrono (200 Accepted).');
+    if (trimmed.toLowerCase() === 'accepted') {
         return {
             accepted: true,
             asincrono: true,
             estado: 'Archivos recibidos y procesamiento iniciado en Make.com',
-            mensaje: 'Make.com ha recibido los archivos con éxito y el escenario se está ejecutando en segundo plano.',
+            mensaje: 'Make.com recibió los archivos correctamente.',
             archivosProcesados: files.length,
+            pais: country,
+            region,
+            ejecucion_id: executionId || null,
             fechaEnvio: new Date().toISOString()
         };
     }
@@ -90,36 +100,33 @@ export async function enviarArchivosAMake(files, tipoReporte) {
     let data;
     try {
         data = JSON.parse(responseText);
-    } catch (e) {
-        // Intentar limpiar y reparar problemas comunes en respuestas de Make (trailing commas, comillas o caracteres de escape)
+    } catch (_) {
         try {
             const sanitized = responseText
                 .replace(/,\s*([}\]])/g, '$1')
-                .replace(/[\u0000-\u001F]+/g, (match) => {
+                .replace(/[\u0000-\u001F]+/g, match => {
                     if (match === '\n' || match === '\r' || match === '\t') return match;
                     return '';
                 });
             data = JSON.parse(sanitized);
-        } catch (repairErr) {
-            console.warn('[MakeService] La respuesta de Make es texto plano (200 OK):', responseText);
+        } catch (_) {
             return {
                 accepted: true,
                 asincrono: true,
                 estado: 'Respuesta recibida de Make.com',
                 mensaje: responseText.substring(0, 300),
                 archivosProcesados: files.length,
+                pais: country,
+                region,
+                ejecucion_id: executionId || null,
                 fechaEnvio: new Date().toISOString()
             };
         }
     }
 
-    // Si el JSON viene con doble codificación como string
     if (typeof data === 'string') {
-        try {
-            data = JSON.parse(data);
-        } catch (_) { }
+        try { data = JSON.parse(data); } catch (_) {}
     }
 
-    console.log('[MakeService] Respuesta JSON recibida y procesada correctamente.');
     return data;
 }

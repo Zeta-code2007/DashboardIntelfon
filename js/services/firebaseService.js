@@ -36,7 +36,6 @@ export const FirebaseService = {
     async set(path, value) {
         const r = this.ref(path);
         if (!r) return false;
-
         try {
             await r.set(value);
             return true;
@@ -49,8 +48,7 @@ export const FirebaseService = {
     onValue(path, callback) {
         const r = this.ref(path);
         if (!r) return () => {};
-
-        const handler = snapshot => callback(snapshot.val());
+        const handler = (snapshot) => callback(snapshot.val());
         r.on('value', handler);
         return () => r.off('value', handler);
     },
@@ -58,7 +56,6 @@ export const FirebaseService = {
     async getOnce(path) {
         const r = this.ref(path);
         if (!r) return null;
-
         try {
             const snap = await r.once('value');
             return snap.val();
@@ -77,9 +74,8 @@ export const FirebaseService = {
     isConnectedRef(callback) {
         const database = ensureInit();
         if (!database) return () => {};
-
         const connectedRef = database.ref('.info/connected');
-        const handler = snap => callback(!!snap.val());
+        const handler = (snap) => callback(!!snap.val());
         connectedRef.on('value', handler);
         return () => connectedRef.off('value', handler);
     }

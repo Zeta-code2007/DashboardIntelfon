@@ -2,31 +2,17 @@ import { CONFIG } from '../config.js';
 
 const USERS_DB_KEY = 'intelfon_registered_users_db';
 
-function normalizeUsername(value) {
-    return String(value || '').toLowerCase().trim();
-}
-
-function fixedRegionByUsername(value) {
-    const username = normalizeUsername(value);
-    if (username === 'masterguatemala') return 'GT';
-    if (username === 'mastersalvador' || username === 'masterelsalvador') return 'SV';
+function forcedRegion(username) {
+    const value = String(username || '').toLowerCase().trim();
+    if (value === 'masterguatemala') return 'GT';
+    if (value === 'mastersalvador' || value === 'masterelsalvador') return 'SV';
     return null;
-}
-
-function persistSession(user) {
-    const payload = JSON.stringify(user);
-    if (localStorage.getItem(CONFIG.AUTH.sessionKey)) {
-        localStorage.setItem(CONFIG.AUTH.sessionKey, payload);
-    } else if (sessionStorage.getItem(CONFIG.AUTH.sessionKey)) {
-        sessionStorage.setItem(CONFIG.AUTH.sessionKey, payload);
-    }
 }
 
 export const AuthService = {
     _getUsersDB() {
         const stored = localStorage.getItem(USERS_DB_KEY);
         let users = [];
-
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
@@ -34,12 +20,12 @@ export const AuthService = {
             } catch (_) {}
         }
 
-        const masterUsername = normalizeUsername(CONFIG.AUTH.masterUsername || 'intelfon');
+        const masterUsername = String(CONFIG.AUTH.masterUsername || 'intelfon').toLowerCase();
         const masterEmail = String(CONFIG.AUTH.masterEmail || 'admin@intelfon.com').toLowerCase();
         const masterPass = String(CONFIG.AUTH.defaultPassword || 'intelfon2026');
 
         const masterIndex = users.findIndex(u =>
-            normalizeUsername(u.username) === masterUsername ||
+            String(u.username || '').toLowerCase() === masterUsername ||
             String(u.email || '').toLowerCase() === masterEmail
         );
 
@@ -59,52 +45,44 @@ export const AuthService = {
             users[masterIndex].role = 'Super Admin';
             users[masterIndex].isMaster = true;
             users[masterIndex].username = masterUsername;
-            users[masterIndex].region = null;
         }
 
         const regionalMasters = Array.isArray(CONFIG.AUTH.masters) ? CONFIG.AUTH.masters : [];
         regionalMasters.forEach((masterDef, idx) => {
-            const uname = normalizeUsername(masterDef.username);
+            const uname = String(masterDef.username || '').toLowerCase();
             if (!uname) return;
-
             const email = String(masterDef.email || `${uname}@intelfon.com`).toLowerCase();
-            const forcedRegion = fixedRegionByUsername(uname);
-            const region = forcedRegion || ((masterDef.region === 'GT' || masterDef.region === 'SV') ? masterDef.region : null);
+            const fixed = forcedRegion(uname);
 
             const existingIndex = users.findIndex(u =>
-                normalizeUsername(u.username) === uname ||
+                String(u.username || '').toLowerCase() === uname ||
                 String(u.email || '').toLowerCase() === email
             );
 
             if (existingIndex === -1) {
                 users.push({
-                    id: `USR-MASTER-${region || idx}`,
-                    name: masterDef.name || (region === 'SV' ? 'Master El Salvador' : 'Master Guatemala'),
+                    id: `USR-MASTER-${fixed || masterDef.region || idx}`,
+                    name: masterDef.name || `Master ${fixed === 'SV' ? 'El Salvador' : 'Guatemala'}`,
                     username: uname,
                     email,
                     password: String(masterDef.password || ''),
                     role: 'Super Admin',
                     isMaster: true,
-                    region,
+                    region: fixed || masterDef.region || null,
                     createdAt: new Date().toISOString()
                 });
             } else {
                 users[existingIndex].role = 'Super Admin';
                 users[existingIndex].isMaster = true;
-                users[existingIndex].username = uname;
-                users[existingIndex].region = region;
-                if (masterDef.name) users[existingIndex].name = masterDef.name;
+                users[existingIndex].region = fixed || masterDef.region || users[existingIndex].region || null;
+                if (masterDef.name) users[existingIndex].name = users[existingIndex].name || masterDef.name;
             }
         });
 
-        // También repara usuarios regionales antiguos almacenados antes de esta corrección.
-        users.forEach(user => {
-            const forcedRegion = fixedRegionByUsername(user.username);
-            if (forcedRegion) {
-                user.region = forcedRegion;
-                user.isMaster = true;
-                user.role = 'Super Admin';
-            }
+        // Reparar registros antiguos de masters regionales.
+        users.forEach(u => {
+            const fixed = forcedRegion(u.username);
+            if (fixed) u.region = fixed;
         });
 
         localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
@@ -115,37 +93,14 @@ export const AuthService = {
         localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
     },
 
-    getFixedRegion(user = null) {
-        const current = user || this.getUser();
-        return current ? fixedRegionByUsername(current.username) : null;
-    },
-
-    isRegionalMaster(user = null) {
-        return !!this.getFixedRegion(user);
-    },
-
-    isGlobalMaster(user = null) {
-        const current = user || this.getUser();
-        if (!current) return false;
-        const username = normalizeUsername(current.username);
-        const email = String(current.email || '').toLowerCase().trim();
-        return username === normalizeUsername(CONFIG.AUTH.masterUsername || 'intelfon') ||
-               username === 'intelfon' ||
-               email === String(CONFIG.AUTH.masterEmail || 'admin@intelfon.com').toLowerCase();
-    },
-
     isMasterAdmin(user = null) {
         const current = user || this.getUser();
         if (!current) return false;
-
-        const uName = normalizeUsername(current.username);
+        const uName = String(current.username || '').toLowerCase().trim();
         const uEmail = String(current.email || '').toLowerCase().trim();
         const uRole = String(current.role || '').toLowerCase().trim();
 
         return uName === 'intelfon' ||
-               uName === 'masterguatemala' ||
-               uName === 'mastersalvador' ||
-               uName === 'masterelsalvador' ||
                uEmail === 'admin@intelfon.com' ||
                uRole === 'super admin' ||
                !!current.isMaster;
@@ -157,25 +112,16 @@ export const AuthService = {
         const cleanPass = String(password || '').trim();
         const cleanRegion = (region === 'GT' || region === 'SV') ? region : null;
 
-        if (!cleanName || cleanName.length < 2) {
-            return { success: false, message: 'Por favor ingresa un nombre válido.' };
-        }
-        if (!cleanEmail || (!cleanEmail.includes('@') && cleanEmail.length < 3)) {
-            return { success: false, message: 'Por favor ingresa un correo o usuario válido.' };
-        }
-        if (!cleanPass || cleanPass.length < 4) {
-            return { success: false, message: 'La contraseña debe tener al menos 4 caracteres.' };
-        }
+        if (!cleanName || cleanName.length < 2) return { success: false, message: 'Por favor ingresa un nombre válido.' };
+        if (!cleanEmail || (!cleanEmail.includes('@') && cleanEmail.length < 3)) return { success: false, message: 'Por favor ingresa un correo o usuario válido.' };
+        if (!cleanPass || cleanPass.length < 4) return { success: false, message: 'La contraseña debe tener al menos 4 caracteres.' };
 
         const users = this._getUsersDB();
         const existing = users.find(u =>
             String(u.email || '').toLowerCase() === cleanEmail ||
-            normalizeUsername(u.username) === cleanEmail
+            String(u.username || '').toLowerCase() === cleanEmail
         );
-
-        if (existing) {
-            return { success: false, message: 'Este correo o nombre de usuario ya está registrado.' };
-        }
+        if (existing) return { success: false, message: 'Este correo o nombre de usuario ya está registrado.' };
 
         const newUser = {
             id: `USR-${Date.now().toString().slice(-4)}`,
@@ -197,22 +143,20 @@ export const AuthService = {
     async login(userOrEmail, password, remember = false) {
         const cleanUser = String(userOrEmail || '').trim().toLowerCase();
         const cleanPass = String(password || '').trim();
-        const users = this._getUsersDB();
 
+        const users = this._getUsersDB();
         const matchedUser = users.find(u => {
             const uEmail = String(u.email || '').toLowerCase().trim();
-            const uUsername = normalizeUsername(u.username);
+            const uUsername = String(u.username || '').toLowerCase().trim();
             const uName = String(u.name || '').toLowerCase().trim();
             const uPass = String(u.password || '').trim();
             return (uEmail === cleanUser || uUsername === cleanUser || uName === cleanUser) && uPass === cleanPass;
         });
 
-        if (!matchedUser) {
-            return { success: false, message: 'Credenciales inválidas. Verifica tu usuario y contraseña.' };
-        }
+        if (!matchedUser) return { success: false, message: 'Credenciales inválidas. Verifica tu usuario y contraseña.' };
 
-        const forcedRegion = fixedRegionByUsername(matchedUser.username);
         const isMaster = this.isMasterAdmin(matchedUser);
+        const fixed = forcedRegion(matchedUser.username);
 
         const userData = {
             id: matchedUser.id,
@@ -220,8 +164,8 @@ export const AuthService = {
             email: matchedUser.email,
             username: matchedUser.username,
             role: matchedUser.role || 'Analista',
-            isMaster,
-            region: forcedRegion || matchedUser.region || null,
+            isMaster: isMaster,
+            region: fixed || matchedUser.region || null,
             avatar: 'assets/logo-intelfon.png',
             loginTime: new Date().toISOString()
         };
@@ -255,21 +199,18 @@ export const AuthService = {
     },
 
     getUser() {
-        const session = localStorage.getItem(CONFIG.AUTH.sessionKey) || sessionStorage.getItem(CONFIG.AUTH.sessionKey);
+        const storage = localStorage.getItem(CONFIG.AUTH.sessionKey)
+            ? localStorage
+            : sessionStorage;
+        const session = storage.getItem(CONFIG.AUTH.sessionKey);
         if (!session) return null;
 
         try {
             const user = JSON.parse(session);
-            if (!user) return null;
-
-            // Reparación automática de sesiones antiguas:
-            // masterguatemala nunca puede quedar en SV y mastersalvador nunca en GT.
-            const forcedRegion = fixedRegionByUsername(user.username);
-            if (forcedRegion && user.region !== forcedRegion) {
-                user.region = forcedRegion;
-                user.isMaster = true;
-                user.role = 'Super Admin';
-                persistSession(user);
+            const fixed = forcedRegion(user?.username);
+            if (fixed && user.region !== fixed) {
+                user.region = fixed;
+                storage.setItem(CONFIG.AUTH.sessionKey, JSON.stringify(user));
             }
             return user;
         } catch (_) {
@@ -283,7 +224,6 @@ export const AuthService = {
 
     updateUserRegion(emailOrId, region) {
         if (region !== 'GT' && region !== 'SV') return false;
-
         const users = this._getUsersDB();
         const target = users.find(u => u.email === emailOrId || u.id === emailOrId || u.username === emailOrId);
         if (!target || this.isMasterAdmin(target)) return false;
@@ -294,7 +234,9 @@ export const AuthService = {
         const current = this.getUser();
         if (current && (current.id === target.id || current.email === target.email)) {
             current.region = region;
-            persistSession(current);
+            const payload = JSON.stringify(current);
+            if (localStorage.getItem(CONFIG.AUTH.sessionKey)) localStorage.setItem(CONFIG.AUTH.sessionKey, payload);
+            else sessionStorage.setItem(CONFIG.AUTH.sessionKey, payload);
         }
         return true;
     },
@@ -302,13 +244,8 @@ export const AuthService = {
     deleteUser(emailOrId) {
         let users = this._getUsersDB();
         const target = users.find(u => u.email === emailOrId || u.id === emailOrId || u.username === emailOrId);
-
         if (!target) return false;
-        if (this.isMasterAdmin(target)) {
-            console.warn('[AuthService] No se puede eliminar a un usuario Master.');
-            return false;
-        }
-
+        if (this.isMasterAdmin(target)) return false;
         users = users.filter(u => u.id !== target.id && u.email !== target.email);
         this._saveUsersDB(users);
         return true;
