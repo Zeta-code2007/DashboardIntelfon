@@ -1332,7 +1332,12 @@ export function renderGenerator() {
                 data = { ...localReport, asincrono: true, advertencia: makeError.message };
             }
 
-            if (localStorage.getItem('intelfon_processing_id') !== processingId || currentRunId !== processingId) {
+            // Solo se compara contra la variable en memoria de ESTA pestaña/sesión (currentRunId).
+            // Antes también se comparaba contra una clave en localStorage, pero esa clave se
+            // comparte entre TODAS las pestañas del mismo navegador: si Guatemala y El Salvador
+            // trabajan al mismo tiempo en pestañas distintas, cada una sobreescribía la clave de
+            // la otra y provocaba que una respuesta válida se descartara como "de otra ejecución".
+            if (currentRunId !== processingId) {
                 throw new Error('Esta respuesta pertenece a una ejecución anterior y fue descartada.');
             }
 
