@@ -975,14 +975,83 @@ export function renderGenerator() {
 
     // Helper: intenta parsear un string JSON, devuelve el valor original si no es parseable
     function tryParseJSON(val) {
-        if (typeof val === 'string') {
-            const trimmed = val.trim();
-            if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
-                try { return JSON.parse(trimmed); } catch (e) { /* no es JSON válido */ }
-            }
-        }
+    if (typeof val !== 'string') {
         return val;
     }
+
+    const trimmed = val.trim();
+
+    if (!trimmed) {
+        return val;
+    }
+
+    if (
+        (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+        try {
+            return JSON.parse(trimmed);
+        } catch (_) {
+            return val;
+        }
+    }
+
+    return val;
+}
+
+
+/**
+ * Convierte recursivamente strings JSON provenientes de Make
+ * en objetos y arrays reales.
+ *
+ * Ejemplo:
+ * [
+ *   "{\"Banco\":\"BI\",\"Saldo_Final\":100}"
+ * ]
+ *
+ * se convierte en:
+ *
+ * [
+ *   { Banco: "BI", Saldo_Final: 100 }
+ * ]
+ */
+function normalizeMakeData(value) {
+
+    if (value === null || value === undefined) {
+        return value;
+    }
+
+    // Si es texto, intentar convertir JSON
+    if (typeof value === 'string') {
+        const parsed = tryParseJSON(value);
+
+        if (parsed !== value) {
+            return normalizeMakeData(parsed);
+        }
+
+        return value;
+    }
+
+    // Si es array, normalizar cada elemento
+    if (Array.isArray(value)) {
+        return value.map(item =>
+            normalizeMakeData(item)
+        );
+    }
+
+    // Si es objeto, normalizar cada propiedad
+    if (typeof value === 'object') {
+        const result = {};
+
+        for (const [key, item] of Object.entries(value)) {
+            result[key] = normalizeMakeData(item);
+        }
+
+        return result;
+    }
+
+    return value;
+}
 
     // Extrae y normaliza las filas desde cualquier estructura de Make
     function extractRows(data) {
@@ -1177,6 +1246,32 @@ export function renderGenerator() {
             `;
             return;
         }
+
+        filas = filas
+    .map(item => normalizeMakeData(item))
+    .filter(item =>
+        item &&
+        typeof item === 'object' &&
+        !Array.isArray(item)
+    );
+
+if (filas.length === 0) {
+    tableHead.innerHTML = `
+        <tr>
+            <th>Estado</th>
+            <th>Detalle</th>
+        </tr>
+    `;
+
+    tableBody.innerHTML = `
+        <tr>
+            <td>Sin registros</td>
+            <td>No se encontraron filas estructuradas para mostrar.</td>
+        </tr>
+    `;
+
+    return;
+}
 
         const sample = filas[0];
         const isStandard = ('id' in sample || 'ID' in sample || 'codigo' in sample || 'Codigo' in sample) &&
@@ -1462,6 +1557,32 @@ try {
         finalReportData.execution_id ||
         ''
     ).trim();
+
+    /*
+ * Make/Firebase puede entregar arrays cuyos elementos
+ * sean strings JSON. Los convertimos a objetos reales
+ * antes de utilizarlos en el dashboard.
+ */
+    finalReportData = normalizeMakeData(
+        finalReportData
+    );
+
+    console.log(
+        '[Generator] Reporte normalizado:',
+        finalReportData
+    );
+
+
+/*
+ * A partir de aquí el reporte ya está listo
+ * para ser utilizado por el dashboard.
+ */
+lastProcessedData = finalReportData;
+
+replaceCurrentReport(
+    finalReportData,
+    processingId
+);
 
     if (
         finalExecutionId &&
