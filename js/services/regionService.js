@@ -3,23 +3,13 @@ import { CONFIG } from '../config.js';
 
 const LAST_REGION_KEY = 'intelfon_last_region';
 
-function forcedRegion(user) {
-    const username = String(user?.username || '').toLowerCase().trim();
-    if (username === 'masterguatemala') return 'GT';
-    if (username === 'mastersalvador' || username === 'masterelsalvador') return 'SV';
-    return null;
-}
-
 export const RegionService = {
     getActiveRegion() {
         const user = AuthService.getUser();
+        const username = String(user?.username || '').toLowerCase().trim();
 
-        // ÚNICO cambio funcional: los masters regionales nunca heredan otra región.
-        const forced = forcedRegion(user);
-        if (forced && CONFIG.REGIONS[forced]) {
-            localStorage.setItem(LAST_REGION_KEY, forced);
-            return forced;
-        }
+        if (username === 'masterguatemala') return 'GT';
+        if (username === 'mastersalvador' || username === 'masterelsalvador') return 'SV';
 
         if (user?.region && CONFIG.REGIONS[user.region]) {
             localStorage.setItem(LAST_REGION_KEY, user.region);
@@ -38,8 +28,8 @@ export const RegionService = {
     getRegionMeta(regionCode) {
         const meta = CONFIG.REGIONS[regionCode] || CONFIG.REGIONS.GT;
         if (regionCode === 'SV') {
-            return { ...meta, currency: 'USD', symbol: '$' };
+            return { ...meta, code:'SV', name:'El Salvador', currency:'USD', symbol:'$' };
         }
-        return meta;
+        return { ...meta, code:'GT', name:'Guatemala', currency:meta.currency || 'GTQ', symbol:meta.symbol || 'Q' };
     }
 };
