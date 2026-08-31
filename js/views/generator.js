@@ -2,7 +2,8 @@
 import { Toast } from '../services/toastService.js';
 import { SyncService } from '../services/syncService.js';
 import { RegionService } from '../services/regionService.js';
-
+import { FirebaseService } from '../services/firebaseService.js';
+import { CONFIG } from '../config.js';
 /**
  * Función auxiliar para sanitizar cadenas y prevenir inyecciones HTML.
  */
@@ -64,6 +65,73 @@ function getEmbedPreviewUrl(url) {
 
     // 5. Fallback para URLs públicas directas (ej: S3, Storage, etc.) usando el visor oficial de Google Docs
     return `https://docs.google.com/gview?url=${encodeURIComponent(trimmedUrl)}&embedded=true`;
+}
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function esperarReporteFinalFirebase(
+    pais,
+    executionId,
+    timeoutMs = 300000
+) {
+    const inicio = Date.now();
+
+    const path =
+        `${CONFIG.SYNC.rootPath}/reportes_finalizados/` +
+        `${pais}/${executionId}`;
+
+    console.log(
+        '[Generator] Esperando resultado oficial de Make:',
+        path
+    );
+
+    while (Date.now() - inicio < timeoutMs) {
+        let reporte = null;
+
+        try {
+            reporte = await FirebaseService.getOnce(path);
+        } catch (error) {
+            console.warn(
+                '[Generator] Firebase todavía no disponible:',
+                error
+            );
+        }
+
+        if (reporte) {
+            console.log(
+                '[Generator] Estado Firebase:',
+                reporte.estado
+            );
+
+            if (
+                reporte.estado === 'finalizado' &&
+                String(reporte.ejecucion_id || '') ===
+                    String(executionId)
+            ) {
+                return reporte;
+            }
+
+            if (
+                reporte.estado === 'error' ||
+                reporte.estado === 'fallido'
+            ) {
+                throw new Error(
+                    reporte.mensaje ||
+                    reporte.error ||
+                    'Make reportó un error durante el procesamiento.'
+                );
+            }
+        }
+
+        await delay(3000);
+    }
+
+    throw new Error(
+        'Make no finalizó el reporte dentro de 5 minutos. ' +
+        'Revisa el historial del escenario en Make.'
+    );
 }
 
 export function renderGenerator() {
@@ -510,14 +578,17 @@ export function renderGenerator() {
 
     // Métodos de visualización de errores
     function showError(title, message) {
-        errorTitle.textContent = title;
-        errorMessage.textContent = message;
-        errorAlert.classList.remove('hidden');
-        resultsPanel.classList.remove('hidden');
-        if (btnTransferOverview) btnTransferOverview.disabled = true;
-        if (btnViewFullReport) btnViewFullReport.disabled = true;
-        if (btnOpenInteractiveViewer) btnOpenInteractiveViewer.disabled = true;
-    }
+    errorTitle.textContent = title;
+    errorMessage.textContent = message;
+    errorAlert.classList.remove('hidden');
+
+    // Si Make falla, NO mostrar resultados anteriores.
+    resultsPanel.classList.add('hidden');
+
+    if (btnTransferOverview) btnTransferOverview.disabled = true;
+    if (btnViewFullReport) btnViewFullReport.disabled = true;
+    if (btnOpenInteractiveViewer) btnOpenInteractiveViewer.disabled = true;
+}
 
     function hideError() {
         errorAlert.classList.add('hidden');
@@ -1251,8 +1322,25 @@ export function renderGenerator() {
         statusContainer.classList.remove('hidden');
         resultsPanel.classList.add('hidden');
         documentPreviewSection.classList.add('hidden');
-        if (excelPreviewFrame) excelPreviewFrame.src = '';
+
+        if (excelPreviewFrame) {
+            excelPreviewFrame.src = '';
+        }
+
         currentPreviewUrl = '';
+
+        // Limpiar cualquier resultado de una ejecución anterior.
+        if (summaryCards) {
+            summaryCards.innerHTML = '';
+        }
+
+        if (tableHead) {
+            tableHead.innerHTML = '';
+        }
+
+        if (tableBody) {
+            tableBody.innerHTML = '';
+        }
 
         statusLabel.textContent = `Enviando y procesando ${totalArchivos} archivo${totalArchivos > 1 ? 's' : ''} con Make...`;
         statusSubtext.textContent = 'Ejecutando escenario en Make.com...';
@@ -1295,130 +1383,216 @@ export function renderGenerator() {
             }
         }, 4000);
 
-        let localReport = null;
-        try {
-            statusLabel.textContent = 'Extrayendo saldos, transacciones y bancos de los archivos Excel...';
-            localReport = await parseExcelFilesToReport(
-                isGT ? selectedFiles[0] : null,
-                isGT ? [] : selectedFiles
+try {
+    statusLabel.textContent =
+        `Enviando ${regionMeta.name} a Make...`;
+
+    statusSubtext.textContent =
+        'Make está procesando el reporte oficial';
+
+    progressBar.style.width = '60%';
+
+    const data = await enviarArchivosAMake(
+        selectedFiles,
+        tipoReporte,
+        {
+            region: activeRegion,
+            country: regionMeta.name,
+            executionId: processingId
+        }
+    );
+
+    if (currentRunId !== processingId) {
+        throw new Error(
+            'Esta respuesta pertenece a una ejecución anterior.'
+        );
+    }
+
+    const respuestaAsincrona =
+        data?.accepted === true ||
+        data?.aceptado === true ||
+        data?.asincrono === true ||
+        String(data?.estado || '').toLowerCase() ===
+            'procesando';
+
+    let finalReportData = null;
+
+    if (respuestaAsincrona) {
+        statusLabel.textContent =
+            'Make recibió el archivo. Analizando...';
+
+        statusSubtext.textContent =
+            'Esperando resultado oficial de Make';
+
+        progressBar.style.width = '75%';
+
+        finalReportData =
+            await esperarReporteFinalFirebase(
+                regionMeta.name,
+                processingId
             );
-            if (localReport && localReport.bancos_procesados && localReport.bancos_procesados.length > 0) {
-                console.log('[Generator] Datos de Excel extraídos exitosamente:', localReport);
-                replaceCurrentReport(localReport, processingId);
-                const localFilas = extractRows(localReport);
-                renderSummaryCards(localReport.resumen_general, localFilas, localReport.totales_globales, localReport);
-                renderTableRows(localFilas);
-                resultsPanel.classList.remove('hidden');
-                if (btnTransferOverview) btnTransferOverview.disabled = false;
-                if (btnViewFullReport) btnViewFullReport.disabled = false;
-                if (btnOpenInteractiveViewer) btnOpenInteractiveViewer.disabled = false;
-            }
-        } catch (localErr) {
-            console.warn('[Generator] Extracción local rápida:', localErr);
+    } else {
+        /*
+         * Solo aceptamos una respuesta directa si realmente
+         * contiene resultado financiero.
+         */
+        const filasDirectas = extractRows(data);
+
+        if (
+            filasDirectas.length === 0 &&
+            !data?.bancos_procesados?.length
+        ) {
+            throw new Error(
+                'Make respondió, pero todavía no existe ' +
+                'un reporte financiero final.'
+            );
         }
 
-        try {
-            let data = null;
-            let pendienteEnMake = false; // true = Make aceptó (HTTP 202 "procesando") pero aún no envía el reporte final
-            try {
-                statusLabel.textContent = `Analizando ${regionMeta.name} (${totalArchivos} archivo${totalArchivos > 1 ? 's' : ''}) con Make...`;
-                statusSubtext.textContent = 'Enviando y sincronizando con Make.com';
-                progressBar.style.width = '65%';
-                data = await enviarArchivosAMake(selectedFiles, tipoReporte, {
-                    region: activeRegion,
-                    country: regionMeta.name,
-                    executionId: processingId
-                });
-                const hasResponseError = response => response?.error || response?.errorMessage || response?.status === 'error';
-                const responseError = Array.isArray(data)
-                    ? data.some(response => !response || typeof response !== 'object' || Object.keys(response).length === 0 || hasResponseError(response))
-                    : hasResponseError(data);
-                const hasResponseContent = Array.isArray(data) ? data.length > 0 : Object.keys(data || {}).length > 0;
-                if (!data || typeof data !== 'object' || !hasResponseContent || responseError) {
-                    throw new Error('La respuesta de Make no contiene datos válidos.');
-                }
+        finalReportData = data;
+    }
 
-                // Make ahora responde de inmediato (HTTP 202: "aceptado":true, "estado":"procesando")
-                // y termina de procesar el reporte en segundo plano. Esa respuesta es VÁLIDA (no es
-                // un error), pero todavía NO trae los bancos/saldos reales — hay que distinguirla de
-                // una respuesta con el reporte ya completo, para no mostrar datos inventados como si
-                // fueran el resultado oficial.
-                if (extractRows(data).length === 0 && !data.bancos_procesados?.length) {
-                    pendienteEnMake = true;
-                }
-            } catch (makeError) {
-                if (!localReport || !localReport.bancos_procesados?.length) {
-                    throw makeError;
-                }
-                console.warn('[Generator] Falló Make pero se conservaron los datos extraídos de Excel:', makeError);
-                data = { ...localReport, asincrono: true, advertencia: makeError.message };
-            }
+    if (!finalReportData) {
+        throw new Error(
+            'No se recibió el resultado final de Make.'
+        );
+    }
 
-            // Solo se compara contra la variable en memoria de ESTA pestaña/sesión (currentRunId).
-            // Antes también se comparaba contra una clave en localStorage, pero esa clave se
-            // comparte entre TODAS las pestañas del mismo navegador: si Guatemala y El Salvador
-            // trabajan al mismo tiempo en pestañas distintas, cada una sobreescribía la clave de
-            // la otra y provocaba que una respuesta válida se descartara como "de otra ejecución".
-            if (currentRunId !== processingId) {
-                throw new Error('Esta respuesta pertenece a una ejecución anterior y fue descartada.');
-            }
+    const finalExecutionId = String(
+        finalReportData.ejecucion_id ||
+        finalReportData.execution_id ||
+        ''
+    ).trim();
 
-            clearInterval(progressInterval);
-            progressBar.style.width = '100%';
-            progressBar.classList.remove('bg-intelfon-red');
-            progressBar.classList.add('bg-emerald-600');
+    if (
+        finalExecutionId &&
+        finalExecutionId !== String(processingId)
+    ) {
+        throw new Error(
+            'Firebase devolvió un reporte de otra ejecución.'
+        );
+    }
 
-            if (data.asincrono) {
-                // Make falló/no respondió a tiempo y se está mostrando la extracción local del Excel
-                statusLabel.textContent = 'Vista previa local generada (Make no respondió a tiempo)';
-                statusSubtext.textContent = 'Datos extraídos directo del Excel, pendientes de confirmación oficial';
-                Toast.warning('No se pudo confirmar con Make.com; se muestra una vista previa local de tus archivos mientras se reintenta.', 'Vista previa local');
-            } else if (pendienteEnMake) {
-                // Make aceptó el envío y lo está procesando en segundo plano (respuesta HTTP 202)
-                statusLabel.textContent = `${regionMeta.name}: recibido por Make, procesando en segundo plano...`;
-                statusSubtext.textContent = 'El reporte oficial llegará por correo cuando Make termine';
-                Toast.success('Make recibió tus archivos y los está procesando en segundo plano. Mientras tanto, te mostramos una vista previa local.', 'Enviado a Make');
-            } else {
-                statusLabel.textContent = '¡Procesamiento finalizado exitosamente!';
-                statusSubtext.textContent = 'Listo';
-                Toast.success('El reporte financiero ha sido generado exitosamente.', 'Proceso Completo');
-            }
-            statusSpinner.classList.add('hidden');
+    /*
+     * AQUÍ, Y SOLO AQUÍ, el resultado pasa a ser
+     * oficial para el dashboard.
+     */
+    lastProcessedData = finalReportData;
 
-            // Si Make todavía no envía el reporte final (pendienteEnMake) o falló (asincrono),
-            // usamos la vista previa local SOLO como referencia visual, marcada como no oficial.
-            // Ya no se guarda como si fuera el resultado definitivo y confirmado por Make.
-            const esVistaPrevia = pendienteEnMake || data.asincrono;
-            const finalReportData = (data && extractRows(data).length > 0)
-                ? data
-                : { ...(localReport || data), asincrono: data.asincrono || false, pendienteEnMake, esVistaPrevia };
-            const firstResponse = Array.isArray(finalReportData) ? finalReportData[0] || {} : finalReportData;
-            const urlDescarga = firstResponse.urlDescarga || firstResponse.downloadUrl || firstResponse.webViewLink || firstResponse.fileUrl || firstResponse.url || firstResponse.link || createExcelDownloadUrl(firstResponse) || '#';
-            currentPreviewUrl = urlDescarga;
-            lastProcessedData = finalReportData;
+    replaceCurrentReport(
+        finalReportData,
+        processingId
+    );
 
-            try {
-                replaceCurrentReport(finalReportData, processingId);
-            } catch (_) {}
+    /*
+     * Buscar URL del Excel.
+     * Make guarda los archivos dentro de:
+     * reportes_finalizados/{pais}/{ejecucion_id}/archivos
+     */
+    let archivoFirebase = null;
 
-            const filas = extractRows(finalReportData);
-            renderSummaryCards(finalReportData.resumen || finalReportData.resumen_general, filas, finalReportData.totales_globales || finalReportData.resumen_general, finalReportData);
-            renderTableRows(filas);
-            loadDocumentPreview(urlDescarga);
-            resultsPanel.classList.remove('hidden');
-            if (btnTransferOverview) btnTransferOverview.disabled = false;
-            if (btnViewFullReport) btnViewFullReport.disabled = false;
-            if (btnOpenInteractiveViewer) btnOpenInteractiveViewer.disabled = false;
+    if (
+        finalReportData.archivos &&
+        typeof finalReportData.archivos === 'object'
+    ) {
+        archivoFirebase =
+            Object.values(
+                finalReportData.archivos
+            )[0] || null;
+    }
 
-            setTimeout(() => {
-                resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
+    const urlDescarga =
+        finalReportData.urlDescarga ||
+        finalReportData.downloadUrl ||
+        archivoFirebase?.urlDescarga ||
+        archivoFirebase?.url ||
+        '#';
 
-            if (btnDownloadExcel) {
-                btnDownloadExcel.href = urlDescarga && urlDescarga !== '#' ? urlDescarga : '#';
-                btnDownloadExcel.classList.toggle('pointer-events-none', !urlDescarga || urlDescarga === '#');
-                btnDownloadExcel.classList.toggle('opacity-50', !urlDescarga || urlDescarga === '#');
-            }
+    currentPreviewUrl = urlDescarga;
+
+    const filas =
+        extractRows(finalReportData);
+
+    renderSummaryCards(
+        finalReportData.resumen ||
+        finalReportData.resumen_general,
+        filas,
+        finalReportData.totales_globales,
+        finalReportData
+    );
+
+    renderTableRows(filas);
+
+    if (
+        urlDescarga &&
+        urlDescarga !== '#'
+    ) {
+        loadDocumentPreview(urlDescarga);
+    }
+
+    resultsPanel.classList.remove('hidden');
+
+    if (btnTransferOverview) {
+        btnTransferOverview.disabled = false;
+    }
+
+    if (btnViewFullReport) {
+        btnViewFullReport.disabled = false;
+    }
+
+    if (btnOpenInteractiveViewer) {
+        btnOpenInteractiveViewer.disabled = false;
+    }
+
+    clearInterval(progressInterval);
+
+    progressBar.style.width = '100%';
+    progressBar.classList.remove(
+        'bg-intelfon-red'
+    );
+    progressBar.classList.add(
+        'bg-emerald-600'
+    );
+
+    statusLabel.textContent =
+        '¡Reporte oficial finalizado!';
+
+    statusSubtext.textContent =
+        'Resultado confirmado por Make y Firebase';
+
+    statusSpinner.classList.add('hidden');
+
+    Toast.success(
+        'Make terminó correctamente y el dashboard fue actualizado.',
+        'Reporte Oficial'
+    );
+
+    localStorage.removeItem(
+        'intelfon_processing_id'
+    );
+
+    setTimeout(() => {
+        resultsPanel.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }, 100);
+
+    if (btnDownloadExcel) {
+        btnDownloadExcel.href =
+            urlDescarga !== '#'
+                ? urlDescarga
+                : '#';
+
+        btnDownloadExcel.classList.toggle(
+            'pointer-events-none',
+            urlDescarga === '#'
+        );
+
+        btnDownloadExcel.classList.toggle(
+            'opacity-50',
+            urlDescarga === '#'
+        );
+    }
 
         } catch (err) {
             clearInterval(progressInterval);
