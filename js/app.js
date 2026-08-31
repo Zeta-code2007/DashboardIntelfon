@@ -27,26 +27,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('intelfon_theme') || 'dark';
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
-    if (btnToggleTheme) {
-        btnToggleTheme.addEventListener('click', () => {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('intelfon_theme', isDark ? 'dark' : 'light');
-            Toast.info(isDark ? 'Modo Oscuro activado' : 'Modo Claro activado', 'Tema Visual');
-        });
-    }
+    btnToggleTheme?.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('intelfon_theme', isDark ? 'dark' : 'light');
+        Toast.info(isDark ? 'Modo Oscuro activado' : 'Modo Claro activado', 'Tema Visual');
+    });
 
     function checkAuthentication() {
-        if (!AuthService.isAuthenticated()) showLoginScreen();
-        else showDashboardScreen();
+        AuthService.isAuthenticated() ? showDashboardScreen() : showLoginScreen();
     }
 
     function showLoginScreen() {
-        if (sidebar) sidebar.classList.add('hidden');
-        if (mainLayout) mainLayout.classList.add('hidden');
-        if (sidebarBackdrop) sidebarBackdrop.classList.add('hidden');
+        sidebar?.classList.add('hidden');
+        mainLayout?.classList.add('hidden');
+        sidebarBackdrop?.classList.add('hidden');
 
-        const existingLogin = document.getElementById('login-modal-container');
-        if (existingLogin) existingLogin.remove();
+        document.getElementById('login-modal-container')?.remove();
 
         const loginElement = renderLogin(user => {
             Toast.success(`Bienvenido, ${user.name}`, 'Inicio de Sesión Exitoso');
@@ -58,32 +54,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showDashboardScreen(user) {
-        const existingLogin = document.getElementById('login-modal-container');
-        if (existingLogin) existingLogin.remove();
+        document.getElementById('login-modal-container')?.remove();
 
-        if (sidebar) sidebar.classList.remove('hidden');
-        if (mainLayout) mainLayout.classList.remove('hidden');
-        if (sidebarBackdrop) sidebarBackdrop.classList.remove('hidden');
+        sidebar?.classList.remove('hidden');
+        mainLayout?.classList.remove('hidden');
+        sidebarBackdrop?.classList.remove('hidden');
 
         const currentUser = user || AuthService.getUser();
-        const isMaster = AuthService.isMasterAdmin(currentUser);
-        const isGlobalMaster = AuthService.isGlobalMaster(currentUser);
+        const username = String(currentUser?.username || '').toLowerCase().trim();
 
-        if (currentUser && userDisplayName) {
-            userDisplayName.textContent = currentUser.name || (isMaster ? 'Master INTELFON' : 'Analista');
+        if (userDisplayName) {
+            if (username === 'masterguatemala') userDisplayName.textContent = 'Master Guatemala';
+            else if (username === 'mastersalvador' || username === 'masterelsalvador') userDisplayName.textContent = 'Master El Salvador';
+            else if (username === 'intelfon') userDisplayName.textContent = 'Master INTELFON';
+            else userDisplayName.textContent = currentUser?.name || 'Analista';
         }
 
-        // Gestión de usuarios solo para el Master GLOBAL.
-        // Los masters regionales no obtienen herramientas para cambiar/asignar el otro país.
+        // Gestión de Usuarios solamente para master global intelfon.
         const navBtnUsers = document.querySelector('.nav-btn[data-view="users"]');
         if (navBtnUsers) {
-            navBtnUsers.classList.toggle('hidden', !isGlobalMaster);
-            navBtnUsers.style.display = isGlobalMaster ? 'flex' : 'none';
+            const globalMaster = AuthService.isGlobalMaster(currentUser);
+            navBtnUsers.classList.toggle('hidden', !globalMaster);
+            navBtnUsers.style.display = globalMaster ? 'flex' : 'none';
         }
 
         const activeRegion = RegionService.getActiveRegion();
         const regionMeta = RegionService.getRegionMeta(activeRegion);
 
+        // Mantener motor original de sincronización.
         SyncService.initSync(activeRegion, currentUser);
 
         const syncBarContainer = document.getElementById('region-sync-bar');
@@ -95,32 +93,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 `Dashboard ${regionMeta.name} (${regionMeta.currency}) · Gestión automatizada de reportes bancarios con Make.com`;
         }
 
-        document.documentElement.dataset.intelfonRegion = activeRegion;
-        document.documentElement.dataset.intelfonCurrency = regionMeta.currency;
-
         loadView('overview');
     }
 
-    if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-                SyncService.teardownSync();
-                AuthService.logout();
-                Toast.info('Has cerrado sesión correctamente.', 'Sesión Finalizada');
-                showLoginScreen();
-            }
-        });
-    }
+    btnLogout?.addEventListener('click', () => {
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+            SyncService.teardownSync();
+            AuthService.logout();
+            Toast.info('Has cerrado sesión correctamente.', 'Sesión Finalizada');
+            showLoginScreen();
+        }
+    });
 
     const isSidebarCollapsed = localStorage.getItem('intelfon_sidebar_collapsed') === 'true';
-    if (isSidebarCollapsed && sidebar) sidebar.classList.add('collapsed');
+    if (isSidebarCollapsed) sidebar?.classList.add('collapsed');
 
-    if (btnToggleSidebar && sidebar) {
-        btnToggleSidebar.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            localStorage.setItem('intelfon_sidebar_collapsed', sidebar.classList.contains('collapsed'));
-        });
-    }
+    btnToggleSidebar?.addEventListener('click', () => {
+        sidebar?.classList.toggle('collapsed');
+        localStorage.setItem('intelfon_sidebar_collapsed', sidebar?.classList.contains('collapsed') ? 'true' : 'false');
+    });
 
     function openMobileSidebar() {
         if (!sidebar || !sidebarBackdrop) return;
@@ -138,34 +129,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.remove('overflow-hidden');
     }
 
-    if (btnMobileSidebar) btnMobileSidebar.addEventListener('click', openMobileSidebar);
-    if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeMobileSidebar);
-
-    window.addEventListener('keydown', e => {
-        if (e.key === 'Escape') closeMobileSidebar();
-    });
+    btnMobileSidebar?.addEventListener('click', openMobileSidebar);
+    sidebarBackdrop?.addEventListener('click', closeMobileSidebar);
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileSidebar(); });
 
     const views = {
         overview: { title: 'Inicio / Overview', render: renderOverview },
         generator: { title: 'Generar Reporte Excel', render: renderGenerator },
         history: { title: 'Reportes Anteriores', render: renderHistory },
-        'bank-detail': {
-            title: 'Detalle por banco',
-            render: () => renderReportSection('bancos', 'Detalle por banco')
-        },
-        'daily-flow': {
-            title: 'Flujo diario',
-            render: () => renderReportSection('flujo', 'Flujo diario')
-        },
-        'account-detail': {
-            title: 'Detalle de cuentas',
-            render: () => renderReportSection('cuentas', 'Detalle de cuentas')
-        },
-        users: {
-            title: 'Gestión de Usuarios (Master Global)',
-            render: renderUsers,
-            globalMasterOnly: true
-        }
+        'bank-detail': { title: 'Detalle por banco', render: () => renderReportSection('bancos', 'Detalle por banco') },
+        'daily-flow': { title: 'Flujo diario', render: () => renderReportSection('flujo', 'Flujo diario') },
+        'account-detail': { title: 'Detalle de cuentas', render: () => renderReportSection('cuentas', 'Detalle de cuentas') },
+        users: { title: 'Gestión de Usuarios (Master)', render: renderUsers, globalMasterOnly: true }
     };
 
     function loadView(viewName) {
@@ -173,19 +148,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!view) return;
 
         if (view.globalMasterOnly && !AuthService.isGlobalMaster()) {
-            Toast.warning(
-                'Acceso denegado. La Gestión de Usuarios está disponible únicamente para el Master global.',
-                'Permiso Insuficiente'
-            );
+            Toast.warning('Acceso denegado. Solo Master INTELFON puede gestionar usuarios.', 'Permiso Insuficiente');
             loadView('overview');
             return;
         }
 
         if (pageTitle) pageTitle.textContent = view.title;
 
-        navButtons.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.view === viewName);
-        });
+        navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === viewName));
 
         appContent.innerHTML = '';
         const renderedView = view.render();
@@ -202,9 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
             loadView(activeView);
             return;
         }
-
-        if (event.data?.type !== 'intelfon-navigate') return;
-        if (typeof event.data.view === 'string') loadView(event.data.view);
+        if (event.data?.type === 'intelfon-navigate' && typeof event.data.view === 'string') {
+            loadView(event.data.view);
+        }
     });
 
     window.addEventListener('storage', event => {
@@ -221,9 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => loadView(btn.dataset.view));
-    });
+    navButtons.forEach(btn => btn.addEventListener('click', () => loadView(btn.dataset.view)));
 
     checkAuthentication();
 });

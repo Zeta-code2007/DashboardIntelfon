@@ -9,13 +9,6 @@ function readAsBase64(file) {
     });
 }
 
-/**
- * Envía archivos a Make.
- * options:
- *  - region: 'GT' | 'SV'
- *  - country: 'Guatemala' | 'El Salvador'
- *  - executionId: id único de la ejecución
- */
 export async function enviarArchivosAMake(files, tipoReporte, options = {}) {
     if (!CONFIG.MAKE_WEBHOOK_URL) {
         throw new Error('La URL del Webhook de Make (CONFIG.MAKE_WEBHOOK_URL) no está configurada.');
@@ -31,24 +24,27 @@ export async function enviarArchivosAMake(files, tipoReporte, options = {}) {
         }
     }
 
-    const region = options.region === 'SV' ? 'SV' : 'GT';
-    const country = options.country || (region === 'SV' ? 'El Salvador' : 'Guatemala');
-    const executionId = String(options.executionId || '').trim();
-
     const payloadFiles = await Promise.all(files.map(async file => ({
         name: file.name,
         data: await readAsBase64(file),
         mimeType: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     })));
 
+    const region = options.region === 'SV' ? 'SV' : 'GT';
+    const pais = String(options.country || (region === 'SV' ? 'El Salvador' : 'Guatemala'));
+    const executionId = String(options.executionId || '').trim();
+
     const formData = new FormData();
     formData.append('files', JSON.stringify(payloadFiles));
     formData.append('tipoReporte', tipoReporte || 'bancario');
 
-    // Campos que el blueprint ya utiliza (72.pais / 72.ejecucion_id).
-    formData.append('pais', country);
+    // Make blueprint ya usa pais y ejecucion_id.
+    formData.append('pais', pais);
     formData.append('region', region);
-    if (executionId) formData.append('ejecucion_id', executionId);
+    if (executionId) {
+        formData.append('ejecucion_id', executionId);
+        formData.append('execution_id', executionId);
+    }
 
     let response;
     try {
@@ -57,40 +53,37 @@ export async function enviarArchivosAMake(files, tipoReporte, options = {}) {
             body: formData
         });
     } catch (networkError) {
-        throw new Error(`Error de red al conectar con Make: ${networkError.message || 'No se pudo contactar el servidor'}. Verifica tu conexión a Internet o bloqueadores de CORS.`);
+        throw new Error(`Error de red al conectar con Make: ${networkError.message || 'No se pudo contactar el servidor'}.`);
     }
 
     if (!response.ok) {
         let errorDetails = '';
-        try {
-            errorDetails = await response.text();
-        } catch (_) {
-            errorDetails = response.statusText;
-        }
+        try { errorDetails = await response.text(); } catch (_) { errorDetails = response.statusText; }
 
         if (response.status === 500) {
-            throw new Error('El escenario en Make.com falló internamente durante la ejecución (HTTP 500). Revisa History / Incomplete executions.');
+            throw new Error('El escenario en Make.com falló internamente (HTTP 500). Revisa History / Incomplete executions.');
         }
 
-        throw new Error(`Error en el servidor de Make (${response.status}): ${errorDetails || response.statusText || 'Petición no completada'}`);
+        throw new Error(`Error en Make (${response.status}): ${errorDetails || response.statusText || 'Petición no completada'}`);
     }
 
     const responseText = await response.text();
-    console.log(`[MakeService] Respuesta recibida (HTTP ${response.status}, ${responseText.length} bytes).`);
+    console.log(`[MakeService] HTTP ${response.status}; ${responseText.length} bytes; ${pais}; ejecución ${executionId || 'sin-id'}.`);
 
     if (!responseText || responseText.trim() === '') {
-        throw new Error('El Webhook de Make respondió sin cuerpo.');
+        throw new Error('El Webhook de Make respondió correctamente pero sin cuerpo.');
     }
 
     const trimmed = responseText.trim();
+
     if (trimmed.toLowerCase() === 'accepted') {
         return {
             accepted: true,
             asincrono: true,
             estado: 'Archivos recibidos y procesamiento iniciado en Make.com',
-            mensaje: 'Make.com recibió los archivos correctamente.',
+            mensaje: 'Make.com recibió los archivos y continúa en segundo plano.',
             archivosProcesados: files.length,
-            pais: country,
+            pais,
             region,
             ejecucion_id: executionId || null,
             fechaEnvio: new Date().toISOString()
@@ -104,10 +97,9 @@ export async function enviarArchivosAMake(files, tipoReporte, options = {}) {
         try {
             const sanitized = responseText
                 .replace(/,\s*([}\]])/g, '$1')
-                .replace(/[\u0000-\u001F]+/g, match => {
-                    if (match === '\n' || match === '\r' || match === '\t') return match;
-                    return '';
-                });
+                .replace(/[\u0000-\u001F]+/g, match =>
+                    (match === '\n' || match === '\r' || match === '\t') ? match : ''
+                );
             data = JSON.parse(sanitized);
         } catch (_) {
             return {
@@ -116,7 +108,7 @@ export async function enviarArchivosAMake(files, tipoReporte, options = {}) {
                 estado: 'Respuesta recibida de Make.com',
                 mensaje: responseText.substring(0, 300),
                 archivosProcesados: files.length,
-                pais: country,
+                pais,
                 region,
                 ejecucion_id: executionId || null,
                 fechaEnvio: new Date().toISOString()

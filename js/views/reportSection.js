@@ -6,6 +6,7 @@ export function renderReportSection(target, title, options = {}) {
 
     const tabs = document.createElement('nav');
     tabs.className = 'report-section-tabs';
+
     const sections = [
         ['resumen', 'Resumen ejecutivo', 'overview'],
         ['bancos', 'Detalle por banco', 'bank-detail'],
@@ -19,8 +20,7 @@ export function renderReportSection(target, title, options = {}) {
         button.className = `report-section-tab${target === tabTarget ? ' active' : ''}`;
         button.textContent = label;
         button.addEventListener('click', () => {
-            const navButton = document.querySelector(`.nav-btn[data-view="${viewName}"]`);
-            if (navButton) navButton.click();
+            document.querySelector(`.nav-btn[data-view="${viewName}"]`)?.click();
         });
         tabs.appendChild(button);
     });
@@ -30,6 +30,7 @@ export function renderReportSection(target, title, options = {}) {
     const viewer = document.createElement('iframe');
     viewer.className = 'overview-report-viewer';
     viewer.title = title;
+    viewer.loading = 'eager';
 
     function getViewerUrl() {
         const region = RegionService.getActiveRegion();
@@ -51,10 +52,9 @@ export function renderReportSection(target, title, options = {}) {
     });
 
     window.addEventListener('intelfon-report-updated', event => {
-        if (event.detail && event.detail.key === 'intelfon_current_report') refreshViewer();
+        if (event.detail?.key === 'intelfon_current_report') refreshViewer();
     });
 
-    viewer.loading = 'eager';
     container.appendChild(viewer);
     return container;
 }

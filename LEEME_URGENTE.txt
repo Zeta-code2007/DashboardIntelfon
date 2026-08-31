@@ -1,0 +1,49 @@
+ENTREGA URGENTE - DASHBOARD RED INTELFON
+=======================================
+
+CÓMO USARLO (2 PASOS)
+1. Descomprime TODO el contenido de este ZIP EN LA RAÍZ de tu proyecto,
+   donde ya existen:
+     index.html
+     report-viewer.html
+     js/
+
+2. Doble clic:
+     APLICAR_FIX_TOTAL.bat
+
+El instalador hace backup antes de modificar:
+  *.backup-antes-fix
+
+QUÉ CORRIGE
+-----------
+- intelfon = Master INTELFON.
+- masterguatemala = Master Guatemala, GT, GTQ.
+- mastersalvador / masterelsalvador = Master El Salvador, SV, USD.
+- Los masters regionales ya no pueden caer en la identidad global.
+- Gestión de Usuarios solo queda para intelfon.
+- SyncService se restaura a la versión original estable: presence, documents,
+  overrides y canProceed conservados.
+- La barra de sincronización sigue viendo el estado del OTRO país porque esa es
+  la coordinación que canProceed necesita; esto NO da acceso al dashboard contrario.
+- makeService manda pais, region y ejecucion_id.
+- generator.js manda esos datos a Make en cada ejecución.
+- report-viewer queda bloqueado al país de la sesión.
+- Flujo diario reconoce Debe/Haber (campos creados por generator.js) además de
+  Egreso/Ingreso y Débito/Crédito.
+- SV se presenta en USD; GT en GTQ.
+- Al abrir una nueva vista Generador se limpia el estado persistente de archivo
+  de esa región hasta que realmente selecciones un archivo.
+
+PRUEBA RÁPIDA
+-------------
+A. Cierra sesión o abre incógnito.
+B. masterguatemala -> debe decir Master Guatemala y Dashboard Guatemala (GTQ).
+C. mastersalvador -> debe decir Master El Salvador y Dashboard El Salvador (USD).
+D. Abre ambos en dos navegadores/perfiles para probar presencia regional.
+E. Selecciona un Excel: el otro lado debe ver Archivo: Subido.
+F. Procesa: Make debe recibir pais + region + ejecucion_id.
+G. Abre Flujo diario: Debe/Haber ya alimentan débitos/créditos y la gráfica.
+
+IMPORTANTE
+----------
+No se reemplaza config.js: conserva tu webhook, Firebase y credenciales actuales.
