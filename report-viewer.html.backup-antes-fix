@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -368,9 +368,7 @@ const COUNTRY_CONFIG = {
   }
 };
 
-const REQUESTED_REGION = new URLSearchParams(window.location.search).get('region');
-const LOCKED_COUNTRY = REQUESTED_REGION === 'SV' ? 'SV' : REQUESTED_REGION === 'GT' ? 'GT' : null;
-let CURRENT_COUNTRY = LOCKED_COUNTRY || 'GT';
+let CURRENT_COUNTRY = 'GT'; // Por defecto siempre inicia en Guatemala
 let RAW_TRANSACTIONS_BY_COUNTRY = { GT: [], SV: [] };
 let BASE_DATA_BY_COUNTRY = {
   GT: createEmptyBaseData('GT'),
@@ -858,8 +856,8 @@ function initDataEngine() {
     if (movs.length) {
       movs.forEach((m, mIdx) => {
         const d = normalizeDate(getField(m, 'Fecha', 'fecha', 'date'));
-        const debit = numberValue(getField(m, 'Egreso', 'egreso', 'Debe', 'debe', 'Cargo', 'cargo', 'Débito', 'Debito', 'debito', 'debit', 'debits'));
-        const credit = numberValue(getField(m, 'Ingreso', 'ingreso', 'Haber', 'haber', 'Abono', 'abono', 'Crédito', 'Credito', 'credito', 'credit', 'credits'));
+        const debit = numberValue(getField(m, 'Egreso', 'Debito', 'debito', 'debit', 'debits'));
+        const credit = numberValue(getField(m, 'Ingreso', 'Credito', 'credito', 'credit', 'credits'));
         const reference = getField(m, 'No_Referencia', 'referencia', 'reference', 'id') || '';
         const transactionKey = `${canonicalKey(bName)}|${canonicalKey(accNum)}|${d}|${reference}|${debit}|${credit}|${getField(m, 'Descripcion', 'descripcion', 'description') || ''}`;
         if (transactionKeys.has(transactionKey)) return;
@@ -916,10 +914,9 @@ function updateCountryBadges() {
  */
 function setCountry(countryCode) {
   if (countryCode !== 'GT' && countryCode !== 'SV') return;
-  if (LOCKED_COUNTRY && countryCode !== LOCKED_COUNTRY) return;
-  CURRENT_COUNTRY = LOCKED_COUNTRY || countryCode;
+  CURRENT_COUNTRY = countryCode;
   updateCountryBadges();
-  applyCountry(CURRENT_COUNTRY);
+  applyCountry(countryCode);
 }
 
 function applyCountry(countryCode) {
@@ -1925,13 +1922,6 @@ if (btnClearDashboard) {
 
 // Inicialización dinámica
 document.addEventListener('DOMContentLoaded', () => {
-  if (LOCKED_COUNTRY) {
-    CURRENT_COUNTRY = LOCKED_COUNTRY;
-    const switcher = document.getElementById('countrySwitcher');
-    const quick = document.getElementById('btn-quick-toggle-country');
-    if (switcher) switcher.style.display = 'none';
-    if (quick) quick.style.display = 'none';
-  }
   if (new URLSearchParams(window.location.search).get('compact') === '1') {
     document.querySelector('.tabs')?.remove();
   }
@@ -1948,4 +1938,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-

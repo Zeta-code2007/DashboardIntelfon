@@ -1,4 +1,4 @@
-﻿import { enviarArchivosAMake } from '../services/makeService.js';
+import { enviarArchivosAMake } from '../services/makeService.js';
 import { Toast } from '../services/toastService.js';
 import { SyncService } from '../services/syncService.js';
 import { RegionService } from '../services/regionService.js';
@@ -364,14 +364,6 @@ export function renderGenerator() {
     let currentPreviewUrl = '';
     let lastProcessedData = null;
     let currentRunId = null;
-
-    // Estado limpio de esta NUEVA instancia del generador.
-    // No toca canProceed(); solo refleja que todavía no se seleccionó archivo aquí.
-    SyncService.setDocumentStatus(activeRegion, {
-        uploaded: false,
-        fileName: null,
-        count: 0
-    }).catch(() => {});
 
     function createRunId() {
         if (crypto.randomUUID) return crypto.randomUUID();
@@ -1324,11 +1316,7 @@ export function renderGenerator() {
                 statusLabel.textContent = `Analizando ${regionMeta.name} (${totalArchivos} archivo${totalArchivos > 1 ? 's' : ''}) con Make...`;
                 statusSubtext.textContent = 'Enviando y sincronizando con Make.com';
                 progressBar.style.width = '65%';
-                data = await enviarArchivosAMake(selectedFiles, tipoReporte, {
-                    region: activeRegion,
-                    country: regionMeta.name,
-                    executionId: processingId
-                });
+                data = await enviarArchivosAMake(selectedFiles, tipoReporte);
                 const hasResponseError = response => response?.error || response?.errorMessage || response?.status === 'error';
                 const responseError = Array.isArray(data)
                     ? data.some(response => !response || typeof response !== 'object' || Object.keys(response).length === 0 || hasResponseError(response))
