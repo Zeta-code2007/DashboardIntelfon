@@ -67,7 +67,7 @@ export function renderUsers() {
                     </button>
                 </div>
 
-                <form id="form-create-user-admin" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <form id="form-create-user-admin" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre</label>
                         <input type="text" id="admin-new-name" required placeholder="Ej. Ana Morales" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-white focus:ring-2 focus:ring-red-500">
@@ -79,6 +79,14 @@ export function renderUsers() {
                     <div>
                         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Contraseña</label>
                         <input type="password" id="admin-new-pass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-white focus:ring-2 focus:ring-red-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">País / Dashboard</label>
+                        <select id="admin-new-region" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-800 dark:text-white focus:ring-2 focus:ring-red-500">
+                            <option value="">Selecciona país...</option>
+                            <option value="GT">🇬🇹 Guatemala</option>
+                            <option value="SV">🇸🇻 El Salvador</option>
+                        </select>
                     </div>
                     <div class="flex items-end">
                         <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-red-600 dark:hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer">
@@ -97,6 +105,7 @@ export function renderUsers() {
                             <th>Usuario</th>
                             <th>Correo / Username</th>
                             <th>Rol / Permiso</th>
+                            <th>País / Dashboard</th>
                             <th>Fecha Creación</th>
                             <th class="text-right">Acciones</th>
                         </tr>
@@ -134,6 +143,14 @@ export function renderUsers() {
 
             const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '2026-08-25';
 
+            const regionCell = isMasterRow
+                ? `<span class="text-xs font-semibold text-slate-500">${u.region === 'SV' ? '🇸🇻 El Salvador' : u.region === 'GT' ? '🇬🇹 Guatemala' : 'Ambos (Master global)'}</span>`
+                : `<select data-region-id="${escapeHtml(u.id || u.email)}" class="select-user-region text-xs font-semibold rounded-lg border ${u.region ? 'border-slate-200 dark:border-slate-700' : 'border-red-400 ring-1 ring-red-300'} bg-white dark:bg-slate-950 px-2 py-1 text-slate-800 dark:text-white">
+                    <option value="" ${!u.region ? 'selected' : ''}>⚠️ Sin asignar</option>
+                    <option value="GT" ${u.region === 'GT' ? 'selected' : ''}>🇬🇹 Guatemala</option>
+                    <option value="SV" ${u.region === 'SV' ? 'selected' : ''}>🇸🇻 El Salvador</option>
+                </select>`;
+
             return `
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-900/60 transition-colors">
                     <td class="font-bold text-slate-800 dark:text-white flex items-center space-x-3">
@@ -147,6 +164,7 @@ export function renderUsers() {
                     </td>
                     <td class="text-slate-500 dark:text-slate-400 font-mono text-xs">${escapeHtml(u.email || u.username)}</td>
                     <td>${roleBadge}</td>
+                    <td>${regionCell}</td>
                     <td class="text-slate-400 text-xs">${dateStr}</td>
                     <td class="text-right">
                         ${isMasterRow ? `
@@ -160,6 +178,22 @@ export function renderUsers() {
                 </tr>
             `;
         }).join('');
+
+        // Eventos para cambiar el país/dashboard asignado a un usuario
+        tableBody.querySelectorAll('.select-user-region').forEach(select => {
+            select.addEventListener('change', () => {
+                const id = select.getAttribute('data-region-id');
+                const region = select.value;
+                if (!region) return;
+                const ok = AuthService.updateUserRegion(id, region);
+                if (ok) {
+                    Toast.success(`Ahora este usuario entrará al dashboard de ${region === 'GT' ? 'Guatemala' : 'El Salvador'}.`, 'País actualizado');
+                    renderUserRows();
+                } else {
+                    Toast.error('No se pudo actualizar el país de este usuario.');
+                }
+            });
+        });
 
         // Eventos para eliminar usuarios
         tableBody.querySelectorAll('.btn-delete-user').forEach(btn => {
@@ -191,10 +225,16 @@ export function renderUsers() {
         const name = container.querySelector('#admin-new-name').value;
         const email = container.querySelector('#admin-new-email').value;
         const pass = container.querySelector('#admin-new-pass').value;
+        const region = container.querySelector('#admin-new-region').value;
 
-        const res = await AuthService.register(name, email, pass, 'Analista');
+        if (!region) {
+            Toast.error('Selecciona a qué país (dashboard) pertenece este usuario.', 'Falta el país');
+            return;
+        }
+
+        const res = await AuthService.register(name, email, pass, 'Analista', region);
         if (res.success) {
-            Toast.success(`Usuario ${name} registrado y persistido en la DB.`, 'Registro Completado');
+            Toast.success(`Usuario ${name} registrado en el dashboard de ${region === 'GT' ? 'Guatemala' : 'El Salvador'}.`, 'Registro Completado');
             formCreate.reset();
             addUserCard.classList.add('hidden');
             renderUserRows();

@@ -121,10 +121,11 @@ export const AuthService = {
      * @param {string} role - Rol opcional (por defecto 'Analista')
      * @returns {Promise<{success: boolean, message?: string, user?: Object}>}
      */
-    async register(name, email, password, role = 'Analista') {
+    async register(name, email, password, role = 'Analista', region = null) {
         const cleanName = String(name || '').trim();
         const cleanEmail = String(email || '').trim().toLowerCase();
         const cleanPass = String(password || '').trim();
+        const cleanRegion = (region === 'GT' || region === 'SV') ? region : null;
 
         if (!cleanName || cleanName.length < 2) {
             return { success: false, message: 'Por favor ingresa un nombre válido.' };
@@ -155,7 +156,7 @@ export const AuthService = {
             password: cleanPass,
             role: role === 'Super Admin' ? 'Analista' : role,
             isMaster: false,
-            region: null,
+            region: cleanRegion,
             createdAt: new Date().toISOString()
         };
 
@@ -273,6 +274,36 @@ export const AuthService = {
      */
     getAllUsers() {
         return this._getUsersDB();
+    },
+
+    /**
+     * Actualiza el país/región asignado a un usuario existente (no aplica a Masters,
+     * cuya región viene fija desde CONFIG.AUTH.masters).
+     * @param {string} emailOrId
+     * @param {'GT'|'SV'} region
+     * @returns {boolean}
+     */
+    updateUserRegion(emailOrId, region) {
+        if (region !== 'GT' && region !== 'SV') return false;
+        const users = this._getUsersDB();
+        const target = users.find(u => u.email === emailOrId || u.id === emailOrId || u.username === emailOrId);
+        if (!target || this.isMasterAdmin(target)) return false;
+
+        target.region = region;
+        this._saveUsersDB(users);
+
+        // Si el usuario editado es quien tiene la sesión activa, refrescar también su sesión.
+        const current = this.getUser();
+        if (current && (current.id === target.id || current.email === target.email)) {
+            current.region = region;
+            const payload = JSON.stringify(current);
+            if (localStorage.getItem(CONFIG.AUTH.sessionKey)) {
+                localStorage.setItem(CONFIG.AUTH.sessionKey, payload);
+            } else {
+                sessionStorage.setItem(CONFIG.AUTH.sessionKey, payload);
+            }
+        }
+        return true;
     },
 
     /**

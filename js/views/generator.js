@@ -762,6 +762,14 @@ export function renderGenerator() {
                         }
                     }
 
+                    // Si no se detectó una fila de encabezado con columnas reales de fecha/descripción/
+                    // debe/haber, esta hoja NO es un estado de cuenta bancario real (podría ser una
+                    // portada, notas, hoja en blanco, etc.). La saltamos por completo: antes se contaba
+                    // igual como una "cuenta" más y, al no tener columnas identificadas, el código cayó
+                    // en un atajo que tomaba el primer número de cada fila como si fuera un monto,
+                    // generando saldos y totales absurdamente grandes.
+                    if (headerRowIdx === -1) return;
+
                     const movimientos = [];
                     let sumIngresos = 0;
                     let sumEgresos = 0;
@@ -783,14 +791,6 @@ export function renderGenerator() {
                         if (colDebe !== -1) debe = Math.abs(parseFloat(String(row[colDebe]).replace(/[^0-9.-]+/g, '')) || 0);
                         let haber = 0;
                         if (colHaber !== -1) haber = Math.abs(parseFloat(String(row[colHaber]).replace(/[^0-9.-]+/g, '')) || 0);
-
-                        if (colDebe === -1 && colHaber === -1) {
-                            const nums = row.map(v => parseFloat(String(v).replace(/[^0-9.-]+/g, ''))).filter(v => !isNaN(v) && v !== 0);
-                            if (nums.length >= 2) {
-                                debe = nums[0] < 0 ? Math.abs(nums[0]) : 0;
-                                haber = nums[0] > 0 ? nums[0] : 0;
-                            }
-                        }
 
                         let saldo = colSaldo !== -1 ? parseFloat(String(row[colSaldo]).replace(/[^0-9.-]+/g, '')) : 0;
                         if (isNaN(saldo)) saldo = 0;
@@ -1311,6 +1311,7 @@ export function renderGenerator() {
 
         try {
             let data = null;
+            let pendienteEnMake = false; // true = Make aceptó (HTTP 202 "procesando") pero aún no envía el reporte final
             try {
                 statusLabel.textContent = `Analizando ${regionMeta.name} (${totalArchivos} archivo${totalArchivos > 1 ? 's' : ''}) con Make...`;
                 statusSubtext.textContent = 'Enviando y sincronizando con Make.com';
@@ -1323,6 +1324,15 @@ export function renderGenerator() {
                 const hasResponseContent = Array.isArray(data) ? data.length > 0 : Object.keys(data || {}).length > 0;
                 if (!data || typeof data !== 'object' || !hasResponseContent || responseError) {
                     throw new Error('La respuesta de Make no contiene datos válidos.');
+                }
+
+                // Make ahora responde de inmediato (HTTP 202: "aceptado":true, "estado":"procesando")
+                // y termina de procesar el reporte en segundo plano. Esa respuesta es VÁLIDA (no es
+                // un error), pero todavía NO trae los bancos/saldos reales — hay que distinguirla de
+                // una respuesta con el reporte ya completo, para no mostrar datos inventados como si
+                // fueran el resultado oficial.
+                if (extractRows(data).length === 0 && !data.bancos_procesados?.length) {
+                    pendienteEnMake = true;
                 }
             } catch (makeError) {
                 if (!localReport || !localReport.bancos_procesados?.length) {
@@ -1347,9 +1357,15 @@ export function renderGenerator() {
             progressBar.classList.add('bg-emerald-600');
 
             if (data.asincrono) {
-                statusLabel.textContent = '¡Reporte financiero generado y enviado a Make!';
-                statusSubtext.textContent = 'Datos extraídos al 100% y proceso en segundo plano';
-                Toast.success('Los saldos y transacciones se han extraído y sincronizado con éxito.', 'Reporte Listo');
+                // Make falló/no respondió a tiempo y se está mostrando la extracción local del Excel
+                statusLabel.textContent = 'Vista previa local generada (Make no respondió a tiempo)';
+                statusSubtext.textContent = 'Datos extraídos directo del Excel, pendientes de confirmación oficial';
+                Toast.warning('No se pudo confirmar con Make.com; se muestra una vista previa local de tus archivos mientras se reintenta.', 'Vista previa local');
+            } else if (pendienteEnMake) {
+                // Make aceptó el envío y lo está procesando en segundo plano (respuesta HTTP 202)
+                statusLabel.textContent = `${regionMeta.name}: recibido por Make, procesando en segundo plano...`;
+                statusSubtext.textContent = 'El reporte oficial llegará por correo cuando Make termine';
+                Toast.success('Make recibió tus archivos y los está procesando en segundo plano. Mientras tanto, te mostramos una vista previa local.', 'Enviado a Make');
             } else {
                 statusLabel.textContent = '¡Procesamiento finalizado exitosamente!';
                 statusSubtext.textContent = 'Listo';
@@ -1357,7 +1373,13 @@ export function renderGenerator() {
             }
             statusSpinner.classList.add('hidden');
 
-            const finalReportData = (data && extractRows(data).length > 0) ? data : (localReport || data);
+            // Si Make todavía no envía el reporte final (pendienteEnMake) o falló (asincrono),
+            // usamos la vista previa local SOLO como referencia visual, marcada como no oficial.
+            // Ya no se guarda como si fuera el resultado definitivo y confirmado por Make.
+            const esVistaPrevia = pendienteEnMake || data.asincrono;
+            const finalReportData = (data && extractRows(data).length > 0)
+                ? data
+                : { ...(localReport || data), asincrono: data.asincrono || false, pendienteEnMake, esVistaPrevia };
             const firstResponse = Array.isArray(finalReportData) ? finalReportData[0] || {} : finalReportData;
             const urlDescarga = firstResponse.urlDescarga || firstResponse.downloadUrl || firstResponse.webViewLink || firstResponse.fileUrl || firstResponse.url || firstResponse.link || createExcelDownloadUrl(firstResponse) || '#';
             currentPreviewUrl = urlDescarga;
