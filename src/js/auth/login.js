@@ -1,5 +1,5 @@
 import { AuthService } from '../services/authService.js';
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 
 /**
  * Renderiza la vista completa de Inicio de Sesión y Registro de RED INTELFON.

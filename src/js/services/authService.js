@@ -1,4 +1,4 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 
 const USERS_DB_KEY = 'intelfon_registered_users_db';
 

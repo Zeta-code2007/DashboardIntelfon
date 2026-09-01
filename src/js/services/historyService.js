@@ -1,4 +1,4 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 
 /**
  * Consulta el historial de reportes bancarios guardados en Google Sheets a través de Make.com.

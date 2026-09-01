@@ -1,5 +1,5 @@
 import { AuthService } from './authService.js';
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 
 const LAST_REGION_KEY = 'intelfon_last_region';
 

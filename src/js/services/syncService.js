@@ -1,5 +1,5 @@
 import { FirebaseService } from './firebaseService.js';
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 
 const ROOT = CONFIG.SYNC.rootPath;
 
