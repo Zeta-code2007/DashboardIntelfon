@@ -42,65 +42,58 @@ import {
 from './generator.parser.js';
 
 
-
 import {
-    sendToMake
+    enviarArchivosAMake
 }
-from '../../services/make.service.js';
+from '../../services/makeService.js';
 
 
-
-/**
- * Configuración
- */
 
 const MAX_FILES = 10;
 
 
 
-/**
- * Inicialización principal
- */
 
+/**
+ * Inicializa módulo Generator
+ */
 export function initGenerator(){
 
 
     const container =
-        document.getElementById(
-            'generator'
+        document.createElement(
+            'div'
         );
 
 
-
-    if(!container){
-
-        console.warn(
-            'No existe contenedor generator'
-        );
-
-        return;
-
-    }
+    container.id =
+        'generator';
 
 
 
-    renderGenerator(container);
+    renderGenerator(
+        container
+    );
 
 
 
     registerEvents();
 
 
+
+    return container;
+
+
 }
 
 
 
 
 
-/**
- * Eventos UI
- */
 
+/**
+ * Registra eventos UI
+ */
 function registerEvents(){
 
 
@@ -134,108 +127,87 @@ function registerEvents(){
 
 
 
-    if(input){
+
+    input?.addEventListener(
+        'change',
+        e=>{
 
 
-        input.addEventListener(
-            'change',
-            e=>{
+            handleFiles(
+                e.target.files
+            );
 
 
-                handleFiles(
-                    e.target.files
-                );
-
-
-            }
-        );
-
-
-    }
+        }
+    );
 
 
 
 
 
-    if(dropZone){
+    dropZone?.addEventListener(
+        'dragover',
+        e=>{
 
+            e.preventDefault();
 
-        dropZone.addEventListener(
-            'dragover',
-            e=>{
-
-                e.preventDefault();
-
-            }
-        );
-
-
-
-        dropZone.addEventListener(
-            'drop',
-            e=>{
-
-                e.preventDefault();
-
-
-                handleFiles(
-                    e.dataTransfer.files
-                );
-
-
-            }
-        );
-
-
-    }
+        }
+    );
 
 
 
 
 
-    if(generateBtn){
+    dropZone?.addEventListener(
+        'drop',
+        e=>{
 
 
-        generateBtn.addEventListener(
-            'click',
-            generateReport
-        );
+            e.preventDefault();
 
 
-    }
+            handleFiles(
+                e.dataTransfer.files
+            );
+
+
+        }
+    );
 
 
 
 
 
-    if(clearBtn){
+    generateBtn?.addEventListener(
+        'click',
+        generateReport
+    );
 
 
-        clearBtn.addEventListener(
-            'click',
-            ()=>{
 
 
-                clearFiles();
+
+    clearBtn?.addEventListener(
+        'click',
+        ()=>{
 
 
-                generatorState.resetFiles();
+            clearFiles();
 
 
-                renderFiles([]);
+            generatorState.resetFiles();
 
 
-                showStatus(
-                    'Archivos eliminados'
-                );
+            renderFiles([]);
 
 
-            }
-        );
+            showStatus(
+                'Archivos eliminados'
+            );
 
 
-    }
-
+        }
+    );
 
 
 }
@@ -243,10 +215,12 @@ function registerEvents(){
 
 
 
+
+
+
 /**
  * Manejo de archivos
  */
-
 function handleFiles(files){
 
 
@@ -269,7 +243,6 @@ function handleFiles(files){
     }
 
 
-
 }
 
 
@@ -277,10 +250,11 @@ function handleFiles(files){
 
 
 
-/**
- * Flujo principal
- */
 
+
+/**
+ * Generación del reporte
+ */
 async function generateReport(){
 
 
@@ -289,13 +263,17 @@ async function generateReport(){
         !generatorState.selectedFiles.length
     ){
 
+
         showError(
             'Debe seleccionar archivos Excel'
         );
 
+
         return;
 
+
     }
+
 
 
 
@@ -315,7 +293,8 @@ async function generateReport(){
     try{
 
 
-        generatorState.processing=true;
+        generatorState.processing =
+            true;
 
 
 
@@ -324,26 +303,17 @@ async function generateReport(){
 
 
 
-        /*
-            1.
-            Enviar archivos a Make
-        */
-
 
         const response =
-            await sendToMake(
-                generatorState.selectedFiles
+            await enviarArchivosAMake(
+                generatorState.selectedFiles,
+                'bancario'
             );
 
 
 
 
 
-
-        /*
-            2.
-            Normalizar respuesta
-        */
 
 
         const report =
@@ -355,15 +325,9 @@ async function generateReport(){
 
 
 
-        /*
-            3.
-            Guardar estado
-        */
-
 
         generatorState.lastProcessedData =
             report;
-
 
 
 
@@ -374,10 +338,6 @@ async function generateReport(){
 
 
 
-        /*
-            4.
-            Mostrar resultado
-        */
 
 
         renderSummaryCards({
@@ -393,8 +353,9 @@ async function generateReport(){
                 ||
                 0
 
-
         });
+
+
 
 
 
@@ -404,7 +365,6 @@ async function generateReport(){
             'Reporte generado correctamente',
             'success'
         );
-
 
 
 
@@ -427,14 +387,16 @@ async function generateReport(){
     }finally{
 
 
-        generatorState.processing=false;
+        generatorState.processing =
+            false;
+
 
 
         hideLoading();
 
 
-
     }
+
 
 
 }

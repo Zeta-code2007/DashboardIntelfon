@@ -15,28 +15,50 @@
  */
 
 
-import { renderOverview } from '../views/overview.js';
-import { renderHistory } from '../views/history.js';
-import { renderUsers } from '../views/users.js';
+import { renderOverview } 
+from '../views/overview.js';
 
-import { renderGenerator } from '../modules/generator/generator.ui.js';
 
-import { renderReportSection } from '../components/reportSection.js';
+import { renderHistory } 
+from '../views/history.js';
 
-import { canAccess } from './permissions.js';
+
+import { renderUsers } 
+from '../views/users.js';
+
+
+
+import { initGenerator } 
+from '../modules/generator/generator.controller.js';
+
+
+
+import { renderReportSection } 
+from '../components/reportSection.js';
+
+
+
+import { canAccess } 
+from './permissions.js';
+
+
 
 
 
 let appContent = null;
+
 let pageTitle = null;
+
 let navButtons = [];
 
 
 
 
 
+
+
 /**
- * Registro de vistas disponibles
+ * Vistas disponibles
  */
 const views = {
 
@@ -53,15 +75,17 @@ const views = {
 
 
 
+
     generator: {
 
         title:
             'Generar Reporte Excel',
 
         render:
-            renderGenerator
+            initGenerator
 
     },
+
 
 
 
@@ -74,6 +98,8 @@ const views = {
             renderHistory
 
     },
+
+
 
 
 
@@ -95,6 +121,8 @@ const views = {
 
 
 
+
+
     'daily-flow': {
 
         title:
@@ -110,6 +138,8 @@ const views = {
         }
 
     },
+
+
 
 
 
@@ -131,6 +161,8 @@ const views = {
 
 
 
+
+
     users: {
 
         title:
@@ -145,14 +177,19 @@ const views = {
     }
 
 
+
 };
 
 
 
 
 
+
+
+
+
 /**
- * Inicializa navegación
+ * Inicializa router
  */
 export function initRouter(){
 
@@ -225,8 +262,11 @@ export function initRouter(){
 
 
 
+
+
+
 /**
- * Carga una vista
+ * Cargar vista
  */
 export function loadView(viewName){
 
@@ -248,6 +288,7 @@ export function loadView(viewName){
 
 
     }
+
 
 
 
@@ -280,6 +321,7 @@ export function loadView(viewName){
 
 
 
+
     if(pageTitle){
 
 
@@ -288,6 +330,7 @@ export function loadView(viewName){
 
 
     }
+
 
 
 
@@ -310,11 +353,14 @@ export function loadView(viewName){
 
 
 
+
+
     if(!appContent){
 
         return;
 
     }
+
 
 
 
@@ -342,6 +388,7 @@ export function loadView(viewName){
         );
 
 
+
         appContent.appendChild(
             element
         );
@@ -357,18 +404,6 @@ export function loadView(viewName){
 
 
 
-
-
-    if(
-        window.innerWidth < 1024
-    ){
-
-        closeMobileSidebar();
-
-    }
-
-
-
 }
 
 
@@ -376,8 +411,11 @@ export function loadView(viewName){
 
 
 
+
+
+
 /**
- * Eventos internos entre módulos
+ * Eventos entre módulos
  */
 function handleMessage(event){
 
@@ -404,11 +442,11 @@ function handleMessage(event){
         );
 
 
-
         return;
 
-
     }
+
+
 
 
 
@@ -438,6 +476,9 @@ function handleMessage(event){
 
 
 
+
+
+
 /**
  * Actualización por almacenamiento
  */
@@ -449,7 +490,6 @@ function handleStorage(event){
         event.key ===
         'intelfon_current_report'
     ){
-
 
 
         const activeView =
@@ -469,73 +509,6 @@ function handleStorage(event){
 
 
     }
-
-
-
-}
-
-
-
-
-
-
-
-/**
- * Cierre menú móvil
- */
-function closeMobileSidebar(){
-
-
-    const sidebar =
-        document.getElementById(
-            'sidebar'
-        );
-
-
-
-    const backdrop =
-        document.getElementById(
-            'sidebar-backdrop'
-        );
-
-
-
-    if(
-        !sidebar ||
-        !backdrop
-    ){
-
-        return;
-
-    }
-
-
-
-
-
-    sidebar.classList.add(
-        '-translate-x-full'
-    );
-
-
-
-    backdrop.classList.add(
-        'opacity-0',
-        'pointer-events-none'
-    );
-
-
-
-    backdrop.classList.remove(
-        'opacity-100',
-        'pointer-events-auto'
-    );
-
-
-
-    document.body.classList.remove(
-        'overflow-hidden'
-    );
 
 
 }

@@ -8,14 +8,21 @@
  */
 
 
+
 /**
  * Escapa HTML básico
  */
 function escapeHtml(value){
 
-    if(value === null || value === undefined){
+    if(
+        value === null ||
+        value === undefined
+    ){
+
         return '';
+
     }
+
 
     return String(value)
         .replace(/&/g,'&amp;')
@@ -29,6 +36,7 @@ function escapeHtml(value){
 
 
 
+
 /**
  * Render principal del módulo
  */
@@ -36,27 +44,36 @@ export function renderGenerator(container){
 
 
     if(!container){
-        return;
+
+        return null;
+
     }
 
 
+
     container.innerHTML = `
+
 
         <section class="generator-container">
 
 
             <div class="generator-header">
 
+
                 <h2>
                     Generador de Reportes Bancarios
                 </h2>
+
 
 
                 <p>
                     Carga tus estados de cuenta para generar el análisis financiero.
                 </p>
 
+
             </div>
+
+
 
 
 
@@ -68,9 +85,11 @@ export function renderGenerator(container){
                     class="drop-zone"
                 >
 
+
                     <span>
                         Arrastra tus archivos Excel aquí
                     </span>
+
 
 
                     <small>
@@ -78,12 +97,19 @@ export function renderGenerator(container){
                     </small>
 
 
+
                     <input 
+
                         id="file-input"
+
                         type="file"
+
                         multiple
+
                         accept=".xlsx"
+
                     >
+
 
                 </div>
 
@@ -92,34 +118,57 @@ export function renderGenerator(container){
 
 
 
+
+
+
             <div 
+
                 id="files-preview"
+
                 class="files-preview"
+
             ></div>
+
+
+
+
 
 
 
             <div class="generator-actions">
 
 
+
                 <button
+
                     id="generate-report"
+
                     class="btn-primary"
+
                 >
 
                     Generar Reporte
 
+
                 </button>
 
 
+
+
+
                 <button
+
                     id="clear-files"
+
                     class="btn-secondary"
+
                 >
 
                     Limpiar
 
+
                 </button>
+
 
 
             </div>
@@ -127,25 +176,47 @@ export function renderGenerator(container){
 
 
 
+
+
+
             <div 
+
                 id="generator-status"
+
                 class="generator-status"
+
             ></div>
+
+
+
 
 
 
             <div 
+
                 id="generator-results"
+
             ></div>
+
+
 
 
 
         </section>
 
+
     `;
 
 
+
+    return container;
+
+
 }
+
+
+
+
 
 
 
@@ -162,24 +233,35 @@ export function renderFiles(files){
         );
 
 
+
     if(!container){
+
         return;
+
     }
+
+
 
 
 
     if(!files.length){
 
+
         container.innerHTML =
-            `
+        `
+
             <p>
                 No hay archivos seleccionados
             </p>
-            `;
+
+        `;
+
 
         return;
 
     }
+
+
 
 
 
@@ -189,6 +271,7 @@ export function renderFiles(files){
 
             return `
 
+
             <div class="file-card">
 
 
@@ -197,19 +280,28 @@ export function renderFiles(files){
                 </strong>
 
 
+
                 <span>
                     ${formatBytes(file.size)}
                 </span>
 
 
+
             </div>
+
 
             `;
 
 
+
         }).join('');
 
+
+
 }
+
+
+
 
 
 
@@ -222,8 +314,11 @@ function formatBytes(bytes){
 
 
     if(!bytes){
+
         return '0 B';
+
     }
+
 
 
     const sizes =
@@ -235,6 +330,7 @@ function formatBytes(bytes){
     ];
 
 
+
     const index =
         Math.floor(
             Math.log(bytes)
@@ -243,9 +339,11 @@ function formatBytes(bytes){
         );
 
 
+
     return (
 
         parseFloat(
+
             (
                 bytes /
                 Math.pow(
@@ -255,15 +353,18 @@ function formatBytes(bytes){
 
             )
             .toFixed(2)
+
         )
 
         +
+
         ' '
+
         +
+
         sizes[index]
 
     );
-
 
 }
 
@@ -271,8 +372,11 @@ function formatBytes(bytes){
 
 
 
+
+
+
 /**
- * Actualiza estado del proceso
+ * Actualiza estado
  */
 export function showStatus(
     message,
@@ -286,9 +390,14 @@ export function showStatus(
         );
 
 
+
     if(!box){
+
         return;
+
     }
+
+
 
 
 
@@ -296,15 +405,21 @@ export function showStatus(
         `generator-status ${type}`;
 
 
+
     box.innerHTML =
-        `
+    `
+
         <span>
             ${escapeHtml(message)}
         </span>
-        `;
+
+    `;
 
 
 }
+
+
+
 
 
 
@@ -322,13 +437,18 @@ export function clearStatus(){
         );
 
 
+
     if(box){
 
         box.innerHTML='';
 
     }
 
+
 }
+
+
+
 
 
 
@@ -346,19 +466,31 @@ export function renderSummaryCards(summary){
         );
 
 
+
     if(!container){
+
         return;
+
     }
+
+
 
 
 
     if(!summary){
 
+
         container.innerHTML='';
+
 
         return;
 
+
     }
+
+
+
+
 
 
 
@@ -370,45 +502,58 @@ export function renderSummaryCards(summary){
 
         <div class="summary-card">
 
+
             <h4>
                 Bancos Procesados
             </h4>
+
 
             <strong>
                 ${summary.bancos || 0}
             </strong>
 
+
         </div>
 
 
 
 
+
         <div class="summary-card">
+
 
             <h4>
                 Registros
             </h4>
 
+
+
             <strong>
                 ${summary.registros || 0}
             </strong>
 
+
         </div>
+
 
 
 
 
         <div class="summary-card">
 
+
             <h4>
                 Estado
             </h4>
+
 
             <strong>
                 Finalizado
             </strong>
 
+
         </div>
+
 
 
 
@@ -418,14 +563,18 @@ export function renderSummaryCards(summary){
     `;
 
 
+
 }
 
 
 
 
 
+
+
+
 /**
- * Mostrar error general
+ * Mostrar error
  */
 export function showError(message){
 
@@ -437,6 +586,8 @@ export function showError(message){
 
 
 }
+
+
 
 
 
@@ -460,11 +611,15 @@ export function showLoading(){
 
 
 
+
+
 /**
  * Ocultar cargando
  */
 export function hideLoading(){
 
+
     clearStatus();
+
 
 }
