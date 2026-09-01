@@ -10,7 +10,7 @@
 
 import { initTheme } from './theme.js';
 import { initRouter } from './router.js';
-import { initSession } from './session.js';
+import { initSession, checkAuthentication } from './session.js';
 
 
 
@@ -37,6 +37,12 @@ document.addEventListener(
             Inicializar sesión
         */
         initSession();
+
+
+        /*
+            Validar autenticación antes de mostrar dashboard
+        */
+        checkAuthentication();
 
 
 
