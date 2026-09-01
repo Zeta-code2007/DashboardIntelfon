@@ -240,7 +240,7 @@ export function renderGenerator() {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                         </svg>
                     </span>
-                    <span id="btn-submit-text">Procesar reporte de ${regionMeta.name}</span>
+                    <span id="btn-submit-text"> Generar reporte de ${regionMeta.name}</span>
                 </button>
                 <button type="button" id="btn-clear-dashboard" class="btn-intelfon-secondary w-full py-3 text-sm flex items-center justify-center space-x-2 border border-slate-300 dark:border-slate-700">
                     <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -407,6 +407,11 @@ export function renderGenerator() {
     const statusSpinner = container.querySelector('#status-spinner');
 
     const btnSubmit = container.querySelector('#btn-submit');
+    btnSubmit.disabled = true;
+    btnSubmit.classList.add(
+        'opacity-50',
+        'cursor-not-allowed'
+    );
     const btnSubmitIcon = container.querySelector('#btn-submit-icon');
     const btnSubmitText = container.querySelector('#btn-submit-text');
 
@@ -734,14 +739,33 @@ export function renderGenerator() {
         renderSvFilesList();
         hideError();
         syncDocumentStatus();
+        btnSubmit.disabled = false;
+        btnSubmit.classList.remove(
+         'opacity-50',
+         'cursor-not-allowed'
+        );
+
+        btnSubmitText.textContent = `Generar reporte de ${regionMeta.name}`;
     }
 
     function clearFileSelection() {
-        selectedFiles.length = 0;
-        if (fileInput) fileInput.value = '';
-        renderSvFilesList();
-        SyncService.setDocumentStatus(activeRegion, { uploaded: false, count: 0 });
-    }
+    selectedFiles.length = 0;
+
+    if (fileInput) fileInput.value = '';
+
+    renderSvFilesList();
+
+    SyncService.setDocumentStatus(activeRegion, {
+        uploaded:false,
+        count:0
+    });
+
+    btnSubmit.disabled = true;
+    btnSubmit.classList.add(
+        'opacity-50',
+        'cursor-not-allowed'
+    );
+}
 
     if (dropzone) {
         dropzone.addEventListener('click', () => {
@@ -1737,7 +1761,7 @@ replaceCurrentReport(
             btnSubmitIcon.innerHTML = `
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
             `;
-            btnSubmitText.textContent = `Procesar reporte de ${regionMeta.name}`;
+            btnSubmitText.textContent = `Generar reporte ${regionMeta.name}`;
         }
     });
 
