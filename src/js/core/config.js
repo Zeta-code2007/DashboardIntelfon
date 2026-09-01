@@ -21,10 +21,34 @@ export const CONFIG = {
 
     // Regiones operativas y su moneda por defecto
     REGIONS: {
-        GT: { code: 'GT', name: 'Guatemala', flag: '🇬🇹', currency: 'GTQ', currencySymbol: 'Q' },
-        SV: { code: 'SV', name: 'El Salvador', flag: '🇸🇻', currency: 'USD', currencySymbol: '$' }
-    },
 
+        GLOBAL: {
+            code: 'GLOBAL',
+            name: 'Consolidado Regional',
+            flag: '🌎',
+            currency: 'USD',
+            currencySymbol: '$'
+        },
+
+
+        GT: {
+            code: 'GT',
+            name: 'Guatemala',
+            flag: '🇬🇹',
+            currency: 'GTQ',
+            currencySymbol: 'Q'
+        },
+
+
+        SV: {
+            code: 'SV',
+            name: 'El Salvador',
+            flag: '🇸🇻',
+            currency: 'USD',
+            currencySymbol: '$'
+        }
+
+    },
     // Credenciales maestras de acceso para demostración / administración
     AUTH: {
         masterUsername: 'intelfon',
@@ -63,7 +87,7 @@ export const CONFIG = {
         messagingSenderId: "457368392091",
         appId: "1:457368392091:web:0cb70fbb766bbdc5a6913e",
         measurementId: "G-RX3B70LFWS"
-        },
+    },
 
     // Ruta raíz en Firebase donde se guarda el estado de sincronización
     SYNC: {

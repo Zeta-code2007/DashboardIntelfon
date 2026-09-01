@@ -275,10 +275,18 @@ function initializeDashboard(
 
 
 
-    SyncService.initSync(
-        activeRegion,
-        user
-    );
+    if(
+        activeRegion === 'GT'
+        ||
+        activeRegion === 'SV'
+    ){
+
+        SyncService.initSync(
+            activeRegion,
+            user
+        );
+
+    }
 
 
 

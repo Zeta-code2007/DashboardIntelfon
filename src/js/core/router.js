@@ -69,7 +69,10 @@ const views = {
             'Inicio / Overview',
 
         render:
-            renderOverview
+            renderOverview,
+
+        permission:
+            'overview'
 
     },
 
@@ -82,7 +85,10 @@ const views = {
             'Generar Reporte Excel',
 
         render:
-            initGenerator
+            initGenerator,
+
+        permission:
+            'generator'
 
     },
 
@@ -95,7 +101,10 @@ const views = {
             'Reportes Anteriores',
 
         render:
-            renderHistory
+            renderHistory,
+
+        permission:
+            'history'
 
     },
 
@@ -115,7 +124,10 @@ const views = {
                 'Detalle por banco'
             );
 
-        }
+        },
+
+        permission:
+            'bank-detail'
 
     },
 
@@ -135,7 +147,10 @@ const views = {
                 'Flujo diario'
             );
 
-        }
+        },
+
+        permission:
+            'daily-flow'
 
     },
 
@@ -155,7 +170,10 @@ const views = {
                 'Detalle de cuentas'
             );
 
-        }
+        },
+
+        permission:
+            'account-detail'
 
     },
 

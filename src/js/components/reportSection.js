@@ -33,9 +33,20 @@ export function renderReportSection(target, title, options = {}) {
     viewer.loading = 'eager';
 
     function getViewerUrl() {
-        const region = RegionService.getActiveRegion();
-        const compact = options.compact ? '&compact=1' : '';
+
+        const region =
+            options.region ||
+            RegionService.getActiveRegion();
+
+
+        const compact =
+            options.compact
+                ? '&compact=1'
+                : '';
+
+
         return `report-viewer.html?region=${encodeURIComponent(region)}${compact}#${target}`;
+
     }
 
     viewer.src = getViewerUrl();

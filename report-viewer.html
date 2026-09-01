@@ -1,1094 +1,2225 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RED INTELFON - Saldos Bancarios Consolidados</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RED INTELFON - Saldos Bancarios Consolidados</title>
 
-<!-- SheetJS (xlsx) CDN -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- SheetJS (xlsx) CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-<!-- html2pdf.js CDN para Descarga Directa de PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- html2pdf.js CDN para Descarga Directa de PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<style>
-  :root{
-    --bg:#171A21;--panel:#222631;--panel2:#292E3A;--soft:#323846;--text:#F8FAFC;--muted:#AAB4C3;
-    --line:#3B4352;--green:#34D399;--blue:#60A5FA;--amber:#FBBF24;--red:#FB7185;--purple:#A78BFA;
-    --intelfon-red:#DC2626;--intelfon-red-hover:#B91C1C;
-    --shadow:0 16px 40px rgba(0,0,0,.22);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:radial-gradient(circle at 10% -10%,#27334a 0,transparent 35%),linear-gradient(180deg,#171A21,#12151B 80%);color:var(--text);font-family:Inter,'Segoe UI',Arial,sans-serif;min-height:100vh;letter-spacing:.005em}
-  .app{max-width:1500px;margin:auto;padding:28px}
-  .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,430px);justify-content:space-between;gap:28px;align-items:start;background:linear-gradient(135deg,#2B3040 0%,#232835 55%,#1C222D 100%);border:1px solid #3C4454;border-radius:24px;padding:26px 28px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-  .hero:after{content:"";position:absolute;width:320px;height:320px;border-radius:50%;background:linear-gradient(135deg,rgba(220,38,38,.18),rgba(96,165,250,.08));right:-90px;top:-140px}
-  .hero-left{position:relative;z-index:1}
-  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#F87171;font-weight:800}
-  h1{margin:8px 0 7px;font-size:clamp(26px,4vw,42px);letter-spacing:-.035em}
-  .sub{color:var(--muted);font-size:14px;line-height:1.55}
-  .hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative;z-index:1;justify-content:stretch}
-  .hero-actions button{width:100%;min-height:40px;white-space:nowrap}
-  .btn-clear-dashboard{background:#374151;border-color:#64748B;color:#F8FAFC}
-  .btn-clear-dashboard:hover{background:#4B5563;border-color:#94A3B8}
-  button,.select{border:1px solid #465064;background:#2C3340;color:var(--text);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:all 0.2s}
-  button:hover{background:#374151}
-  .btn-primary-red{background:linear-gradient(135deg,#DC2626,#B91C1C);border-color:#EF4444;color:#FFFFFF}
-  .btn-primary-red:hover{background:linear-gradient(135deg,#B91C1C,#991B1B)}
-  .btn-excel{background:#059669;border-color:#10B981;color:#FFFFFF}
-  .btn-excel:hover{background:#047857}
-  .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px;max-width:900px}
-  .meta span{background:#1E2430;border:1px solid #3A4352;color:#C7D2E0;border-radius:999px;padding:7px 10px;font-size:12px}
-  .date-filter{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:#1E2430;border:1px solid #3A4352;color:#C7D2E0;border-radius:16px;padding:5px 6px 5px 11px;font-size:11px;box-shadow:0 6px 16px rgba(0,0,0,.10)}
-  .date-filter-title{font-weight:850;color:#DCE6F4;margin-right:1px;white-space:nowrap}
-  .date-filter label{display:flex;align-items:center;gap:5px;color:#94A3B8;font-size:10px;font-weight:750;white-space:nowrap}
-  .date-filter input[type="date"]{width:124px;border:1px solid #465064;background:#252C37;color:#F8FAFC;border-radius:9px;padding:5px 7px;font:700 10px Inter,'Segoe UI',Arial,sans-serif;outline:none;color-scheme:dark}
-  .date-filter input[type="date"]:focus{border-color:#60A5FA;box-shadow:0 0 0 2px rgba(96,165,250,.13)}
-  .date-sep{color:#687386;font-weight:800}
-  .date-apply,.date-reset{border:1px solid #4A5A72;background:#334155;color:#F8FAFC;padding:6px 9px;border-radius:9px;font-size:10px;font-weight:800;cursor:pointer}
-  .date-apply:hover,.date-reset:hover{background:#41516A}
-  .date-reset{min-width:30px;padding-left:8px;padding-right:8px}
-  .tabs{display:flex;gap:9px;margin:22px 0 16px;flex-wrap:wrap}
-  body.embedded-overview .tabs{display:none}
-  .tab{background:#222832;border:1px solid #394252;color:#C5CEDA}
-  .tab.active{background:#DC2626;color:#FFFFFF;border-color:#DC2626}
-  .section{display:none}.section.active{display:block;animation:sectionIn .28s ease both}
-  @keyframes sectionIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .kpis{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px}
-  .kpi{background:linear-gradient(180deg,#262B36,#20252F);border:1px solid #3A4250;border-radius:18px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.12)}
-  .kpi .label{font-size:12px;color:#AEB8C8;text-transform:uppercase;letter-spacing:.07em;font-weight:800}
-  .kpi .value{font-size:clamp(20px,2vw,29px);font-weight:850;margin:8px 0 4px;letter-spacing:-.03em}
-  .kpi .hint{font-size:12px;color:#8F9AAA}
-  .positive{color:#6EE7B7!important}.negative{color:#FDA4AF!important}.neutral{color:#93C5FD!important}
-  .grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-top:16px}
-  .grid-equal{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
-  .card{background:linear-gradient(180deg,#242A34,#1E232C);border:1px solid #39414F;border-radius:20px;padding:20px;box-shadow:var(--shadow);position:relative;transition:transform .25s cubic-bezier(0.16, 1, 0.3, 1),border-color .25s ease,box-shadow .25s ease}
-  .card:hover{border-color:#4F5B6F;box-shadow:0 20px 45px rgba(0,0,0,.35)}
-  .card h2{font-size:17px;margin:0 0 4px;letter-spacing:-.01em}
-  .card .desc{font-size:12px;color:#94A0B2;margin-bottom:16px}
-  canvas{width:100%;height:330px;display:block;cursor:crosshair;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.12))}
-  .chart-tooltip{position:absolute;z-index:20;display:flex;flex-direction:column;gap:5px;min-width:170px;max-width:260px;padding:12px 14px;border:1px solid rgba(96,165,250,.35);border-radius:12px;background:rgba(15,23,42,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 36px rgba(0,0,0,.45);color:#CBD5E1;font-size:11px;line-height:1.4;pointer-events:none;opacity:0;transform:translateY(6px) scale(.97);transition:opacity .18s ease,transform .18s cubic-bezier(0.16, 1, 0.3, 1)}
-  .chart-tooltip.visible{opacity:1;transform:translateY(0) scale(1)}
-  .chart-tooltip strong{color:#F8FAFC;font-size:12.5px;font-weight:800;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:4px;margin-bottom:2px}
-  .bank-list{display:grid;gap:10px}
-  .bank-row{display:grid;grid-template-columns:14px 1fr auto;gap:11px;align-items:center;padding:12px;border:1px solid #3B4453;background:#292F3A;border-radius:14px}
-  .dot{width:10px;height:10px;border-radius:50%}
-  .bank-row strong{display:block;font-size:14px}.bank-row small{color:#9BA6B6}
-  .bank-row .amount{text-align:right;font-weight:800}
-  .progress{height:7px;background:#3A4250;border-radius:99px;overflow:hidden;margin-top:7px}.progress i{display:block;height:100%;border-radius:99px}
-  .insights{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
-  .insight{padding:15px;border-radius:16px;background:#252B35;border:1px solid #3B4350}
-  .insight .tag{font-size:11px;color:#AAB4C2;text-transform:uppercase;font-weight:800}
-  .insight b{display:block;font-size:17px;margin-top:7px}.insight p{margin:5px 0 0;color:#9CA8B8;font-size:12px;line-height:1.4}
-  .table-wrap{overflow:auto;border:1px solid #39414F;border-radius:16px}
-  table{width:100%;border-collapse:collapse;min-width:980px;background:#20252E}
-  th{position:sticky;top:0;background:#2D3440;color:#DCE4EF;font-size:11px;text-transform:uppercase;letter-spacing:.05em;text-align:left;padding:12px;border-bottom:1px solid #465061}
-  td{padding:12px;border-bottom:1px solid #343C49;font-size:13px;color:#D6DEEA}
-  tr:hover td{background:#252C36}
-  td.num{text-align:right;font-variant-numeric:tabular-nums}
-  .badge{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border-radius:999px;background:#303744;font-weight:800;font-size:11px}
-  .toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
-  select{appearance:none}
-  .legend{display:flex;gap:14px;flex-wrap:wrap;color:#AEB8C6;font-size:12px}.legend span{display:flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:3px}
-  .note{margin-top:18px;padding:13px 15px;border-radius:13px;background:#1E2530;border:1px dashed #465164;color:#AAB5C5;font-size:12px;line-height:1.5}
-  .footer{display:flex;justify-content:space-between;gap:15px;color:#7F8A9B;font-size:11px;margin-top:20px;padding:0 4px;flex-wrap:wrap}
-  .bank-detail-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
-  .bank-card{background:#242A34;border:1px solid #3B4350;border-radius:18px;padding:16px;position:relative;overflow:hidden}
-  .bank-card:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--bank,#DC2626)}
-  .bank-card .bank-title{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:850}
-  .bank-badge{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;background:rgba(255,255,255,.08);color:#F8FAFC;border:1px solid rgba(255,255,255,.12)}
-  .bank-card .big{font-size:23px;font-weight:900;margin:14px 0 3px}.bank-card .small{color:#9AA6B7;font-size:11px}
-  .bank-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.mini{background:#1D222A;padding:9px;border-radius:10px}.mini b{font-size:12px}.mini span{display:block;color:#8E9AAB;font-size:10px;margin-top:3px}
+  <style>
+    :root {
+      --bg: #171A21;
+      --panel: #222631;
+      --panel2: #292E3A;
+      --soft: #323846;
+      --text: #F8FAFC;
+      --muted: #AAB4C3;
+      --line: #3B4352;
+      --green: #34D399;
+      --blue: #60A5FA;
+      --amber: #FBBF24;
+      --red: #FB7185;
+      --purple: #A78BFA;
+      --intelfon-red: #DC2626;
+      --intelfon-red-hover: #B91C1C;
+      --shadow: 0 16px 40px rgba(0, 0, 0, .22);
+    }
 
-  .executive-cover{position:relative;overflow:hidden;background:linear-gradient(135deg,#242B38 0%,#1E2531 58%,#17202B 100%);border:1px solid #3B4555;border-radius:24px;padding:28px 30px;margin-bottom:18px;box-shadow:var(--shadow)}
-  .executive-cover:before{content:"";position:absolute;inset:auto -80px -120px auto;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(220,38,38,.20),rgba(96,165,250,.08) 50%,transparent 72%)}
-  .cover-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:28px;align-items:center;position:relative;z-index:1}
-  .cover-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:#F87171;font-weight:850}
-  .cover-title{font-size:clamp(28px,4vw,48px);line-height:1.03;margin:9px 0 10px;letter-spacing:-.045em;font-weight:900}
-  .cover-copy{max-width:760px;color:#B6C1D0;font-size:14px;line-height:1.65}
-  .cover-badges{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.cover-badges span{background:#202733;border:1px solid #3C4656;border-radius:999px;padding:8px 11px;font-size:11px;color:#D4DCE8;font-weight:700}
-  .cover-bank-strip{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end}
-  .cover-logo{background:linear-gradient(180deg,#2A3241,#202633);border:1px solid #3E4B60;border-radius:14px;min-height:54px;padding:8px 14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(0,0,0,.15);font-size:12px;font-weight:800;color:#F8FAFC}
-  .section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:4px 0 14px}.section-heading h2{margin:0;font-size:20px;letter-spacing:-.02em}.section-heading p{margin:4px 0 0;color:#94A0B2;font-size:12px}.section-chip{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#F87171;border:1px solid #7F1D1D;background:#2D1515;border-radius:999px;padding:7px 10px;font-weight:800}
-  .bank-card{transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}.bank-card:hover{transform:translateY(-2px);border-color:#536174;box-shadow:0 14px 28px rgba(0,0,0,.18)}
-  .kpi{transition:transform .2s ease,border-color .2s ease}.kpi:hover{transform:translateY(-2px);border-color:#4B586A}
-  
-  .empty-state{text-align:center;padding:40px 20px;color:#94A0B2;font-size:14px}
-  .empty-state svg{width:48px;height:48px;margin:0 auto 12px;color:#64748B}
+    * {
+      box-sizing: border-box
+    }
 
-  /* SELECTOR MULTIPAÍS GT / SV */
-  .country-switcher{display:inline-flex;align-items:center;background:#181D26;border:1px solid #3B4454;border-radius:14px;padding:3px;gap:4px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
-  .country-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:10px;font-size:12px;font-weight:750;border:1px solid transparent;background:transparent;color:#94A3B8;cursor:pointer;transition:all .18s ease}
-  .country-pill:hover{color:#F8FAFC;background:rgba(255,255,255,.06)}
-  .country-pill.active{background:linear-gradient(135deg,#DC2626,#B91C1C);color:#FFFFFF;border-color:#EF4444;box-shadow:0 4px 14px rgba(220,38,38,.35)}
-  .country-pill .flag{font-size:15px;line-height:1}
-  .country-pill .country-curr{font-size:10px;opacity:.85;font-weight:600}
-  .country-pill .country-count{display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;color:#FFF}
-  .btn-toggle-country{background:linear-gradient(135deg,#1E293B,#0F172A);border:1px solid #475569;color:#38BDF8;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:800;cursor:pointer;transition:all .2s ease}
-  .btn-toggle-country:hover{background:linear-gradient(135deg,#334155,#1E293B);border-color:#38BDF8;color:#FFFFFF;box-shadow:0 4px 12px rgba(56,189,248,.25);transform:translateY(-1px)}
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 10% -10%, #27334a 0, transparent 35%), linear-gradient(180deg, #171A21, #12151B 80%);
+      color: var(--text);
+      font-family: Inter, 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      letter-spacing: .005em
+    }
 
-  @media(max-width:1200px){.hero{grid-template-columns:minmax(0,1fr) minmax(300px,360px)}.kpis{grid-template-columns:repeat(2,minmax(200px,1fr))}.insights{grid-template-columns:repeat(2,1fr)}.bank-detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-  @media(max-width:820px){.date-filter{width:100%;border-radius:14px}.date-filter input[type="date"]{width:118px}.app{padding:14px}.hero{display:flex;flex-direction:column}.hero-actions{width:100%;justify-content:stretch}.kpis{grid-template-columns:1fr}.grid2,.grid-equal{grid-template-columns:1fr}.insights{grid-template-columns:1fr}.bank-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}canvas{height:280px}}
-  @media(max-width:520px){.bank-detail-grid{grid-template-columns:1fr}}
-  @media print{body{background:#fff;color:#111}.executive-cover{background:#fff!important;color:#111!important;border:1px solid #d7d7d7;box-shadow:none}.executive-cover:before{display:none}.cover-copy,.cover-badges span{color:#444!important}.cover-badges span{background:#fff;border-color:#ddd}.cover-logo{box-shadow:none;border-color:#ddd;background:#fff;color:#111}.app{max-width:none;padding:0}.hero,.card,.kpi,.bank-card,.insight{box-shadow:none}.hero-actions,.tabs{display:none!important}.section{display:block!important;page-break-inside:avoid;margin-bottom:20px}.hero,.card,.kpi,.bank-card,.insight{background:#fff;color:#111;border-color:#ddd}.sub,.desc,.hint,.small,.note,.footer{color:#555!important}.table-wrap{border-color:#ddd}table,td{background:#fff!important;color:#111!important}th{background:#eee!important;color:#111!important}.meta span{background:#f5f5f5;color:#333;border-color:#ddd}}
-</style>
+    .app {
+      max-width: 1500px;
+      margin: auto;
+      padding: 28px
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+      justify-content: space-between;
+      gap: 28px;
+      align-items: start;
+      background: linear-gradient(135deg, #2B3040 0%, #232835 55%, #1C222D 100%);
+      border: 1px solid #3C4454;
+      border-radius: 24px;
+      padding: 26px 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden
+    }
+
+    .hero:after {
+      content: "";
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(220, 38, 38, .18), rgba(96, 165, 250, .08));
+      right: -90px;
+      top: -140px
+    }
+
+    .hero-left {
+      position: relative;
+      z-index: 1
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: #F87171;
+      font-weight: 800
+    }
+
+    h1 {
+      margin: 8px 0 7px;
+      font-size: clamp(26px, 4vw, 42px);
+      letter-spacing: -.035em
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55
+    }
+
+    .hero-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+      justify-content: stretch
+    }
+
+    .hero-actions button {
+      width: 100%;
+      min-height: 40px;
+      white-space: nowrap
+    }
+
+    .btn-clear-dashboard {
+      background: #374151;
+      border-color: #64748B;
+      color: #F8FAFC
+    }
+
+    .btn-clear-dashboard:hover {
+      background: #4B5563;
+      border-color: #94A3B8
+    }
+
+    button,
+    .select {
+      border: 1px solid #465064;
+      background: #2C3340;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s
+    }
+
+    button:hover {
+      background: #374151
+    }
+
+    .btn-primary-red {
+      background: linear-gradient(135deg, #DC2626, #B91C1C);
+      border-color: #EF4444;
+      color: #FFFFFF
+    }
+
+    .btn-primary-red:hover {
+      background: linear-gradient(135deg, #B91C1C, #991B1B)
+    }
+
+    .btn-excel {
+      background: #059669;
+      border-color: #10B981;
+      color: #FFFFFF
+    }
+
+    .btn-excel:hover {
+      background: #047857
+    }
+
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 18px;
+      max-width: 900px
+    }
+
+    .meta span {
+      background: #1E2430;
+      border: 1px solid #3A4352;
+      color: #C7D2E0;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px
+    }
+
+    .date-filter {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+      background: #1E2430;
+      border: 1px solid #3A4352;
+      color: #C7D2E0;
+      border-radius: 16px;
+      padding: 5px 6px 5px 11px;
+      font-size: 11px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .10)
+    }
+
+    .date-filter-title {
+      font-weight: 850;
+      color: #DCE6F4;
+      margin-right: 1px;
+      white-space: nowrap
+    }
+
+    .date-filter label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #94A3B8;
+      font-size: 10px;
+      font-weight: 750;
+      white-space: nowrap
+    }
+
+    .date-filter input[type="date"] {
+      width: 124px;
+      border: 1px solid #465064;
+      background: #252C37;
+      color: #F8FAFC;
+      border-radius: 9px;
+      padding: 5px 7px;
+      font: 700 10px Inter, 'Segoe UI', Arial, sans-serif;
+      outline: none;
+      color-scheme: dark
+    }
+
+    .date-filter input[type="date"]:focus {
+      border-color: #60A5FA;
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, .13)
+    }
+
+    .date-sep {
+      color: #687386;
+      font-weight: 800
+    }
+
+    .date-apply,
+    .date-reset {
+      border: 1px solid #4A5A72;
+      background: #334155;
+      color: #F8FAFC;
+      padding: 6px 9px;
+      border-radius: 9px;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer
+    }
+
+    .date-apply:hover,
+    .date-reset:hover {
+      background: #41516A
+    }
+
+    .date-reset {
+      min-width: 30px;
+      padding-left: 8px;
+      padding-right: 8px
+    }
+
+    .tabs {
+      display: flex;
+      gap: 9px;
+      margin: 22px 0 16px;
+      flex-wrap: wrap
+    }
+
+    body.embedded-overview .tabs {
+      display: none
+    }
+
+    .tab {
+      background: #222832;
+      border: 1px solid #394252;
+      color: #C5CEDA
+    }
+
+    .tab.active {
+      background: #DC2626;
+      color: #FFFFFF;
+      border-color: #DC2626
+    }
+
+    .section {
+      display: none
+    }
+
+    .section.active {
+      display: block;
+      animation: sectionIn .28s ease both
+    }
+
+    @keyframes sectionIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 14px
+    }
+
+    .kpi {
+      background: linear-gradient(180deg, #262B36, #20252F);
+      border: 1px solid #3A4250;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .12)
+    }
+
+    .kpi .label {
+      font-size: 12px;
+      color: #AEB8C8;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      font-weight: 800
+    }
+
+    .kpi .value {
+      font-size: clamp(20px, 2vw, 29px);
+      font-weight: 850;
+      margin: 8px 0 4px;
+      letter-spacing: -.03em
+    }
+
+    .kpi .hint {
+      font-size: 12px;
+      color: #8F9AAA
+    }
+
+    .positive {
+      color: #6EE7B7 !important
+    }
+
+    .negative {
+      color: #FDA4AF !important
+    }
+
+    .neutral {
+      color: #93C5FD !important
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 16px;
+      margin-top: 16px
+    }
+
+    .grid-equal {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px
+    }
+
+    .card {
+      background: linear-gradient(180deg, #242A34, #1E232C);
+      border: 1px solid #39414F;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      position: relative;
+      transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1), border-color .25s ease, box-shadow .25s ease
+    }
+
+    .card:hover {
+      border-color: #4F5B6F;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, .35)
+    }
+
+    .card h2 {
+      font-size: 17px;
+      margin: 0 0 4px;
+      letter-spacing: -.01em
+    }
+
+    .card .desc {
+      font-size: 12px;
+      color: #94A0B2;
+      margin-bottom: 16px
+    }
+
+    canvas {
+      width: 100%;
+      height: 330px;
+      display: block;
+      cursor: crosshair;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12))
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 170px;
+      max-width: 260px;
+      padding: 12px 14px;
+      border: 1px solid rgba(96, 165, 250, .35);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, .92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, .45);
+      color: #CBD5E1;
+      font-size: 11px;
+      line-height: 1.4;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(6px) scale(.97);
+      transition: opacity .18s ease, transform .18s cubic-bezier(0.16, 1, 0.3, 1)
+    }
+
+    .chart-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1)
+    }
+
+    .chart-tooltip strong {
+      color: #F8FAFC;
+      font-size: 12.5px;
+      font-weight: 800;
+      border-bottom: 1px solid rgba(255, 255, 255, .1);
+      padding-bottom: 4px;
+      margin-bottom: 2px
+    }
+
+    .bank-list {
+      display: grid;
+      gap: 10px
+    }
+
+    .bank-row {
+      display: grid;
+      grid-template-columns: 14px 1fr auto;
+      gap: 11px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid #3B4453;
+      background: #292F3A;
+      border-radius: 14px
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%
+    }
+
+    .bank-row strong {
+      display: block;
+      font-size: 14px
+    }
+
+    .bank-row small {
+      color: #9BA6B6
+    }
+
+    .bank-row .amount {
+      text-align: right;
+      font-weight: 800
+    }
+
+    .progress {
+      height: 7px;
+      background: #3A4250;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 7px
+    }
+
+    .progress i {
+      display: block;
+      height: 100%;
+      border-radius: 99px
+    }
+
+    .insights {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 16px
+    }
+
+    .insight {
+      padding: 15px;
+      border-radius: 16px;
+      background: #252B35;
+      border: 1px solid #3B4350
+    }
+
+    .insight .tag {
+      font-size: 11px;
+      color: #AAB4C2;
+      text-transform: uppercase;
+      font-weight: 800
+    }
+
+    .insight b {
+      display: block;
+      font-size: 17px;
+      margin-top: 7px
+    }
+
+    .insight p {
+      margin: 5px 0 0;
+      color: #9CA8B8;
+      font-size: 12px;
+      line-height: 1.4
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid #39414F;
+      border-radius: 16px
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      background: #20252E
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #2D3440;
+      color: #DCE4EF;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #465061
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #343C49;
+      font-size: 13px;
+      color: #D6DEEA
+    }
+
+    tr:hover td {
+      background: #252C36
+    }
+
+    td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #303744;
+      font-weight: 800;
+      font-size: 11px
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap
+    }
+
+    select {
+      appearance: none
+    }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: #AEB8C6;
+      font-size: 12px
+    }
+
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .legend i {
+      width: 9px;
+      height: 9px;
+      border-radius: 3px
+    }
+
+    .note {
+      margin-top: 18px;
+      padding: 13px 15px;
+      border-radius: 13px;
+      background: #1E2530;
+      border: 1px dashed #465164;
+      color: #AAB5C5;
+      font-size: 12px;
+      line-height: 1.5
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      color: #7F8A9B;
+      font-size: 11px;
+      margin-top: 20px;
+      padding: 0 4px;
+      flex-wrap: wrap
+    }
+
+    .bank-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px
+    }
+
+    .bank-card {
+      background: #242A34;
+      border: 1px solid #3B4350;
+      border-radius: 18px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .bank-card:before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--bank, #DC2626)
+    }
+
+    .bank-card .bank-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      font-weight: 850
+    }
+
+    .bank-badge {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      background: rgba(255, 255, 255, .08);
+      color: #F8FAFC;
+      border: 1px solid rgba(255, 255, 255, .12)
+    }
+
+    .bank-card .big {
+      font-size: 23px;
+      font-weight: 900;
+      margin: 14px 0 3px
+    }
+
+    .bank-card .small {
+      color: #9AA6B7;
+      font-size: 11px
+    }
+
+    .bank-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .mini {
+      background: #1D222A;
+      padding: 9px;
+      border-radius: 10px
+    }
+
+    .mini b {
+      font-size: 12px
+    }
+
+    .mini span {
+      display: block;
+      color: #8E9AAB;
+      font-size: 10px;
+      margin-top: 3px
+    }
+
+    .executive-cover {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #242B38 0%, #1E2531 58%, #17202B 100%);
+      border: 1px solid #3B4555;
+      border-radius: 24px;
+      padding: 28px 30px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow)
+    }
+
+    .executive-cover:before {
+      content: "";
+      position: absolute;
+      inset: auto -80px -120px auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(220, 38, 38, .20), rgba(96, 165, 250, .08) 50%, transparent 72%)
+    }
+
+    .cover-grid {
+      display: grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap: 28px;
+      align-items: center;
+      position: relative;
+      z-index: 1
+    }
+
+    .cover-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .18em;
+      color: #F87171;
+      font-weight: 850
+    }
+
+    .cover-title {
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: 1.03;
+      margin: 9px 0 10px;
+      letter-spacing: -.045em;
+      font-weight: 900
+    }
+
+    .cover-copy {
+      max-width: 760px;
+      color: #B6C1D0;
+      font-size: 14px;
+      line-height: 1.65
+    }
+
+    .cover-badges {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+      margin-top: 18px
+    }
+
+    .cover-badges span {
+      background: #202733;
+      border: 1px solid #3C4656;
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 11px;
+      color: #D4DCE8;
+      font-weight: 700
+    }
+
+    .cover-bank-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end
+    }
+
+    .cover-logo {
+      background: linear-gradient(180deg, #2A3241, #202633);
+      border: 1px solid #3E4B60;
+      border-radius: 14px;
+      min-height: 54px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, .15);
+      font-size: 12px;
+      font-weight: 800;
+      color: #F8FAFC
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 4px 0 14px
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -.02em
+    }
+
+    .section-heading p {
+      margin: 4px 0 0;
+      color: #94A0B2;
+      font-size: 12px
+    }
+
+    .section-chip {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: #F87171;
+      border: 1px solid #7F1D1D;
+      background: #2D1515;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-weight: 800
+    }
+
+    .bank-card {
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease
+    }
+
+    .bank-card:hover {
+      transform: translateY(-2px);
+      border-color: #536174;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, .18)
+    }
+
+    .kpi {
+      transition: transform .2s ease, border-color .2s ease
+    }
+
+    .kpi:hover {
+      transform: translateY(-2px);
+      border-color: #4B586A
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94A0B2;
+      font-size: 14px
+    }
+
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      color: #64748B
+    }
+
+    /* SELECTOR MULTIPAÍS GT / SV */
+    .country-switcher {
+      display: inline-flex;
+      align-items: center;
+      background: #181D26;
+      border: 1px solid #3B4454;
+      border-radius: 14px;
+      padding: 3px;
+      gap: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .15)
+    }
+
+    .country-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 750;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #94A3B8;
+      cursor: pointer;
+      transition: all .18s ease
+    }
+
+    .country-pill:hover {
+      color: #F8FAFC;
+      background: rgba(255, 255, 255, .06)
+    }
+
+    .country-pill.active {
+      background: linear-gradient(135deg, #DC2626, #B91C1C);
+      color: #FFFFFF;
+      border-color: #EF4444;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, .35)
+    }
+
+    .country-pill .flag {
+      font-size: 15px;
+      line-height: 1
+    }
+
+    .country-pill .country-curr {
+      font-size: 10px;
+      opacity: .85;
+      font-weight: 600
+    }
+
+    .country-pill .country-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .3);
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #FFF
+    }
+
+    .btn-toggle-country {
+      background: linear-gradient(135deg, #1E293B, #0F172A);
+      border: 1px solid #475569;
+      color: #38BDF8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all .2s ease
+    }
+
+    .btn-toggle-country:hover {
+      background: linear-gradient(135deg, #334155, #1E293B);
+      border-color: #38BDF8;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(56, 189, 248, .25);
+      transform: translateY(-1px)
+    }
+
+    @media(max-width:1200px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 360px)
+      }
+
+      .kpis {
+        grid-template-columns: repeat(2, minmax(200px, 1fr))
+      }
+
+      .insights {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .bank-detail-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+      }
+    }
+
+    @media(max-width:820px) {
+      .date-filter {
+        width: 100%;
+        border-radius: 14px
+      }
+
+      .date-filter input[type="date"] {
+        width: 118px
+      }
+
+      .app {
+        padding: 14px
+      }
+
+      .hero {
+        display: flex;
+        flex-direction: column
+      }
+
+      .hero-actions {
+        width: 100%;
+        justify-content: stretch
+      }
+
+      .kpis {
+        grid-template-columns: 1fr
+      }
+
+      .grid2,
+      .grid-equal {
+        grid-template-columns: 1fr
+      }
+
+      .insights {
+        grid-template-columns: 1fr
+      }
+
+      .bank-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+
+      canvas {
+        height: 280px
+      }
+    }
+
+    @media(max-width:520px) {
+      .bank-detail-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        color: #111
+      }
+
+      .executive-cover {
+        background: #fff !important;
+        color: #111 !important;
+        border: 1px solid #d7d7d7;
+        box-shadow: none
+      }
+
+      .executive-cover:before {
+        display: none
+      }
+
+      .cover-copy,
+      .cover-badges span {
+        color: #444 !important
+      }
+
+      .cover-badges span {
+        background: #fff;
+        border-color: #ddd
+      }
+
+      .cover-logo {
+        box-shadow: none;
+        border-color: #ddd;
+        background: #fff;
+        color: #111
+      }
+
+      .app {
+        max-width: none;
+        padding: 0
+      }
+
+      .hero,
+      .card,
+      .kpi,
+      .bank-card,
+      .insight {
+        box-shadow: none
+      }
+
+      .hero-actions,
+      .tabs {
+        display: none !important
+      }
+
+      .section {
+        display: block !important;
+        page-break-inside: avoid;
+        margin-bottom: 20px
+      }
+
+      .hero,
+      .card,
+      .kpi,
+      .bank-card,
+      .insight {
+        background: #fff;
+        color: #111;
+        border-color: #ddd
+      }
+
+      .sub,
+      .desc,
+      .hint,
+      .small,
+      .note,
+      .footer {
+        color: #555 !important
+      }
+
+      .table-wrap {
+        border-color: #ddd
+      }
+
+      table,
+      td {
+        background: #fff !important;
+        color: #111 !important
+      }
+
+      th {
+        background: #eee !important;
+        color: #111 !important
+      }
+
+      .meta span {
+        background: #f5f5f5;
+        color: #333;
+        border-color: #ddd
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div class="app" id="export-pdf-area">
-  
-  <!-- PORTADA EJECUTIVA -->
-  <section class="executive-cover" aria-label="Portada ejecutiva">
-    <div class="cover-grid">
-      <div>
-        <div class="cover-kicker">RED INTELFON · Conciliación Bancaria Consolidada</div>
-        <div class="cover-title">Saldos Bancarios Consolidados</div>
-        <div class="cover-copy">Informe financiero ejecutivo con auditoría integral de saldos iniciales, créditos, débitos, flujo neto y conciliación contable por banco y número de cuenta.</div>
-        <div class="cover-badges">
-          <span>🌍 País: <b id="coverCountry">Guatemala (GT)</b></span>
-          <span>📅 Período: <b id="coverCut">—</b></span>
-          <span>💵 Moneda: <b id="coverCurrency">GTQ (Q)</b></span>
-          <span>🏦 <b id="coverBanks">0</b> entidades bancarias</span>
-          <span>💳 <b id="coverAccounts">0</b> cuentas operadas</span>
-        </div>
-      </div>
-      <div class="cover-bank-strip" id="coverBankLogos"></div>
-    </div>
-  </section>
+  <div class="app" id="export-pdf-area">
 
-  <!-- ENCABEZADO Y FILTROS -->
-  <header class="hero">
-    <div class="hero-left">
-      <div class="flex items-center gap-3 mb-2 flex-wrap">
-        <div class="eyebrow">Análisis financiero en tiempo real</div>
-        
-        <!-- SELECTOR DE PAÍS (GT / SV) -->
-        <div class="country-switcher" id="countrySwitcher" role="group" aria-label="Seleccionar País">
-          <button type="button" class="country-pill active" id="btn-country-gt" data-country="GT" title="Ver bancos de Guatemala">
-            <span class="flag">🇬🇹</span>
-            <span>Guatemala</span>
-            <span class="country-curr">(Q)</span>
-            <span class="country-count" id="badge-count-gt">0</span>
-          </button>
-          <button type="button" class="country-pill" id="btn-country-sv" data-country="SV" title="Ver bancos de El Salvador">
-            <span class="flag">🇸🇻</span>
-            <span>El Salvador</span>
-            <span class="country-curr">($)</span>
-            <span class="country-count" id="badge-count-sv">0</span>
-          </button>
-        </div>
-      </div>
-
-      <h1 id="mainCountryTitle">Consolidación Bancaria · Guatemala</h1>
-      <div class="sub" id="mainCountrySub">Auditoría contable y evolución de saldos calculados dinámicamente para bancos de Guatemala (GTQ).</div>
-      <div class="meta">
-        <div class="date-filter" aria-label="Filtro de fecha">
-          <span class="date-filter-title">📅 Período</span>
-          <label>Desde <input type="date" id="dateFrom" aria-label="Fecha desde"></label>
-          <span class="date-sep">—</span>
-          <label>Hasta <input type="date" id="dateTo" aria-label="Fecha hasta"></label>
-          <button type="button" class="date-apply" id="applyDateFilter">Aplicar</button>
-          <button type="button" class="date-reset" id="resetDateFilter" title="Restablecer período" aria-label="Restablecer período">↺</button>
-        </div>
-        <span>🌍 País activo: <b id="metaCountryName">Guatemala 🇬🇹</b></span>
-        <span>💵 Moneda: <b id="metaCurrency">GTQ (Q)</b></span>
-        <span>🏦 <b id="bankCount">0</b> bancos</span>
-        <span>💳 <b id="accountCount">0</b> cuentas</span>
-        <span>🧾 Último movimiento: <b id="latestMovement">—</b></span>
-      </div>
-    </div>
-    <div class="hero-actions">
-      <!-- BOTÓN RÁPIDO DE CAMBIO DE PAÍS -->
-      <button type="button" class="btn-toggle-country" id="btn-quick-toggle-country" title="Alternar entre bancos de Guatemala y El Salvador">
-        <span>🇸🇻 Ver bancos SV</span>
-      </button>
-      <button type="button" class="btn-primary-red" id="btn-download-pdf-direct">📄 Descargar PDF Oficial</button>
-      <button type="button" class="btn-excel" id="btn-download-xlsx-direct">📥 Descargar Excel (.xlsx)</button>
-      <button type="button" onclick="window.print()">🖨️ Imprimir</button>
-      <button type="button" onclick="toggleFullscreen()">⛶ Pantalla Completa</button>
-      <button type="button" class="btn-clear-dashboard" id="btn-clear-dashboard">🧹 Limpiar dashboard</button>
-    </div>
-  </header>
-
-  <!-- NAVEGACIÓN POR PESTAÑAS -->
-  <nav class="tabs">
-    <button class="tab active" data-target="resumen">Resumen ejecutivo</button>
-    <button class="tab" data-target="bancos">Detalle por banco</button>
-    <button class="tab" data-target="flujo">Flujo diario</button>
-    <button class="tab" data-target="cuentas">Detalle de cuentas</button>
-  </nav>
-
-  <!-- PESTAÑA 1: RESUMEN EJECUTIVO -->
-  <section id="resumen" class="section active">
-    <div class="kpis" id="kpis"></div>
-
-    <div class="grid2">
-      <div class="card">
-        <h2>Saldos por banco</h2>
-        <div class="desc">Comparación entre saldo inicial y saldo final registrado por entidad bancaria.</div>
-        <div class="legend"><span><i style="background:#60A5FA"></i>Saldo inicial</span><span><i style="background:#34D399"></i>Saldo final</span></div>
-        <canvas id="balancesChart"></canvas>
-      </div>
-      <div class="card">
-        <h2>Composición del saldo final</h2>
-        <div class="desc">Participación porcentual de cada banco dentro de los fondos totales.</div>
-        <div class="bank-list" id="bankList"></div>
-      </div>
-    </div>
-
-    <div class="insights" id="insights"></div>
-
-    <div class="grid-equal">
-      <div class="card">
-        <h2>Créditos vs. débitos por banco</h2>
-        <div class="desc">Totales acumulados de ingresos y egresos registrados.</div>
-        <div class="legend"><span><i style="background:#34D399"></i>Créditos</span><span><i style="background:#FB7185"></i>Débitos</span></div>
-        <canvas id="flowBankChart"></canvas>
-      </div>
-      <div class="card">
-        <h2>Flujo neto por banco</h2>
-        <div class="desc">Ingresos menos egresos (Verde = Superávit; Rosado = Déficit).</div>
-        <canvas id="netBankChart"></canvas>
-      </div>
-    </div>
-  </section>
-
-  <!-- PESTAÑA 2: DETALLE POR BANCO -->
-  <section id="bancos" class="section">
-    <div class="card">
-      <div class="section-heading">
+    <!-- PORTADA EJECUTIVA -->
+    <section class="executive-cover" aria-label="Portada ejecutiva">
+      <div class="cover-grid">
         <div>
-          <h2>Resumen individual por banco</h2>
-          <p>Saldos y movimientos acumulados directamente desde el archivo procesado.</p>
+          <div class="cover-kicker">RED INTELFON · Conciliación Bancaria Consolidada</div>
+          <div class="cover-title">Saldos Bancarios Consolidados</div>
+          <div class="cover-copy">Informe financiero ejecutivo con auditoría integral de saldos iniciales, créditos,
+            débitos, flujo neto y conciliación contable por banco y número de cuenta.</div>
+          <div class="cover-badges">
+            <span>🌍 País: <b id="coverCountry">Guatemala (GT)</b></span>
+            <span>📅 Período: <b id="coverCut">—</b></span>
+            <span>💵 Moneda: <b id="coverCurrency">GTQ (Q)</b></span>
+            <span>🏦 <b id="coverBanks">0</b> entidades bancarias</span>
+            <span>💳 <b id="coverAccounts">0</b> cuentas operadas</span>
+          </div>
         </div>
-        <span class="section-chip">Detalle contable</span>
+        <div class="cover-bank-strip" id="coverBankLogos"></div>
       </div>
-      <div class="bank-detail-grid" id="bankCards"></div>
-    </div>
-  </section>
+    </section>
 
-  <!-- PESTAÑA 3: FLUJO DIARIO -->
-  <section id="flujo" class="section">
-    <div class="card">
-      <h2>Evolución diaria de créditos y débitos</h2>
-      <div class="desc">Comportamiento cronológico de las transacciones operadas.</div>
-      <div class="legend"><span><i style="background:#34D399"></i>Créditos</span><span><i style="background:#FB7185"></i>Débitos</span></div>
-      <canvas id="dailyChart"></canvas>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <div class="toolbar">
-        <div>
-          <h2>Detalle diario de transacciones</h2>
-          <div class="desc" style="margin:4px 0 0">Número de movimientos y balance neto consolidado por fecha.</div>
+    <!-- ENCABEZADO Y FILTROS -->
+    <header class="hero">
+      <div class="hero-left">
+        <div class="flex items-center gap-3 mb-2 flex-wrap">
+          <div class="eyebrow">Análisis financiero en tiempo real</div>
+
+          <!-- SELECTOR DE PAÍS (GT / SV) -->
+          <div class="country-switcher" id="countrySwitcher" role="group" aria-label="Seleccionar País">
+            <button type="button" class="country-pill active" id="btn-country-gt" data-country="GT"
+              title="Ver bancos de Guatemala">
+              <span class="flag">🇬🇹</span>
+              <span>Guatemala</span>
+              <span class="country-curr">(Q)</span>
+              <span class="country-count" id="badge-count-gt">0</span>
+            </button>
+            <button type="button" class="country-pill" id="btn-country-sv" data-country="SV"
+              title="Ver bancos de El Salvador">
+              <span class="flag">🇸🇻</span>
+              <span>El Salvador</span>
+              <span class="country-curr">($)</span>
+              <span class="country-count" id="badge-count-sv">0</span>
+            </button>
+          </div>
+        </div>
+
+        <h1 id="mainCountryTitle">Consolidación Bancaria · Guatemala</h1>
+        <div class="sub" id="mainCountrySub">Auditoría contable y evolución de saldos calculados dinámicamente para
+          bancos de Guatemala (GTQ).</div>
+        <div class="meta">
+          <div class="date-filter" aria-label="Filtro de fecha">
+            <span class="date-filter-title">📅 Período</span>
+            <label>Desde <input type="date" id="dateFrom" aria-label="Fecha desde"></label>
+            <span class="date-sep">—</span>
+            <label>Hasta <input type="date" id="dateTo" aria-label="Fecha hasta"></label>
+            <button type="button" class="date-apply" id="applyDateFilter">Aplicar</button>
+            <button type="button" class="date-reset" id="resetDateFilter" title="Restablecer período"
+              aria-label="Restablecer período">↺</button>
+          </div>
+          <span>🌍 País activo: <b id="metaCountryName">Guatemala 🇬🇹</b></span>
+          <span>💵 Moneda: <b id="metaCurrency">GTQ (Q)</b></span>
+          <span>🏦 <b id="bankCount">0</b> bancos</span>
+          <span>💳 <b id="accountCount">0</b> cuentas</span>
+          <span>🧾 Último movimiento: <b id="latestMovement">—</b></span>
         </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th class="num">Movimientos</th>
-              <th class="num">Débitos (Egresos)</th>
-              <th class="num">Créditos (Ingresos)</th>
-              <th class="num">Flujo Neto</th>
-            </tr>
-          </thead>
-          <tbody id="dailyTable"></tbody>
-        </table>
+      <div class="hero-actions">
+        <!-- BOTÓN RÁPIDO DE CAMBIO DE PAÍS -->
+        <button type="button" class="btn-toggle-country" id="btn-quick-toggle-country"
+          title="Alternar entre bancos de Guatemala y El Salvador">
+          <span>🇸🇻 Ver bancos SV</span>
+        </button>
+        <button type="button" class="btn-primary-red" id="btn-download-pdf-direct">📄 Descargar PDF Oficial</button>
+        <button type="button" class="btn-excel" id="btn-download-xlsx-direct">📥 Descargar Excel (.xlsx)</button>
+        <button type="button" onclick="window.print()">🖨️ Imprimir</button>
+        <button type="button" onclick="toggleFullscreen()">⛶ Pantalla Completa</button>
+        <button type="button" class="btn-clear-dashboard" id="btn-clear-dashboard">🧹 Limpiar dashboard</button>
       </div>
-    </div>
-  </section>
+    </header>
 
-  <!-- PESTAÑA 4: DETALLE DE CUENTAS -->
-  <section id="cuentas" class="section">
-    <div class="card">
-      <div class="toolbar">
-        <div>
-          <h2>Detalle de cuentas bancarias</h2>
-          <div class="desc" style="margin:4px 0 0">Saldos iniciales, finales y movimientos acumulados cuenta por cuenta.</div>
+    <!-- NAVEGACIÓN POR PESTAÑAS -->
+    <nav class="tabs">
+      <button class="tab active" data-target="resumen">Resumen ejecutivo</button>
+      <button class="tab" data-target="bancos">Detalle por banco</button>
+      <button class="tab" data-target="flujo">Flujo diario</button>
+      <button class="tab" data-target="cuentas">Detalle de cuentas</button>
+    </nav>
+
+    <!-- PESTAÑA 1: RESUMEN EJECUTIVO -->
+    <section id="resumen" class="section active">
+      <div class="kpis" id="kpis"></div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Saldos por banco</h2>
+          <div class="desc">Comparación entre saldo inicial y saldo final registrado por entidad bancaria.</div>
+          <div class="legend"><span><i style="background:#60A5FA"></i>Saldo inicial</span><span><i
+                style="background:#34D399"></i>Saldo final</span></div>
+          <canvas id="balancesChart"></canvas>
         </div>
-        <select class="select" id="bankFilter">
-          <option value="ALL">Todos los bancos</option>
-        </select>
+        <div class="card">
+          <h2>Composición del saldo final</h2>
+          <div class="desc">Participación porcentual de cada banco dentro de los fondos totales.</div>
+          <div class="bank-list" id="bankList"></div>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Entidad Bancaria</th>
-              <th>No. Cuenta</th>
-              <th class="num">Saldo Inicial</th>
-              <th class="num">Saldo Final</th>
-              <th class="num">Variación</th>
-              <th class="num">% Variación</th>
-              <th class="num">Créditos</th>
-              <th class="num">Débitos</th>
-            </tr>
-          </thead>
-          <tbody id="accountsTable"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
 
-  <div class="note">
-    <b>Nota de auditoría contable:</b> Todos los valores, gráficas y saldos iniciales y finales reflejados en este informe provienen de la extracción y conciliación automatizada ejecutada con Make.com e Inteligencia Artificial, garantizando tolerancia cero a alteraciones manuales.
+      <div class="insights" id="insights"></div>
+
+      <div class="grid-equal">
+        <div class="card">
+          <h2>Créditos vs. débitos por banco</h2>
+          <div class="desc">Totales acumulados de ingresos y egresos registrados.</div>
+          <div class="legend"><span><i style="background:#34D399"></i>Créditos</span><span><i
+                style="background:#FB7185"></i>Débitos</span></div>
+          <canvas id="flowBankChart"></canvas>
+        </div>
+        <div class="card">
+          <h2>Flujo neto por banco</h2>
+          <div class="desc">Ingresos menos egresos (Verde = Superávit; Rosado = Déficit).</div>
+          <canvas id="netBankChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 2: DETALLE POR BANCO -->
+    <section id="bancos" class="section">
+      <div class="card">
+        <div class="section-heading">
+          <div>
+            <h2>Resumen individual por banco</h2>
+            <p>Saldos y movimientos acumulados directamente desde el archivo procesado.</p>
+          </div>
+          <span class="section-chip">Detalle contable</span>
+        </div>
+        <div class="bank-detail-grid" id="bankCards"></div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 3: FLUJO DIARIO -->
+    <section id="flujo" class="section">
+      <div class="card">
+        <h2>Evolución diaria de créditos y débitos</h2>
+        <div class="desc">Comportamiento cronológico de las transacciones operadas.</div>
+        <div class="legend"><span><i style="background:#34D399"></i>Créditos</span><span><i
+              style="background:#FB7185"></i>Débitos</span></div>
+        <canvas id="dailyChart"></canvas>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="toolbar">
+          <div>
+            <h2>Detalle diario de transacciones</h2>
+            <div class="desc" style="margin:4px 0 0">Número de movimientos y balance neto consolidado por fecha.</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th class="num">Movimientos</th>
+                <th class="num">Débitos (Egresos)</th>
+                <th class="num">Créditos (Ingresos)</th>
+                <th class="num">Flujo Neto</th>
+              </tr>
+            </thead>
+            <tbody id="dailyTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 4: DETALLE DE CUENTAS -->
+    <section id="cuentas" class="section">
+      <div class="card">
+        <div class="toolbar">
+          <div>
+            <h2>Detalle de cuentas bancarias</h2>
+            <div class="desc" style="margin:4px 0 0">Saldos iniciales, finales y movimientos acumulados cuenta por
+              cuenta.</div>
+          </div>
+          <select class="select" id="bankFilter">
+            <option value="ALL">Todos los bancos</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Entidad Bancaria</th>
+                <th>No. Cuenta</th>
+                <th class="num">Saldo Inicial</th>
+                <th class="num">Saldo Final</th>
+                <th class="num">Variación</th>
+                <th class="num">% Variación</th>
+                <th class="num">Créditos</th>
+                <th class="num">Débitos</th>
+              </tr>
+            </thead>
+            <tbody id="accountsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="note">
+      <b>Nota de auditoría contable:</b> Todos los valores, gráficas y saldos iniciales y finales reflejados en este
+      informe provienen de la extracción y conciliación automatizada ejecutada con Make.com e Inteligencia Artificial,
+      garantizando tolerancia cero a alteraciones manuales.
+    </div>
+    <div class="footer">
+      <span>Fuente: <b id="sourceFile">Reporte Procesado</b></span>
+      <span>RED INTELFON © 2026 · Sistema Integrado de Reportes Financieros</span>
+    </div>
   </div>
-  <div class="footer">
-    <span>Fuente: <b id="sourceFile">Reporte Procesado</b></span>
-    <span>RED INTELFON © 2026 · Sistema Integrado de Reportes Financieros</span>
-  </div>
-</div>
 
-<script>
-// ===========================================================================
-// MOTOR DE EXTRACCIÓN Y CONCILIACIÓN DINÁMICA MULTIPAÍS (GUATEMALA / EL SALVADOR)
-// ===========================================================================
+  <script>
+    // ===========================================================================
+    // MOTOR DE EXTRACCIÓN Y CONCILIACIÓN DINÁMICA MULTIPAÍS (GUATEMALA / EL SALVADOR)
+    // ===========================================================================
 
-if (window.self !== window.top && window.location.hash === '#resumen') {
-  document.body.classList.add('embedded-overview');
-}
-
-// Configuración de metadatos por país
-const COUNTRY_CONFIG = {
-  GT: {
-    code: 'GT',
-    name: 'Guatemala',
-    flag: '🇬🇹',
-    currency: 'GTQ',
-    symbol: 'Q',
-    description: 'Auditoría contable y evolución de saldos calculados dinámicamente para bancos de Guatemala (GTQ).'
-  },
-  SV: {
-    code: 'SV',
-    name: 'El Salvador',
-    flag: '🇸🇻',
-    currency: 'USD',
-    symbol: '$',
-    description: 'Auditoría contable y evolución de saldos calculados dinámicamente para bancos de El Salvador (USD).'
-  }
-};
-
-const REQUESTED_REGION = new URLSearchParams(window.location.search).get('region');
-const LOCKED_COUNTRY = REQUESTED_REGION === 'SV' ? 'SV' : REQUESTED_REGION === 'GT' ? 'GT' : null;
-let CURRENT_COUNTRY = LOCKED_COUNTRY || 'GT';
-let RAW_TRANSACTIONS_BY_COUNTRY = { GT: [], SV: [] };
-let BASE_DATA_BY_COUNTRY = {
-  GT: createEmptyBaseData('GT'),
-  SV: createEmptyBaseData('SV')
-};
-let DATA = null;
-let downloadExcelUrl = '#';
-let loadedReportSnapshot = null;
-let CONSOLIDATION = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
-
-function createEmptyBaseData(countryCode = 'GT') {
-  const cfg = COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG.GT;
-  return {
-    meta: {
-      file: 'Sin archivo cargado',
-      fileCut: 'Esperando procesamiento',
-      latestMovement: 'Sin registros',
-      currency: cfg.currency,
-      country: cfg.code,
-      countryName: cfg.name,
-      countryFlag: cfg.flag,
-      accounts: 0,
-      banks: 0,
-      movementCount: 0
-    },
-    totals: { initial: 0, final: 0, change: 0, changePct: 0, credits: 0, debits: 0, netFlow: 0 },
-    highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
-    banks: [],
-    accounts: [],
-    daily: []
-  };
-}
-
-window.addEventListener('storage', event => {
-  if (event.key === 'intelfon_current_report') initDataEngine();
-});
-window.addEventListener('intelfon-report-updated', event => {
-  if (event.detail && event.detail.key === 'intelfon_current_report') initDataEngine();
-});
-window.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'intelfon-report-updated') {
-    initDataEngine();
-  }
-});
-window.addEventListener('focus', () => initDataEngine());
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) initDataEngine();
-});
-
-const PALETTE = ['#DC2626', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
-
-function money(v, currency) {
-  const c = currency || DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
-  const sym = (c === 'USD' || c === '$' || c === 'USD$') ? '$' : 'Q';
-  const num = Number(v) || 0;
-  return `${sym} ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-const pct = v => `${v >= 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
-const cls = v => v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
-const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-const fmtDate = iso => { if (!iso) return '—'; const parts = iso.split(/[-/]/); return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : iso; };
-const periodLabel = (a, b) => (!a && !b) ? '—' : a === b ? fmtDate(a) : `${fmtDate(a)} – ${fmtDate(b)}`;
-const round2 = v => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
-
-function parseJsonValue(value) {
-  if (typeof value !== 'string') return value;
-  const text = value.trim();
-  if (!text) return value;
-  try { return JSON.parse(text); } catch (_) { return value; }
-}
-
-function normalizedKey(value) {
-  return String(value ?? '')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .toLowerCase();
-}
-
-function canonicalKey(value) {
-  return normalizedKey(value).replace(/\s+/g, '');
-}
-
-function isSyntheticAccount(record) {
-  const bank = canonicalKey(getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria'));
-  const account = canonicalKey(getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta'));
-  const syntheticNames = new Set(['global', 'total', 'totales', 'consolidado', 'consolidada', 'resumen']);
-  return syntheticNames.has(bank)
-    || syntheticNames.has(account)
-    || bank.includes('global')
-    || bank.includes('consolidado')
-    || account.includes('global')
-    || account.includes('consolidado')
-    || (/^banco\d+$/.test(bank) && /^cta\d+$/.test(account));
-}
-
-function getField(record, ...names) {
-  if (!record || typeof record !== 'object' || Array.isArray(record)) return undefined;
-  const fields = Object.entries(record);
-  for (const name of names) {
-    const match = fields.find(([key]) => normalizedKey(key) === normalizedKey(name));
-    if (match) return parseJsonValue(match[1]);
-  }
-  return undefined;
-}
-
-function collectFields(value, names, result = [], depth = 0) {
-  const parsed = parseJsonValue(value);
-  if (!parsed || typeof parsed !== 'object' || depth > 8) return result;
-  if (Array.isArray(parsed)) {
-    parsed.forEach(item => collectFields(item, names, result, depth + 1));
-    return result;
-  }
-  for (const [key, fieldValue] of Object.entries(parsed)) {
-    if (names.some(name => normalizedKey(key) === normalizedKey(name))) {
-      result.push(parseJsonValue(fieldValue));
+    if (window.self !== window.top && window.location.hash === '#resumen') {
+      document.body.classList.add('embedded-overview');
     }
-    collectFields(fieldValue, names, result, depth + 1);
-  }
-  return result;
-}
 
-function unwrapPayload(value, depth = 0) {
-  const parsed = parseJsonValue(value);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || depth > 5) return parsed;
-  for (const key of ['data', 'resultado', 'result', 'response', 'body', 'payload']) {
-    const nested = getField(parsed, key);
-    if (nested && typeof nested === 'object') return unwrapPayload(nested, depth + 1);
-  }
-  return parsed;
-}
+    // Configuración de metadatos por país
+    const COUNTRY_CONFIG = {
 
-function asArray(value) {
-  const parsed = parseJsonValue(value);
-  if (Array.isArray(parsed)) return parsed;
-  if (parsed && typeof parsed === 'object') {
-    const values = Object.values(parsed);
-    if (values.length && values.every(item => item && typeof item === 'object')) return values;
-    if (getField(parsed, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'Entidad_Bancaria', 'Institucion_Bancaria')
-      || getField(parsed, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta')) return [parsed];
-  }
-  return [];
-}
+      GLOBAL: {
+        code: 'GLOBAL',
+        name: 'Consolidado Regional',
+        flag: '🌎',
+        currency: 'USD',
+        symbol: '$',
+        description:
+          'Vista consolidada Guatemala + El Salvador'
+      },
 
-function numberValue(value, fallback = 0) {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const text = String(value ?? '').trim().replace(/[^0-9,.-]/g, '');
-  if (!text) return fallback;
-  const normalized = text.includes(',') && text.includes('.')
-    ? (text.lastIndexOf(',') > text.lastIndexOf('.') ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, ''))
-    : text.replace(',', '.');
-  const result = Number(normalized);
-  return Number.isFinite(result) ? result : fallback;
-}
 
-function normalizeDate(value) {
-  if (typeof value === 'number' && value > 20000 && value < 100000) {
-    const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
-    return date.toISOString().slice(0, 10);
-  }
-  const text = String(value ?? '').trim();
-  const parts = text.split(/[\/-]/);
-  if (parts.length === 3) {
-    if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-    if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-  }
-  return text || '2026-08-01';
-}
+      GT: {
+        code: 'GT',
+        name: 'Guatemala',
+        flag: '🇬🇹',
+        currency: 'GTQ',
+        symbol: 'Q',
+        description:
+          'Bancos Guatemala'
+      },
 
-/**
- * Función clasificadora robusta de País (GT vs SV)
- * Reconoce atributos explícitos, moneda, y nombres de bancos populares de cada país.
- */
-function detectCountry(record, defaultCountry = 'GT') {
-  if (!record || typeof record !== 'object') return defaultCountry;
 
-  // 1. Verificación explícita de campo de país
-  const cVal = String(getField(record, 'pais', 'país', 'country', 'cod_pais', 'codigo_pais', 'codPais', 'nacion', 'region', 'iso_pais', '_country') || '').trim().toLowerCase();
-  if (cVal === 'sv' || cVal.includes('salvador') || cVal === 'slv') return 'SV';
-  if (cVal === 'gt' || cVal.includes('guat') || cVal === 'gtm') return 'GT';
-
-  // 2. Reconocimiento de bancos salvadoreños populares
-  const bName = String(getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || '').toLowerCase();
-  if (
-    bName.includes('agricola') || bName.includes('agrícola') ||
-    bName.includes('cuscatlan') || bName.includes('cuscatlán') ||
-    bName.includes('davivienda sv') || bName.includes('davivienda el salvador') ||
-    bName.includes('bac sv') || bName.includes('bac el salvador') ||
-    bName.includes('banco azul') || bName.includes('hipotecario') ||
-    bName.includes('fedecredito') || bName.includes('fedecrédito') ||
-    bName.includes('promerica sv') || bName.includes('promerica el salvador') ||
-    bName.includes('fomento agropecuario') || bName.includes('bancovital') ||
-    bName.includes('salvador')
-  ) {
-    return 'SV';
-  }
-
-  // 3. Reconocimiento de bancos guatemaltecos populares
-  if (
-    bName.includes('industrial') || bName.includes('banrural') ||
-    bName.includes('g&t') || bName.includes('gyt') ||
-    bName.includes('bam') || bName.includes('agromercantil') ||
-    bName.includes('chn') || bName.includes('interbanco') ||
-    bName.includes('inmobiliario') || bName.includes('vivibanco') ||
-    bName.includes('bantrab') || bName.includes('trabajadores') ||
-    bName.includes('bac gt') || bName.includes('bac guatemala') ||
-    bName.includes('promerica gt') || bName.includes('promerica guatemala') ||
-    bName.includes('ficohsa gt') || bName.includes('ficohsa guatemala') ||
-    bName.includes('guatemala')
-  ) {
-    return 'GT';
-  }
-
-  // 4. Reconocimiento por moneda
-  const curr = String(getField(record, 'Moneda', 'moneda', 'currency', 'cur') || '').trim().toUpperCase();
-  if (curr === 'GTQ' || curr === 'Q' || curr.includes('QUETZAL')) return 'GT';
-  if (curr === 'USD' || curr === '$' || curr.includes('DOLAR') || curr.includes('DÓLAR')) {
-    // Si la moneda es USD y no hay coincidencia de banco GT, categorizar en SV
-    return 'SV';
-  }
-
-  return defaultCountry;
-}
-
-function mergeAccountRecords(...sources) {
-  const merged = new Map();
-  sources.flatMap(asArray).forEach((record) => {
-    if (!record || typeof record !== 'object' || Array.isArray(record)) return;
-    if (isSyntheticAccount(record)) return;
-    const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria');
-    const account = getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta');
-    if (!bank || !account) return;
-    const bankName = String(bank).trim();
-    const accountName = String(account).trim();
-    const key = `${canonicalKey(bankName)}|${canonicalKey(accountName)}`;
-    const previous = merged.get(key);
-    if (!previous) {
-      merged.set(key, { ...record });
-      return;
-    }
-    for (const [field, value] of Object.entries(record)) {
-      if (value === undefined || value === null || value === '') continue;
-      if (Array.isArray(value)) {
-        const combined = [...(Array.isArray(previous[field]) ? previous[field] : []), ...value];
-        const seen = new Set();
-        previous[field] = combined.filter(item => {
-          const signature = JSON.stringify(item);
-          if (seen.has(signature)) return false;
-          seen.add(signature);
-          return true;
-        });
-      } else if (previous[field] === undefined || previous[field] === null || previous[field] === '') {
-        previous[field] = value;
-      }
-    }
-  });
-  return [...merged.values()];
-}
-
-function parseRawReport() {
-  const saved = localStorage.getItem('intelfon_current_report');
-  if (!saved) return null;
-
-  try {
-    let parsedJson = parseJsonValue(JSON.parse(saved));
-    if (!parsedJson) return null;
-
-    // Aceptar cualquier estructura: { data }, { resultado }, arrays, o payload plano
-    let original = parsedJson.data !== undefined ? parsedJson.data : parsedJson;
-    original = parseJsonValue(original);
-
-    let sourcesArray = Array.isArray(original) ? original : [original];
-
-    let allBancosList = [];
-    let allResumenList = [];
-    let fileName = 'ReporteFinanciero.xlsx';
-    let outerDownloadUrl = '';
-    const consolidation = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
-
-    sourcesArray.forEach(src => {
-      if (!src) return;
-      const raw = unwrapPayload(src);
-      const fName = getField(src, 'fileName', 'filename', 'nombreArchivo') || getField(raw, 'fileName', 'filename', 'nombreArchivo');
-      if (fName) fileName = fName;
-
-      const dUrl = getField(src, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link')
-        || getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
-      if (dUrl && dUrl !== '#') outerDownloadUrl = dUrl;
-      const excelBase64 = getField(src, 'archivoExcelBase64', 'excelBase64')
-        || getField(raw, 'archivoExcelBase64', 'excelBase64')
-        || (Array.isArray(src?.archivosExcel) && src.archivosExcel[0]?.data ? src.archivosExcel[0].data : '')
-        || (src?.consolidadoGeneral?.data ? src.consolidadoGeneral.data : '');
-      if (!outerDownloadUrl && typeof excelBase64 === 'string' && excelBase64.length > 20) {
-        outerDownloadUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBase64}`;
-      }
-      const rate = getField(src, 'tipoCambioGTQUSD', 'tipo_cambio_gtq_usd') || getField(raw, 'tipoCambioGTQUSD', 'tipo_cambio_gtq_usd');
-      if (rate !== undefined && rate !== null && rate !== '') consolidation.rate = Number(rate);
-      const regional = getField(src, 'consolidadoRegionalUSD', 'consolidado_regional_usd') || getField(raw, 'consolidadoRegionalUSD', 'consolidado_regional_usd');
-      if (regional) consolidation.regional.push(...asArray(regional));
-      const totals = getField(src, 'totales_globales', 'totalesGlobales') || getField(raw, 'totales_globales', 'totalesGlobales');
-      if (totals && typeof totals === 'object') Object.assign(consolidation.globalTotals, totals);
-      const review = getField(src, 'registrosRevision', 'registros_revision', 'revisiones') || getField(raw, 'registrosRevision', 'registros_revision', 'revisiones');
-      if (review) consolidation.review.push(...asArray(review));
-      const files = getField(src, 'archivosExcel', 'archivos_excel') || getField(raw, 'archivosExcel', 'archivos_excel');
-      if (files) consolidation.files.push(...asArray(files));
-      const generalFile = getField(src, 'consolidadoGeneral', 'consolidado_general') || getField(raw, 'consolidadoGeneral', 'consolidado_general');
-      if (generalFile && typeof generalFile === 'object') consolidation.files.push({ ...generalFile, _kind: 'general' });
-      for (const [code, keys] of [['GT', ['guatemala']], ['SV', ['el_salvador', 'elsalvador']]]) {
-        const countryData = keys.map(key => getField(src, key) || getField(raw, key)).find(Boolean);
-        if (countryData) consolidation.countryData[code] = countryData;
+      SV: {
+        code: 'SV',
+        name: 'El Salvador',
+        flag: '🇸🇻',
+        currency: 'USD',
+        symbol: '$',
+        description:
+          'Bancos El Salvador'
       }
 
-      // Fuentes específicas de GT / SV si vienen particionadas
-      const gtSpecific = collectFields(src, ['guatemala', 'gt', 'bancos_gt', 'bancos_guatemala', 'cuentas_gt']);
-      const svSpecific = collectFields(src, ['el_salvador', 'salvador', 'sv', 'bancos_sv', 'bancos_salvador', 'cuentas_sv']);
+    };
+    const REQUESTED_REGION =
+      new URLSearchParams(window.location.search)
+        .get('region');
+    const LOCKED_COUNTRY =
+      REQUESTED_REGION === 'SV'
+        ? 'SV'
+        :
+        REQUESTED_REGION === 'GT'
+          ? 'GT'
+          :
+          REQUESTED_REGION === 'GLOBAL'
+            ? 'GLOBAL'
+            :
+            null;
+    let CURRENT_COUNTRY =
+      LOCKED_COUNTRY || 'GLOBAL';
 
-      gtSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'GT'; });
-      svSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'SV'; });
+    let RAW_TRANSACTIONS_BY_COUNTRY = {
+      GLOBAL: [],
+      GT: [],
+      SV: []
+    };
 
-      const generalSources = collectFields(src, ['registros', 'bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
-      const resumenSources = collectFields(src, ['resumen_general', 'filas', 'resumen', 'rows']);
-      const balanceSources = collectFields(src, ['balance_general', 'balance', 'account_balances']);
+    let BASE_DATA_BY_COUNTRY = {
+      GLOBAL:
+        createEmptyBaseData('GLOBAL'),
+      GT:
+        createEmptyBaseData('GT'),
+      SV:
+        createEmptyBaseData('SV')
+    };
+    let DATA = null;
+    let downloadExcelUrl = '#';
+    let loadedReportSnapshot = null;
+    let CONSOLIDATION = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
 
-      const merged = mergeAccountRecords(...gtSpecific, ...svSpecific, ...generalSources, ...balanceSources, ...resumenSources);
-      if (merged.length) {
-        allBancosList.push(...merged);
-      }
-      allResumenList.push(...resumenSources.flatMap(asArray));
-    });
-
-    const bancosList = mergeAccountRecords(allBancosList);
-    const resumenList = allResumenList;
-
-    downloadExcelUrl = outerDownloadUrl || '#';
-
-    CONSOLIDATION = consolidation;
-    return { bancosList, resumenList, fileName };
-  } catch (e) {
-    console.error('Error parseando reporte guardado:', e);
-    return null;
-  }
-}
-
-/**
- * Compila y construye la estructura de métricas y análisis para un país específico.
- */
-function buildCountryBaseData(countryCode, accountsForCountry, transactionsForCountry, fileName) {
-  const cfg = COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG.GT;
-  const currency = cfg.currency;
-
-  if (!accountsForCountry || accountsForCountry.length === 0) {
-    return createEmptyBaseData(countryCode);
-  }
-
-  const accountsMap = [];
-  const banksMap = {};
-
-  accountsForCountry.forEach((b, idx) => {
-    const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || `Banco ${idx + 1}`).trim();
-    const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta') || `CTA-${idx + 1}`).trim();
-    const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
-    const cIng = numberValue(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income'));
-    const dEgr = numberValue(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses'));
-    const sFinValue = getField(b, 'Saldo_Final', 'saldo_final', 'saldoFinal', 'finalBalance');
-    const sFin = numberValue(sFinValue ?? (sIni + cIng - dEgr));
-
-    accountsMap.push({
-      bankKey: bName,
-      bank: bName,
-      account: accNum,
-      initial: sIni,
-      final: sFin,
-      change: round2(sFin - sIni),
-      changePct: sIni !== 0 ? round2(((sFin - sIni) / Math.abs(sIni)) * 100) : 0,
-      credits: cIng,
-      debits: dEgr,
-      country: countryCode
-    });
-
-    const bankKey = canonicalKey(bName);
-    if (!banksMap[bankKey]) {
-      banksMap[bankKey] = {
-        key: bName,
-        name: bName,
-        color: PALETTE[Object.keys(banksMap).length % PALETTE.length],
-        initial: 0,
-        final: 0,
-        credits: 0,
-        debits: 0,
-        accountsCount: 0,
-        country: countryCode
+    function createEmptyBaseData(countryCode = 'GT') {
+      const cfg = COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG.GT;
+      return {
+        meta: {
+          file: 'Sin archivo cargado',
+          fileCut: 'Esperando procesamiento',
+          latestMovement: 'Sin registros',
+          currency: cfg.currency,
+          country: cfg.code,
+          countryName: cfg.name,
+          countryFlag: cfg.flag,
+          accounts: 0,
+          banks: 0,
+          movementCount: 0
+        },
+        totals: { initial: 0, final: 0, change: 0, changePct: 0, credits: 0, debits: 0, netFlow: 0 },
+        highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
+        banks: [],
+        accounts: [],
+        daily: []
       };
     }
-    banksMap[bankKey].initial += sIni;
-    banksMap[bankKey].final += sFin;
-    banksMap[bankKey].credits += cIng;
-    banksMap[bankKey].debits += dEgr;
-    banksMap[bankKey].accountsCount += 1;
-  });
 
-  const totalFinalAll = Object.values(banksMap).reduce((s, b) => s + b.final, 0) || 1;
-  const banksArray = Object.values(banksMap).map(b => ({
-    ...b,
-    initial: round2(b.initial),
-    final: round2(b.final),
-    change: round2(b.final - b.initial),
-    changePct: b.initial !== 0 ? round2(((b.final - b.initial) / Math.abs(b.initial)) * 100) : 0,
-    credits: round2(b.credits),
-    debits: round2(b.debits),
-    netFlow: round2(b.credits - b.debits),
-    share: round2((b.final / totalFinalAll) * 100),
-    accounts: b.accountsCount
-  }));
+    window.addEventListener('storage', event => {
+      if (event.key === 'intelfon_current_report') initDataEngine();
+    });
+    window.addEventListener('intelfon-report-updated', event => {
+      if (event.detail && event.detail.key === 'intelfon_current_report') initDataEngine();
+    });
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'intelfon-report-updated') {
+        initDataEngine();
+      }
+    });
+    window.addEventListener('focus', () => initDataEngine());
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) initDataEngine();
+    });
 
-  const minDate = transactionsForCountry.length ? transactionsForCountry.reduce((m, t) => !m || t.date < m ? t.date : m, '') : '';
-  const maxDate = transactionsForCountry.length ? transactionsForCountry.reduce((m, t) => !m || t.date > m ? t.date : m, '') : '';
+    const PALETTE = ['#DC2626', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
 
-  return {
-    meta: {
-      file: fileName,
-      fileCut: periodLabel(minDate, maxDate),
-      latestMovement: maxDate ? fmtDate(maxDate) : 'Reciente',
-      currency: currency,
-      country: cfg.code,
-      countryName: cfg.name,
-      countryFlag: cfg.flag,
-      accounts: accountsMap.length,
-      banks: banksArray.length,
-      movementCount: transactionsForCountry.length || accountsMap.length,
-      minDate,
-      maxDate
-    },
-    totals: {
-      initial: round2(banksArray.reduce((s, b) => s + b.initial, 0)),
-      final: round2(banksArray.reduce((s, b) => s + b.final, 0)),
-      change: round2(banksArray.reduce((s, b) => s + (b.final - b.initial), 0)),
-      changePct: banksArray.reduce((sum, bank) => sum + bank.initial, 0) !== 0
-        ? round2((banksArray.reduce((sum, bank) => sum + bank.change, 0) / Math.abs(banksArray.reduce((sum, bank) => sum + bank.initial, 0))) * 100)
-        : 0,
-      credits: round2(banksArray.reduce((s, b) => s + b.credits, 0)),
-      debits: round2(banksArray.reduce((s, b) => s + b.debits, 0)),
-      netFlow: round2(banksArray.reduce((s, b) => s + (b.credits - b.debits), 0))
-    },
-    highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
-    banks: banksArray,
-    accounts: accountsMap,
-    daily: []
-  };
-}
+    function money(v, currency) {
+      const c = currency || DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
+      const sym = (c === 'USD' || c === '$' || c === 'USD$') ? '$' : 'Q';
+      const num = Number(v) || 0;
+      return `${sym} ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    const pct = v => `${v >= 0 ? '+' : ''}${Number(v || 0).toFixed(2)}%`;
+    const cls = v => v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    const fmtDate = iso => { if (!iso) return '—'; const parts = iso.split(/[-/]/); return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : iso; };
+    const periodLabel = (a, b) => (!a && !b) ? '—' : a === b ? fmtDate(a) : `${fmtDate(a)} – ${fmtDate(b)}`;
+    const round2 = v => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
 
-function initDataEngine() {
-  const parsed = parseRawReport();
-  loadedReportSnapshot = localStorage.getItem('intelfon_current_report');
-  RAW_TRANSACTIONS_BY_COUNTRY = { GT: [], SV: [] };
-  CONSOLIDATION = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
+    function parseJsonValue(value) {
+      if (typeof value !== 'string') return value;
+      const text = value.trim();
+      if (!text) return value;
+      try { return JSON.parse(text); } catch (_) { return value; }
+    }
 
-  if (!parsed || !Array.isArray(parsed.bancosList) || parsed.bancosList.length === 0) {
-    BASE_DATA_BY_COUNTRY = {
-      GT: createEmptyBaseData('GT'),
-      SV: createEmptyBaseData('SV')
-    };
-    updateCountryBadges();
-    applyCountry(CURRENT_COUNTRY);
-    return;
-  }
+    function normalizedKey(value) {
+      return String(value ?? '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase();
+    }
 
-  const { bancosList, fileName } = parsed;
-  const accountsByCountry = { GT: [], SV: [] };
-  const transactionKeys = new Set();
+    function canonicalKey(value) {
+      return normalizedKey(value).replace(/\s+/g, '');
+    }
 
-  bancosList.forEach((b, idx) => {
-    const countryCode = detectCountry(b, 'GT');
-    accountsByCountry[countryCode].push(b);
+    function isSyntheticAccount(record) {
+      const bank = canonicalKey(getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria'));
+      const account = canonicalKey(getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta'));
+      const syntheticNames = new Set(['global', 'total', 'totales', 'consolidado', 'consolidada', 'resumen']);
+      return syntheticNames.has(bank)
+        || syntheticNames.has(account)
+        || bank.includes('global')
+        || bank.includes('consolidado')
+        || account.includes('global')
+        || account.includes('consolidado')
+        || (/^banco\d+$/.test(bank) && /^cta\d+$/.test(account));
+    }
 
-    const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || `Banco ${idx + 1}`).trim();
-    const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta') || `CTA-${idx + 1}`).trim();
-    const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
-    const cIng = numberValue(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income'));
-    const dEgr = numberValue(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses'));
-    const sFinValue = getField(b, 'Saldo_Final', 'saldo_final', 'saldoFinal', 'finalBalance');
-    const sFin = numberValue(sFinValue ?? (sIni + cIng - dEgr));
+    function getField(record, ...names) {
+      if (!record || typeof record !== 'object' || Array.isArray(record)) return undefined;
+      const fields = Object.entries(record);
+      for (const name of names) {
+        const match = fields.find(([key]) => normalizedKey(key) === normalizedKey(name));
+        if (match) return parseJsonValue(match[1]);
+      }
+      return undefined;
+    }
 
-    // Extraer transacciones reales si vienen en el payload
-    const movs = asArray(getField(b, 'estado_cuenta', 'estado cuenta', 'Movimientos', 'movimientos', 'transactions', 'transacciones'));
-    if (movs.length) {
-      movs.forEach((m, mIdx) => {
-        const d = normalizeDate(getField(m, 'Fecha', 'fecha', 'date'));
-        const debit = numberValue(getField(m, 'Egreso', 'egreso', 'Debe', 'debe', 'Cargo', 'cargo', 'Débito', 'Debito', 'debito', 'debit', 'debits'));
-        const credit = numberValue(getField(m, 'Ingreso', 'ingreso', 'Haber', 'haber', 'Abono', 'abono', 'Crédito', 'Credito', 'credito', 'credit', 'credits'));
-        const reference = getField(m, 'No_Referencia', 'referencia', 'reference', 'id') || '';
-        const transactionKey = `${canonicalKey(bName)}|${canonicalKey(accNum)}|${d}|${reference}|${debit}|${credit}|${getField(m, 'Descripcion', 'descripcion', 'description') || ''}`;
-        if (transactionKeys.has(transactionKey)) return;
-        transactionKeys.add(transactionKey);
-        RAW_TRANSACTIONS_BY_COUNTRY[countryCode].push({
-          row: mIdx,
-          country: countryCode,
+    function collectFields(value, names, result = [], depth = 0) {
+      const parsed = parseJsonValue(value);
+      if (!parsed || typeof parsed !== 'object' || depth > 8) return result;
+      if (Array.isArray(parsed)) {
+        parsed.forEach(item => collectFields(item, names, result, depth + 1));
+        return result;
+      }
+      for (const [key, fieldValue] of Object.entries(parsed)) {
+        if (names.some(name => normalizedKey(key) === normalizedKey(name))) {
+          result.push(parseJsonValue(fieldValue));
+        }
+        collectFields(fieldValue, names, result, depth + 1);
+      }
+      return result;
+    }
+
+    function unwrapPayload(value, depth = 0) {
+      const parsed = parseJsonValue(value);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || depth > 5) return parsed;
+      for (const key of ['data', 'resultado', 'result', 'response', 'body', 'payload']) {
+        const nested = getField(parsed, key);
+        if (nested && typeof nested === 'object') return unwrapPayload(nested, depth + 1);
+      }
+      return parsed;
+    }
+
+    function asArray(value) {
+      const parsed = parseJsonValue(value);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') {
+        const values = Object.values(parsed);
+        if (values.length && values.every(item => item && typeof item === 'object')) return values;
+        if (getField(parsed, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'Entidad_Bancaria', 'Institucion_Bancaria')
+          || getField(parsed, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta')) return [parsed];
+      }
+      return [];
+    }
+
+    function numberValue(value, fallback = 0) {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      const text = String(value ?? '').trim().replace(/[^0-9,.-]/g, '');
+      if (!text) return fallback;
+      const normalized = text.includes(',') && text.includes('.')
+        ? (text.lastIndexOf(',') > text.lastIndexOf('.') ? text.replace(/\./g, '').replace(',', '.') : text.replace(/,/g, ''))
+        : text.replace(',', '.');
+      const result = Number(normalized);
+      return Number.isFinite(result) ? result : fallback;
+    }
+
+    function normalizeDate(value) {
+      if (typeof value === 'number' && value > 20000 && value < 100000) {
+        const date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
+        return date.toISOString().slice(0, 10);
+      }
+      const text = String(value ?? '').trim();
+      const parts = text.split(/[\/-]/);
+      if (parts.length === 3) {
+        if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      return text || '2026-08-01';
+    }
+
+    /**
+     * Función clasificadora robusta de País (GT vs SV)
+     * Reconoce atributos explícitos, moneda, y nombres de bancos populares de cada país.
+     */
+    function detectCountry(record, defaultCountry = 'GT') {
+      if (!record || typeof record !== 'object') return defaultCountry;
+
+      // 1. Verificación explícita de campo de país
+      const cVal = String(getField(record, 'pais', 'país', 'country', 'cod_pais', 'codigo_pais', 'codPais', 'nacion', 'region', 'iso_pais', '_country') || '').trim().toLowerCase();
+      if (cVal === 'sv' || cVal.includes('salvador') || cVal === 'slv') return 'SV';
+      if (cVal === 'gt' || cVal.includes('guat') || cVal === 'gtm') return 'GT';
+
+      // 2. Reconocimiento de bancos salvadoreños populares
+      const bName = String(getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || '').toLowerCase();
+      if (
+        bName.includes('agricola') || bName.includes('agrícola') ||
+        bName.includes('cuscatlan') || bName.includes('cuscatlán') ||
+        bName.includes('davivienda sv') || bName.includes('davivienda el salvador') ||
+        bName.includes('bac sv') || bName.includes('bac el salvador') ||
+        bName.includes('banco azul') || bName.includes('hipotecario') ||
+        bName.includes('fedecredito') || bName.includes('fedecrédito') ||
+        bName.includes('promerica sv') || bName.includes('promerica el salvador') ||
+        bName.includes('fomento agropecuario') || bName.includes('bancovital') ||
+        bName.includes('salvador')
+      ) {
+        return 'SV';
+      }
+
+      // 3. Reconocimiento de bancos guatemaltecos populares
+      if (
+        bName.includes('industrial') || bName.includes('banrural') ||
+        bName.includes('g&t') || bName.includes('gyt') ||
+        bName.includes('bam') || bName.includes('agromercantil') ||
+        bName.includes('chn') || bName.includes('interbanco') ||
+        bName.includes('inmobiliario') || bName.includes('vivibanco') ||
+        bName.includes('bantrab') || bName.includes('trabajadores') ||
+        bName.includes('bac gt') || bName.includes('bac guatemala') ||
+        bName.includes('promerica gt') || bName.includes('promerica guatemala') ||
+        bName.includes('ficohsa gt') || bName.includes('ficohsa guatemala') ||
+        bName.includes('guatemala')
+      ) {
+        return 'GT';
+      }
+
+      // 4. Reconocimiento por moneda
+      const curr = String(getField(record, 'Moneda', 'moneda', 'currency', 'cur') || '').trim().toUpperCase();
+      if (curr === 'GTQ' || curr === 'Q' || curr.includes('QUETZAL')) return 'GT';
+      if (curr === 'USD' || curr === '$' || curr.includes('DOLAR') || curr.includes('DÓLAR')) {
+        // Si la moneda es USD y no hay coincidencia de banco GT, categorizar en SV
+        return 'SV';
+      }
+
+      return defaultCountry;
+    }
+
+    function mergeAccountRecords(...sources) {
+      const merged = new Map();
+      sources.flatMap(asArray).forEach((record) => {
+        if (!record || typeof record !== 'object' || Array.isArray(record)) return;
+        if (isSyntheticAccount(record)) return;
+        const bank = getField(record, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria');
+        const account = getField(record, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta');
+        if (!bank || !account) return;
+        const bankName = String(bank).trim();
+        const accountName = String(account).trim();
+        const key = `${canonicalKey(bankName)}|${canonicalKey(accountName)}`;
+        const previous = merged.get(key);
+        if (!previous) {
+          merged.set(key, { ...record });
+          return;
+        }
+        for (const [field, value] of Object.entries(record)) {
+          if (value === undefined || value === null || value === '') continue;
+          if (Array.isArray(value)) {
+            const combined = [...(Array.isArray(previous[field]) ? previous[field] : []), ...value];
+            const seen = new Set();
+            previous[field] = combined.filter(item => {
+              const signature = JSON.stringify(item);
+              if (seen.has(signature)) return false;
+              seen.add(signature);
+              return true;
+            });
+          } else if (previous[field] === undefined || previous[field] === null || previous[field] === '') {
+            previous[field] = value;
+          }
+        }
+      });
+      return [...merged.values()];
+    }
+
+    function parseRawReport() {
+      const saved = localStorage.getItem('intelfon_current_report');
+      if (!saved) return null;
+
+      try {
+        let parsedJson = parseJsonValue(JSON.parse(saved));
+        if (!parsedJson) return null;
+
+        // Aceptar cualquier estructura: { data }, { resultado }, arrays, o payload plano
+        let original = parsedJson.data !== undefined ? parsedJson.data : parsedJson;
+        original = parseJsonValue(original);
+
+        let sourcesArray = Array.isArray(original) ? original : [original];
+
+        let allBancosList = [];
+        let allResumenList = [];
+        let fileName = 'ReporteFinanciero.xlsx';
+        let outerDownloadUrl = '';
+        const consolidation = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
+
+        sourcesArray.forEach(src => {
+          if (!src) return;
+          const raw = unwrapPayload(src);
+          const fName = getField(src, 'fileName', 'filename', 'nombreArchivo') || getField(raw, 'fileName', 'filename', 'nombreArchivo');
+          if (fName) fileName = fName;
+
+          const dUrl = getField(src, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link')
+            || getField(raw, 'urlDescarga', 'downloadUrl', 'webViewLink', 'fileUrl', 'url', 'link');
+          if (dUrl && dUrl !== '#') outerDownloadUrl = dUrl;
+          const excelBase64 = getField(src, 'archivoExcelBase64', 'excelBase64')
+            || getField(raw, 'archivoExcelBase64', 'excelBase64')
+            || (Array.isArray(src?.archivosExcel) && src.archivosExcel[0]?.data ? src.archivosExcel[0].data : '')
+            || (src?.consolidadoGeneral?.data ? src.consolidadoGeneral.data : '');
+          if (!outerDownloadUrl && typeof excelBase64 === 'string' && excelBase64.length > 20) {
+            outerDownloadUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBase64}`;
+          }
+          const rate = getField(src, 'tipoCambioGTQUSD', 'tipo_cambio_gtq_usd') || getField(raw, 'tipoCambioGTQUSD', 'tipo_cambio_gtq_usd');
+          if (rate !== undefined && rate !== null && rate !== '') consolidation.rate = Number(rate);
+          const regional = getField(src, 'consolidadoRegionalUSD', 'consolidado_regional_usd') || getField(raw, 'consolidadoRegionalUSD', 'consolidado_regional_usd');
+          if (regional) consolidation.regional.push(...asArray(regional));
+          const totals = getField(src, 'totales_globales', 'totalesGlobales') || getField(raw, 'totales_globales', 'totalesGlobales');
+          if (totals && typeof totals === 'object') Object.assign(consolidation.globalTotals, totals);
+          const review = getField(src, 'registrosRevision', 'registros_revision', 'revisiones') || getField(raw, 'registrosRevision', 'registros_revision', 'revisiones');
+          if (review) consolidation.review.push(...asArray(review));
+          const files = getField(src, 'archivosExcel', 'archivos_excel') || getField(raw, 'archivosExcel', 'archivos_excel');
+          if (files) consolidation.files.push(...asArray(files));
+          const generalFile = getField(src, 'consolidadoGeneral', 'consolidado_general') || getField(raw, 'consolidadoGeneral', 'consolidado_general');
+          if (generalFile && typeof generalFile === 'object') consolidation.files.push({ ...generalFile, _kind: 'general' });
+          for (const [code, keys] of [['GT', ['guatemala']], ['SV', ['el_salvador', 'elsalvador']]]) {
+            const countryData = keys.map(key => getField(src, key) || getField(raw, key)).find(Boolean);
+            if (countryData) consolidation.countryData[code] = countryData;
+          }
+
+          // Fuentes específicas de GT / SV si vienen particionadas
+          const gtSpecific = collectFields(src, ['guatemala', 'gt', 'bancos_gt', 'bancos_guatemala', 'cuentas_gt']);
+          const svSpecific = collectFields(src, ['el_salvador', 'salvador', 'sv', 'bancos_sv', 'bancos_salvador', 'cuentas_sv']);
+
+          gtSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'GT'; });
+          svSpecific.flatMap(asArray).forEach(r => { if (r && typeof r === 'object') r._country = 'SV'; });
+
+          const generalSources = collectFields(src, ['registros', 'bancos_procesados', 'bancos', 'cuentas', 'accounts', 'bank_accounts', 'cuentas_bancarias', 'bankAccounts', 'accountDetails']);
+          const resumenSources = collectFields(src, ['resumen_general', 'filas', 'resumen', 'rows']);
+          const balanceSources = collectFields(src, ['balance_general', 'balance', 'account_balances']);
+
+          const merged = mergeAccountRecords(...gtSpecific, ...svSpecific, ...generalSources, ...balanceSources, ...resumenSources);
+          if (merged.length) {
+            allBancosList.push(...merged);
+          }
+          allResumenList.push(...resumenSources.flatMap(asArray));
+        });
+
+        const bancosList = mergeAccountRecords(allBancosList);
+        const resumenList = allResumenList;
+
+        downloadExcelUrl = outerDownloadUrl || '#';
+
+        CONSOLIDATION = consolidation;
+        return { bancosList, resumenList, fileName };
+      } catch (e) {
+        console.error('Error parseando reporte guardado:', e);
+        return null;
+      }
+    }
+
+    /**
+     * Compila y construye la estructura de métricas y análisis para un país específico.
+     */
+    function buildCountryBaseData(countryCode, accountsForCountry, transactionsForCountry, fileName) {
+      const cfg = COUNTRY_CONFIG[countryCode] || COUNTRY_CONFIG.GT;
+      const currency = cfg.currency;
+
+      if (!accountsForCountry || accountsForCountry.length === 0) {
+        return createEmptyBaseData(countryCode);
+      }
+
+      const accountsMap = [];
+      const banksMap = {};
+
+      accountsForCountry.forEach((b, idx) => {
+        const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || `Banco ${idx + 1}`).trim();
+        const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta') || `CTA-${idx + 1}`).trim();
+        const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
+        const cIng = numberValue(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income'));
+        const dEgr = numberValue(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses'));
+        const sFinValue = getField(b, 'Saldo_Final', 'saldo_final', 'saldoFinal', 'finalBalance');
+        const sFin = numberValue(sFinValue ?? (sIni + cIng - dEgr));
+
+        accountsMap.push({
           bankKey: bName,
           bank: bName,
           account: accNum,
-          date: d,
-          debit,
-          credit,
-          balance: numberValue(getField(m, 'Saldo_Resultante', 'Saldo', 'saldo', 'balance'), sFin)
+          initial: sIni,
+          final: sFin,
+          change: round2(sFin - sIni),
+          changePct: sIni !== 0 ? round2(((sFin - sIni) / Math.abs(sIni)) * 100) : 0,
+          credits: cIng,
+          debits: dEgr,
+          country: countryCode
         });
+
+        const bankKey = canonicalKey(bName);
+        if (!banksMap[bankKey]) {
+          banksMap[bankKey] = {
+            key: bName,
+            name: bName,
+            color: PALETTE[Object.keys(banksMap).length % PALETTE.length],
+            initial: 0,
+            final: 0,
+            credits: 0,
+            debits: 0,
+            accountsCount: 0,
+            country: countryCode
+          };
+        }
+        banksMap[bankKey].initial += sIni;
+        banksMap[bankKey].final += sFin;
+        banksMap[bankKey].credits += cIng;
+        banksMap[bankKey].debits += dEgr;
+        banksMap[bankKey].accountsCount += 1;
       });
-    }
-  });
 
-  BASE_DATA_BY_COUNTRY = {
-    GT: buildCountryBaseData('GT', accountsByCountry.GT, RAW_TRANSACTIONS_BY_COUNTRY.GT, fileName),
-    SV: buildCountryBaseData('SV', accountsByCountry.SV, RAW_TRANSACTIONS_BY_COUNTRY.SV, fileName)
-  };
+      const totalFinalAll = Object.values(banksMap).reduce((s, b) => s + b.final, 0) || 1;
+      const banksArray = Object.values(banksMap).map(b => ({
+        ...b,
+        initial: round2(b.initial),
+        final: round2(b.final),
+        change: round2(b.final - b.initial),
+        changePct: b.initial !== 0 ? round2(((b.final - b.initial) / Math.abs(b.initial)) * 100) : 0,
+        credits: round2(b.credits),
+        debits: round2(b.debits),
+        netFlow: round2(b.credits - b.debits),
+        share: round2((b.final / totalFinalAll) * 100),
+        accounts: b.accountsCount
+      }));
 
-  updateCountryBadges();
-  applyCountry(CURRENT_COUNTRY);
-}
+      const minDate = transactionsForCountry.length ? transactionsForCountry.reduce((m, t) => !m || t.date < m ? t.date : m, '') : '';
+      const maxDate = transactionsForCountry.length ? transactionsForCountry.reduce((m, t) => !m || t.date > m ? t.date : m, '') : '';
 
-function updateCountryBadges() {
-  const badgeGt = document.getElementById('badge-count-gt');
-  const badgeSv = document.getElementById('badge-count-sv');
-  if (badgeGt) badgeGt.textContent = BASE_DATA_BY_COUNTRY.GT.meta.banks;
-  if (badgeSv) badgeSv.textContent = BASE_DATA_BY_COUNTRY.SV.meta.banks;
-
-  const btnGt = document.getElementById('btn-country-gt');
-  const btnSv = document.getElementById('btn-country-sv');
-  if (btnGt) btnGt.classList.toggle('active', CURRENT_COUNTRY === 'GT');
-  if (btnSv) btnSv.classList.toggle('active', CURRENT_COUNTRY === 'SV');
-
-  const btnQuickToggle = document.getElementById('btn-quick-toggle-country');
-  if (btnQuickToggle) {
-    if (CURRENT_COUNTRY === 'GT') {
-      btnQuickToggle.innerHTML = '<span>🇸🇻 Ver bancos El Salvador (SV)</span>';
-      btnQuickToggle.title = 'Cambiar a estadísticas y bancos de El Salvador';
-    } else {
-      btnQuickToggle.innerHTML = '<span>🇬🇹 Ver bancos Guatemala (GT)</span>';
-      btnQuickToggle.title = 'Cambiar a estadísticas y bancos de Guatemala';
-    }
-  }
-}
-
-/**
- * Cambia el país activo (GT o SV) y recalcula la vista completa
- */
-function setCountry(countryCode) {
-  if (countryCode !== 'GT' && countryCode !== 'SV') return;
-  if (LOCKED_COUNTRY && countryCode !== LOCKED_COUNTRY) return;
-  CURRENT_COUNTRY = LOCKED_COUNTRY || countryCode;
-  updateCountryBadges();
-  applyCountry(CURRENT_COUNTRY);
-}
-
-function applyCountry(countryCode) {
-  const baseData = BASE_DATA_BY_COUNTRY[countryCode] || BASE_DATA_BY_COUNTRY.GT;
-  const rawTx = RAW_TRANSACTIONS_BY_COUNTRY[countryCode] || [];
-
-  const minDate = baseData.meta.minDate || '';
-  const maxDate = baseData.meta.maxDate || '';
-
-  const dFrom = document.getElementById('dateFrom');
-  const dTo = document.getElementById('dateTo');
-  if (dFrom && dTo) {
-    dFrom.min = minDate; dFrom.max = maxDate; dFrom.value = minDate;
-    dTo.min = minDate; dTo.max = maxDate; dTo.value = maxDate;
-  }
-
-  DATA = buildFiltered(countryCode, minDate, maxDate);
-  renderAll();
-}
-
-function buildFiltered(countryCode, startDate, endDate) {
-  const baseData = BASE_DATA_BY_COUNTRY[countryCode] || BASE_DATA_BY_COUNTRY.GT;
-  const rawTx = RAW_TRANSACTIONS_BY_COUNTRY[countryCode] || [];
-
-  if (!baseData.banks.length || !rawTx.length) {
-    return baseData;
-  }
-
-  const reportStart = rawTx.reduce((min, t) => !min || t.date < min ? t.date : min, '');
-  const reportEnd = rawTx.reduce((max, t) => !max || t.date > max ? t.date : max, '');
-  const isCompletePeriod = startDate <= reportStart && endDate >= reportEnd;
-
-  const inRange = rawTx.filter(t => t.date >= startDate && t.date <= endDate);
-
-  const byDate = {};
-  inRange.forEach(t => {
-    const d = byDate[t.date] || (byDate[t.date] = { date: t.date, moves: 0, debits: 0, credits: 0 });
-    d.moves += 1;
-    d.debits += Number(t.debit || 0);
-    d.credits += Number(t.credit || 0);
-  });
-
-  const daily = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)).map(d => ({
-    date: d.date,
-    label: fmtDate(d.date).slice(0, 5),
-    moves: d.moves,
-    debits: round2(d.debits),
-    credits: round2(d.credits),
-    net: round2(d.credits - d.debits)
-  }));
-
-  const maxCredit = daily.length ? daily.reduce((a, b) => b.credits > a.credits ? b : a) : null;
-  const maxDebit = daily.length ? daily.reduce((a, b) => b.debits > a.debits ? b : a) : null;
-  const maxNet = daily.length ? daily.reduce((a, b) => b.net > a.net ? b : a) : null;
-  const minNet = daily.length ? daily.reduce((a, b) => b.net < a.net ? b : a) : null;
-
-  const filteredCredits = round2(daily.reduce((sum, day) => sum + day.credits, 0));
-  const filteredDebits = round2(daily.reduce((sum, day) => sum + day.debits, 0));
-  const filteredNetFlow = round2(filteredCredits - filteredDebits);
-  const filteredFinal = round2(baseData.totals.initial + filteredNetFlow);
-  const totals = isCompletePeriod
-    ? { ...baseData.totals }
-    : {
-        ...baseData.totals,
-        final: filteredFinal,
-        change: filteredNetFlow,
-        changePct: baseData.totals.initial !== 0
-          ? round2((filteredNetFlow / Math.abs(baseData.totals.initial)) * 100)
-          : 0,
-        credits: filteredCredits,
-        debits: filteredDebits,
-        netFlow: filteredNetFlow
+      return {
+        meta: {
+          file: fileName,
+          fileCut: periodLabel(minDate, maxDate),
+          latestMovement: maxDate ? fmtDate(maxDate) : 'Reciente',
+          currency: currency,
+          country: cfg.code,
+          countryName: cfg.name,
+          countryFlag: cfg.flag,
+          accounts: accountsMap.length,
+          banks: banksArray.length,
+          movementCount: transactionsForCountry.length || accountsMap.length,
+          minDate,
+          maxDate
+        },
+        totals: {
+          initial: round2(banksArray.reduce((s, b) => s + b.initial, 0)),
+          final: round2(banksArray.reduce((s, b) => s + b.final, 0)),
+          change: round2(banksArray.reduce((s, b) => s + (b.final - b.initial), 0)),
+          changePct: banksArray.reduce((sum, bank) => sum + bank.initial, 0) !== 0
+            ? round2((banksArray.reduce((sum, bank) => sum + bank.change, 0) / Math.abs(banksArray.reduce((sum, bank) => sum + bank.initial, 0))) * 100)
+            : 0,
+          credits: round2(banksArray.reduce((s, b) => s + b.credits, 0)),
+          debits: round2(banksArray.reduce((s, b) => s + b.debits, 0)),
+          netFlow: round2(banksArray.reduce((s, b) => s + (b.credits - b.debits), 0))
+        },
+        highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
+        banks: banksArray,
+        accounts: accountsMap,
+        daily: []
       };
+    }
 
-  return {
-    meta: {
-      ...baseData.meta,
-      fileCut: periodLabel(startDate, endDate),
-      latestMovement: inRange.length ? fmtDate(inRange[inRange.length - 1].date) : baseData.meta.latestMovement,
-      movementCount: inRange.length || baseData.meta.movementCount
-    },
-    totals,
-    highlights: { maxCredit, maxDebit, maxNet, minNet },
-    banks: baseData.banks,
-    accounts: baseData.accounts,
-    daily: daily
-  };
-}
+    function buildGlobalBaseData(gtData, svData) {
+      const gtBase = gtData || createEmptyBaseData('GT');
+      const svBase = svData || createEmptyBaseData('SV');
+      const cfg = COUNTRY_CONFIG.GLOBAL || COUNTRY_CONFIG.GT;
 
-function renderHeader() {
-  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
-  const titleEl = document.getElementById('mainCountryTitle');
-  const subEl = document.getElementById('mainCountrySub');
-  const coverCountryEl = document.getElementById('coverCountry');
-  const metaCountryName = document.getElementById('metaCountryName');
+      const banks = [
+        ...(Array.isArray(gtBase.banks) ? gtBase.banks : []),
+        ...(Array.isArray(svBase.banks) ? svBase.banks : [])
+      ];
+      const accounts = [
+        ...(Array.isArray(gtBase.accounts) ? gtBase.accounts : []),
+        ...(Array.isArray(svBase.accounts) ? svBase.accounts : [])
+      ];
+      const daily = [
+        ...(Array.isArray(gtBase.daily) ? gtBase.daily : []),
+        ...(Array.isArray(svBase.daily) ? svBase.daily : [])
+      ];
 
-  if (titleEl) titleEl.textContent = `Consolidación Bancaria · ${cfg.name}`;
-  if (subEl) subEl.textContent = cfg.description;
-  if (coverCountryEl) coverCountryEl.textContent = `${cfg.name} (${cfg.code})`;
-  if (metaCountryName) metaCountryName.textContent = `${cfg.name} ${cfg.flag}`;
+      const gtMin = gtBase.meta?.minDate || '';
+      const svMin = svBase.meta?.minDate || '';
+      const gtMax = gtBase.meta?.maxDate || '';
+      const svMax = svBase.meta?.maxDate || '';
+      const minDate = [gtMin, svMin].filter(Boolean).reduce((acc, value) => !acc || value < acc ? value : acc, '');
+      const maxDate = [gtMax, svMax].filter(Boolean).reduce((acc, value) => !acc || value > acc ? value : acc, '');
 
-  document.getElementById('latestMovement').textContent = DATA.meta.latestMovement;
-  document.getElementById('bankCount').textContent = DATA.meta.banks;
-  document.getElementById('accountCount').textContent = DATA.meta.accounts;
-  document.getElementById('sourceFile').textContent = DATA.meta.file;
-  document.getElementById('coverCut').textContent = DATA.meta.fileCut;
-  document.getElementById('coverBanks').textContent = DATA.meta.banks;
-  document.getElementById('coverAccounts').textContent = DATA.meta.accounts;
-  document.getElementById('coverCurrency').textContent = `${DATA.meta.currency} (${cfg.symbol})`;
-  document.getElementById('metaCurrency').textContent = `${DATA.meta.currency} (${cfg.symbol})`;
+      return {
+        meta: {
+          file: 'Consolidado Regional',
+          fileCut: periodLabel(minDate, maxDate),
+          latestMovement: maxDate ? fmtDate(maxDate) : 'Reciente',
+          currency: cfg.currency,
+          country: cfg.code,
+          countryName: cfg.name,
+          countryFlag: cfg.flag,
+          accounts: accounts.length,
+          banks: banks.length,
+          movementCount: (Number(gtBase.meta?.movementCount) || 0) + (Number(svBase.meta?.movementCount) || 0),
+          minDate,
+          maxDate
+        },
+        totals: {
+          initial: round2((Number(gtBase.totals?.initial) || 0) + (Number(svBase.totals?.initial) || 0)),
+          final: round2((Number(gtBase.totals?.final) || 0) + (Number(svBase.totals?.final) || 0)),
+          change: round2((Number(gtBase.totals?.change) || 0) + (Number(svBase.totals?.change) || 0)),
+          changePct: ((Number(gtBase.totals?.initial) || 0) + (Number(svBase.totals?.initial) || 0)) !== 0
+            ? round2((((Number(gtBase.totals?.change) || 0) + (Number(svBase.totals?.change) || 0)) / Math.abs((Number(gtBase.totals?.initial) || 0) + (Number(svBase.totals?.initial) || 0))) * 100)
+            : 0,
+          credits: round2((Number(gtBase.totals?.credits) || 0) + (Number(svBase.totals?.credits) || 0)),
+          debits: round2((Number(gtBase.totals?.debits) || 0) + (Number(svBase.totals?.debits) || 0)),
+          netFlow: round2((Number(gtBase.totals?.netFlow) || 0) + (Number(svBase.totals?.netFlow) || 0))
+        },
+        highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
+        banks,
+        accounts,
+        daily
+      };
+    }
 
-  const logosContainer = document.getElementById('coverBankLogos');
-  if (logosContainer) {
-    if (DATA.banks.length > 0) {
-      logosContainer.innerHTML = DATA.banks.map(b => `
+    function initDataEngine() {
+      const parsed = parseRawReport();
+      loadedReportSnapshot = localStorage.getItem('intelfon_current_report');
+      RAW_TRANSACTIONS_BY_COUNTRY = { GLOBAL: [], GT: [], SV: [] };
+      CONSOLIDATION = { rate: null, regional: [], globalTotals: {}, files: [], review: [], countryData: {} };
+
+      if (!parsed || !Array.isArray(parsed.bancosList) || parsed.bancosList.length === 0) {
+        BASE_DATA_BY_COUNTRY = {
+          GLOBAL: createEmptyBaseData('GLOBAL'),
+          GT: createEmptyBaseData('GT'),
+          SV: createEmptyBaseData('SV')
+        };
+        updateCountryBadges();
+        applyCountry(CURRENT_COUNTRY);
+        return;
+      }
+
+      const { bancosList, fileName } = parsed;
+      const accountsByCountry = { GT: [], SV: [] };
+      const transactionKeys = new Set();
+
+      bancosList.forEach((b, idx) => {
+        const countryCode = detectCountry(b, 'GT');
+        accountsByCountry[countryCode].push(b);
+
+        const bName = String(getField(b, 'Banco', 'banco', 'bank', 'bankName', 'Nombre_Banco', 'Nombre del Banco', 'nombre_banco', 'Entidad_Bancaria', 'Institucion_Bancaria') || `Banco ${idx + 1}`).trim();
+        const accNum = String(getField(b, 'Cuenta', 'cuenta', 'account', 'accountNumber', 'Numero_Cuenta', 'Número de cuenta', 'numero_cuenta', 'No_Cuenta', 'No. de Cuenta', 'No. Cuenta', 'Cuenta_Bancaria', 'Tipo_Cuenta', 'Identificador_Cuenta') || `CTA-${idx + 1}`).trim();
+        const sIni = numberValue(getField(b, 'Saldo_Inicial', 'saldo_inicial', 'saldoInicial', 'initialBalance'));
+        const cIng = numberValue(getField(b, 'Total_Ingresos', 'total_ingresos', 'creditos', 'credits', 'income'));
+        const dEgr = numberValue(getField(b, 'Total_Egresos', 'total_egresos', 'debitos', 'debits', 'expenses'));
+        const sFinValue = getField(b, 'Saldo_Final', 'saldo_final', 'saldoFinal', 'finalBalance');
+        const sFin = numberValue(sFinValue ?? (sIni + cIng - dEgr));
+
+        // Extraer transacciones reales si vienen en el payload
+        const movs = asArray(getField(b, 'estado_cuenta', 'estado cuenta', 'Movimientos', 'movimientos', 'transactions', 'transacciones'));
+        if (movs.length) {
+          movs.forEach((m, mIdx) => {
+            const d = normalizeDate(getField(m, 'Fecha', 'fecha', 'date'));
+            const debit = numberValue(getField(m, 'Egreso', 'egreso', 'Debe', 'debe', 'Cargo', 'cargo', 'Débito', 'Debito', 'debito', 'debit', 'debits'));
+            const credit = numberValue(getField(m, 'Ingreso', 'ingreso', 'Haber', 'haber', 'Abono', 'abono', 'Crédito', 'Credito', 'credito', 'credit', 'credits'));
+            const reference = getField(m, 'No_Referencia', 'referencia', 'reference', 'id') || '';
+            const transactionKey = `${canonicalKey(bName)}|${canonicalKey(accNum)}|${d}|${reference}|${debit}|${credit}|${getField(m, 'Descripcion', 'descripcion', 'description') || ''}`;
+            if (transactionKeys.has(transactionKey)) return;
+            transactionKeys.add(transactionKey);
+            RAW_TRANSACTIONS_BY_COUNTRY[countryCode].push({
+              row: mIdx,
+              country: countryCode,
+              bankKey: bName,
+              bank: bName,
+              account: accNum,
+              date: d,
+              debit,
+              credit,
+              balance: numberValue(getField(m, 'Saldo_Resultante', 'Saldo', 'saldo', 'balance'), sFin)
+            });
+          });
+        }
+      });
+
+      RAW_TRANSACTIONS_BY_COUNTRY.GLOBAL = [
+        ...RAW_TRANSACTIONS_BY_COUNTRY.GT,
+        ...RAW_TRANSACTIONS_BY_COUNTRY.SV
+      ];
+
+      const gtData = buildCountryBaseData(
+        'GT',
+        accountsByCountry.GT,
+        RAW_TRANSACTIONS_BY_COUNTRY.GT,
+        fileName
+      );
+
+      const svData = buildCountryBaseData(
+        'SV',
+        accountsByCountry.SV,
+        RAW_TRANSACTIONS_BY_COUNTRY.SV,
+        fileName
+      );
+
+      BASE_DATA_BY_COUNTRY = {
+        GT: gtData,
+        SV: svData,
+        GLOBAL: buildGlobalBaseData(gtData, svData)
+      };
+      updateCountryBadges();
+      applyCountry(CURRENT_COUNTRY);
+    }
+
+    function updateCountryBadges() {
+      const badgeGt = document.getElementById('badge-count-gt');
+      const badgeSv = document.getElementById('badge-count-sv');
+      if (badgeGt) badgeGt.textContent = BASE_DATA_BY_COUNTRY.GT.meta.banks;
+      if (badgeSv) badgeSv.textContent = BASE_DATA_BY_COUNTRY.SV.meta.banks;
+
+      const btnGt = document.getElementById('btn-country-gt');
+      const btnSv = document.getElementById('btn-country-sv');
+      const btnGlobal = document.getElementById('btn-country-global');
+      if (btnGlobal) {
+        btnGlobal.classList.toggle('active', CURRENT_COUNTRY === 'GLOBAL');
+        btnGlobal.onclick = () => {
+          CURRENT_COUNTRY = 'GLOBAL';
+          refreshDashboard();
+        };
+      }
+      if (btnGt) btnGt.classList.toggle('active', CURRENT_COUNTRY === 'GT');
+      if (btnSv) btnSv.classList.toggle('active', CURRENT_COUNTRY === 'SV');
+
+      const btnQuickToggle = document.getElementById('btn-quick-toggle-country');
+      if (btnQuickToggle) {
+        if (CURRENT_COUNTRY === 'GT') {
+          btnQuickToggle.innerHTML = '<span>🇸🇻 Ver bancos El Salvador (SV)</span>';
+          btnQuickToggle.title = 'Cambiar a estadísticas y bancos de El Salvador';
+        } else if (CURRENT_COUNTRY === 'SV') {
+          btnQuickToggle.innerHTML = '<span>🇬🇹 Ver bancos Guatemala (GT)</span>';
+          btnQuickToggle.title = 'Cambiar a estadísticas y bancos de Guatemala';
+        } else {
+          btnQuickToggle.innerHTML = '<span>🇬🇹 Ver bancos Guatemala (GT)</span>';
+          btnQuickToggle.title = 'Cambiar a estadísticas y bancos de Guatemala';
+        }
+      }
+    }
+
+    function refreshDashboard() {
+      if (!BASE_DATA_BY_COUNTRY[CURRENT_COUNTRY]) {
+        CURRENT_COUNTRY = 'GLOBAL';
+      }
+      applyCountry(CURRENT_COUNTRY);
+    }
+
+    /**
+     * Cambia el país activo (GT, SV o GLOBAL) y recalcula la vista completa.
+     */
+    function setCountry(countryCode) {
+      if (!['GT', 'SV', 'GLOBAL'].includes(countryCode)) return;
+      if (LOCKED_COUNTRY && countryCode !== LOCKED_COUNTRY) return;
+      CURRENT_COUNTRY = countryCode;
+      updateCountryBadges();
+      applyCountry(CURRENT_COUNTRY);
+    }
+
+    function applyCountry(countryCode) {
+      const baseData = BASE_DATA_BY_COUNTRY[countryCode] || BASE_DATA_BY_COUNTRY.GT;
+      const rawTx = RAW_TRANSACTIONS_BY_COUNTRY[countryCode] || [];
+
+      const minDate = baseData.meta.minDate || '';
+      const maxDate = baseData.meta.maxDate || '';
+
+      const dFrom = document.getElementById('dateFrom');
+      const dTo = document.getElementById('dateTo');
+      if (dFrom && dTo) {
+        dFrom.min = minDate; dFrom.max = maxDate; dFrom.value = minDate;
+        dTo.min = minDate; dTo.max = maxDate; dTo.value = maxDate;
+      }
+
+      DATA = buildFiltered(countryCode, minDate, maxDate);
+      renderAll();
+    }
+
+    function buildFiltered(countryCode, startDate, endDate) {
+      const resolvedCountryCode = countryCode === 'GLOBAL' ? 'GLOBAL' : (countryCode || 'GLOBAL');
+      const baseData = BASE_DATA_BY_COUNTRY[resolvedCountryCode] || BASE_DATA_BY_COUNTRY.GLOBAL || BASE_DATA_BY_COUNTRY.GT;
+      const rawTx = RAW_TRANSACTIONS_BY_COUNTRY[resolvedCountryCode] || [];
+
+      if (!baseData.banks.length || !rawTx.length) {
+        return baseData;
+      }
+
+      const reportStart = rawTx.reduce((min, t) => !min || t.date < min ? t.date : min, '');
+      const reportEnd = rawTx.reduce((max, t) => !max || t.date > max ? t.date : max, '');
+      const isCompletePeriod = startDate <= reportStart && endDate >= reportEnd;
+
+      const inRange = rawTx.filter(t => t.date >= startDate && t.date <= endDate);
+
+      const byDate = {};
+      inRange.forEach(t => {
+        const d = byDate[t.date] || (byDate[t.date] = { date: t.date, moves: 0, debits: 0, credits: 0 });
+        d.moves += 1;
+        d.debits += Number(t.debit || 0);
+        d.credits += Number(t.credit || 0);
+      });
+
+      const daily = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date)).map(d => ({
+        date: d.date,
+        label: fmtDate(d.date).slice(0, 5),
+        moves: d.moves,
+        debits: round2(d.debits),
+        credits: round2(d.credits),
+        net: round2(d.credits - d.debits)
+      }));
+
+      const maxCredit = daily.length ? daily.reduce((a, b) => b.credits > a.credits ? b : a) : null;
+      const maxDebit = daily.length ? daily.reduce((a, b) => b.debits > a.debits ? b : a) : null;
+      const maxNet = daily.length ? daily.reduce((a, b) => b.net > a.net ? b : a) : null;
+      const minNet = daily.length ? daily.reduce((a, b) => b.net < a.net ? b : a) : null;
+
+      const filteredCredits = round2(daily.reduce((sum, day) => sum + day.credits, 0));
+      const filteredDebits = round2(daily.reduce((sum, day) => sum + day.debits, 0));
+      const filteredNetFlow = round2(filteredCredits - filteredDebits);
+      const filteredFinal = round2(baseData.totals.initial + filteredNetFlow);
+      const totals = isCompletePeriod
+        ? { ...baseData.totals }
+        : {
+          ...baseData.totals,
+          final: filteredFinal,
+          change: filteredNetFlow,
+          changePct: baseData.totals.initial !== 0
+            ? round2((filteredNetFlow / Math.abs(baseData.totals.initial)) * 100)
+            : 0,
+          credits: filteredCredits,
+          debits: filteredDebits,
+          netFlow: filteredNetFlow
+        };
+
+      return {
+        meta: {
+          ...baseData.meta,
+          fileCut: periodLabel(startDate, endDate),
+          latestMovement: inRange.length ? fmtDate(inRange[inRange.length - 1].date) : baseData.meta.latestMovement,
+          movementCount: inRange.length || baseData.meta.movementCount
+        },
+        totals,
+        highlights: { maxCredit, maxDebit, maxNet, minNet },
+        banks: baseData.banks,
+        accounts: baseData.accounts,
+        daily: daily
+      };
+    }
+
+    function renderHeader() {
+      const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+      const titleEl = document.getElementById('mainCountryTitle');
+      const subEl = document.getElementById('mainCountrySub');
+      const coverCountryEl = document.getElementById('coverCountry');
+      const metaCountryName = document.getElementById('metaCountryName');
+
+      if (titleEl) titleEl.textContent = `Consolidación Bancaria · ${cfg.name}`;
+      if (subEl) subEl.textContent = cfg.description;
+      if (coverCountryEl) coverCountryEl.textContent = `${cfg.name} (${cfg.code})`;
+      if (metaCountryName) metaCountryName.textContent = `${cfg.name} ${cfg.flag}`;
+
+      document.getElementById('latestMovement').textContent = DATA.meta.latestMovement;
+      document.getElementById('bankCount').textContent = DATA.meta.banks;
+      document.getElementById('accountCount').textContent = DATA.meta.accounts;
+      document.getElementById('sourceFile').textContent = DATA.meta.file;
+      document.getElementById('coverCut').textContent = DATA.meta.fileCut;
+      document.getElementById('coverBanks').textContent = DATA.meta.banks;
+      document.getElementById('coverAccounts').textContent = DATA.meta.accounts;
+      document.getElementById('coverCurrency').textContent = `${DATA.meta.currency} (${cfg.symbol})`;
+      document.getElementById('metaCurrency').textContent = `${DATA.meta.currency} (${cfg.symbol})`;
+
+      const logosContainer = document.getElementById('coverBankLogos');
+      if (logosContainer) {
+        if (DATA.banks.length > 0) {
+          logosContainer.innerHTML = DATA.banks.map(b => `
         <div class="cover-logo" style="border-left: 3px solid ${b.color};">
           <span>${esc(b.name)}</span>
         </div>
       `).join('');
-    } else {
-      logosContainer.innerHTML = `<div class="cover-logo">${cfg.flag} RED INTELFON ${cfg.code}</div>`;
+        } else {
+          logosContainer.innerHTML = `<div class="cover-logo">${cfg.flag} RED INTELFON ${cfg.code}</div>`;
+        }
+      }
+
+      const bankFilter = document.getElementById('bankFilter');
+      if (bankFilter) {
+        const currentValue = bankFilter.value;
+        bankFilter.innerHTML = '<option value="ALL">Todos los bancos</option>' + DATA.banks
+          .map(bank => `<option value="${esc(bank.key)}">${esc(bank.name)}</option>`)
+          .join('');
+        bankFilter.value = DATA.banks.some(bank => bank.key === currentValue) ? currentValue : 'ALL';
+      }
     }
-  }
 
-  const bankFilter = document.getElementById('bankFilter');
-  if (bankFilter) {
-    const currentValue = bankFilter.value;
-    bankFilter.innerHTML = '<option value="ALL">Todos los bancos</option>' + DATA.banks
-      .map(bank => `<option value="${esc(bank.key)}">${esc(bank.name)}</option>`)
-      .join('');
-    bankFilter.value = DATA.banks.some(bank => bank.key === currentValue) ? currentValue : 'ALL';
-  }
-}
+    function renderKpis() {
+      const kpisContainer = document.getElementById('kpis');
+      if (!kpisContainer) return;
 
-function renderKpis() {
-  const kpisContainer = document.getElementById('kpis');
-  if (!kpisContainer) return;
+      const cur = DATA.meta.currency;
+      const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
 
-  const cur = DATA.meta.currency;
-  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+      const kpis = [
+        ['Saldo inicial consolidado', money(DATA.totals.initial, cur), `Apertura contable (${cfg.code})`, 'neutral'],
+        ['Saldo final disponible', money(DATA.totals.final, cur), 'Cuadre 100% en bancos', 'neutral'],
+        ['Créditos acumulados', money(DATA.totals.credits, cur), 'Total ingresos y depósitos', 'positive'],
+        ['Débitos acumulados', money(DATA.totals.debits, cur), 'Total retiros y cargos', 'negative'],
+        ['Variación del período', money(DATA.totals.change, cur), pct(DATA.totals.changePct), cls(DATA.totals.change)],
+        ['Cuentas verificadas', `${DATA.meta.accounts} cuentas`, `${DATA.meta.banks} bancos auditados`, 'neutral']
+      ];
 
-  const kpis = [
-    ['Saldo inicial consolidado', money(DATA.totals.initial, cur), `Apertura contable (${cfg.code})`, 'neutral'],
-    ['Saldo final disponible', money(DATA.totals.final, cur), 'Cuadre 100% en bancos', 'neutral'],
-    ['Créditos acumulados', money(DATA.totals.credits, cur), 'Total ingresos y depósitos', 'positive'],
-    ['Débitos acumulados', money(DATA.totals.debits, cur), 'Total retiros y cargos', 'negative'],
-    ['Variación del período', money(DATA.totals.change, cur), pct(DATA.totals.changePct), cls(DATA.totals.change)],
-    ['Cuentas verificadas', `${DATA.meta.accounts} cuentas`, `${DATA.meta.banks} bancos auditados`, 'neutral']
-  ];
-
-  kpisContainer.innerHTML = kpis.map(k => `
+      kpisContainer.innerHTML = kpis.map(k => `
     <div class="kpi">
       <div class="label">${k[0]}</div>
       <div class="value ${k[3]}">${k[1]}</div>
       <div class="hint">${k[2]}</div>
     </div>
   `).join('');
-}
+    }
 
-function renderBankList() {
-  const list = document.getElementById('bankList');
-  if (!list) return;
+    function renderBankList() {
+      const list = document.getElementById('bankList');
+      if (!list) return;
 
-  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
-  const otherCountryCode = CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT';
-  const otherCfg = COUNTRY_CONFIG[otherCountryCode];
+      const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+      const otherCountryCode = CURRENT_COUNTRY === 'GLOBAL' ? 'GT' : (CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT');
+      const otherCfg = COUNTRY_CONFIG[otherCountryCode];
 
-  if (!DATA.banks.length) {
-    list.innerHTML = `
+      if (!DATA.banks.length) {
+        list.innerHTML = `
       <div class="empty-state">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
         <p>No hay cuentas bancarias de <b>${cfg.name}</b> en este archivo.</p>
@@ -1097,11 +2228,11 @@ function renderBankList() {
         </button>
       </div>
     `;
-    return;
-  }
+        return;
+      }
 
-  const cur = DATA.meta.currency;
-  list.innerHTML = DATA.banks.slice().sort((a, b) => b.final - a.final).map(b => `
+      const cur = DATA.meta.currency;
+      list.innerHTML = DATA.banks.slice().sort((a, b) => b.final - a.final).map(b => `
     <div class="bank-row">
       <span class="dot" style="background:${b.color}"></span>
       <div>
@@ -1112,18 +2243,18 @@ function renderBankList() {
       <div class="amount">${money(b.final, cur)}</div>
     </div>
   `).join('');
-}
+    }
 
-function renderInsights() {
-  const container = document.getElementById('insights');
-  if (!container) return;
+    function renderInsights() {
+      const container = document.getElementById('insights');
+      if (!container) return;
 
-  const cur = DATA.meta.currency;
-  const largestBank = DATA.banks.slice().sort((a, b) => b.final - a.final)[0];
-  const biggestDrop = DATA.banks.slice().sort((a, b) => a.change - b.change)[0];
-  const mc = DATA.highlights.maxCredit, md = DATA.highlights.maxDebit;
+      const cur = DATA.meta.currency;
+      const largestBank = DATA.banks.slice().sort((a, b) => b.final - a.final)[0];
+      const biggestDrop = DATA.banks.slice().sort((a, b) => a.change - b.change)[0];
+      const mc = DATA.highlights.maxCredit, md = DATA.highlights.maxDebit;
 
-  container.innerHTML = `
+      container.innerHTML = `
     <div class="insight">
       <div class="tag">Mayor saldo disponible</div>
       <b>${largestBank ? esc(largestBank.name) : '—'}</b>
@@ -1145,18 +2276,18 @@ function renderInsights() {
       <p>${md ? money(md.debits, cur) + ' debitados.' : 'Sin movimientos diarios.'}</p>
     </div>
   `;
-}
+    }
 
-function renderBankCards() {
-  const container = document.getElementById('bankCards');
-  if (!container) return;
+    function renderBankCards() {
+      const container = document.getElementById('bankCards');
+      if (!container) return;
 
-  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
-  const otherCountryCode = CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT';
-  const otherCfg = COUNTRY_CONFIG[otherCountryCode];
+      const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+      const otherCountryCode = CURRENT_COUNTRY === 'GLOBAL' ? 'GT' : (CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT');
+      const otherCfg = COUNTRY_CONFIG[otherCountryCode];
 
-  if (!DATA.banks.length) {
-    container.innerHTML = `
+      if (!DATA.banks.length) {
+        container.innerHTML = `
       <div class="empty-state" style="grid-column: 1 / -1;">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
         <p>No hay entidades bancarias registradas para <b>${cfg.name}</b> en este archivo.</p>
@@ -1165,11 +2296,11 @@ function renderBankCards() {
         </button>
       </div>
     `;
-    return;
-  }
+        return;
+      }
 
-  const cur = DATA.meta.currency;
-  container.innerHTML = DATA.banks.map(b => `
+      const cur = DATA.meta.currency;
+      container.innerHTML = DATA.banks.map(b => `
     <div class="bank-card" style="--bank:${b.color}">
       <div class="bank-title">
         <span>${esc(b.name)}</span>
@@ -1185,25 +2316,25 @@ function renderBankCards() {
       </div>
     </div>
   `).join('');
-}
+    }
 
-function renderAccounts() {
-  const filter = document.getElementById('bankFilter');
-  const tbody = document.getElementById('accountsTable');
-  if (!tbody) return;
+    function renderAccounts() {
+      const filter = document.getElementById('bankFilter');
+      const tbody = document.getElementById('accountsTable');
+      if (!tbody) return;
 
-  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+      const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
 
-  if (!DATA.accounts.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94A0B2;padding:28px">No hay cuentas bancarias de ${cfg.name} (${cfg.currency}) en este reporte.</td></tr>`;
-    return;
-  }
+      if (!DATA.accounts.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94A0B2;padding:28px">No hay cuentas bancarias de ${cfg.name} (${cfg.currency}) en este reporte.</td></tr>`;
+        return;
+      }
 
-  const f = filter ? filter.value : 'ALL';
-  const rows = DATA.accounts.filter(a => f === 'ALL' || a.bankKey === f);
-  const cur = DATA.meta.currency;
+      const f = filter ? filter.value : 'ALL';
+      const rows = DATA.accounts.filter(a => f === 'ALL' || a.bankKey === f);
+      const cur = DATA.meta.currency;
 
-  tbody.innerHTML = rows.map(a => `
+      tbody.innerHTML = rows.map(a => `
     <tr>
       <td><span class="badge">${esc(a.bank)}</span></td>
       <td><b>${esc(a.account)}</b></td>
@@ -1215,21 +2346,21 @@ function renderAccounts() {
       <td class="num negative">-${money(a.debits, cur)}</td>
     </tr>
   `).join('');
-}
+    }
 
-function renderDailyTable() {
-  const tbody = document.getElementById('dailyTable');
-  if (!tbody) return;
+    function renderDailyTable() {
+      const tbody = document.getElementById('dailyTable');
+      if (!tbody) return;
 
-  const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+      const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
 
-  if (!DATA.daily.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A0B2;padding:28px">No hay movimientos diarios registrados para ${cfg.name} en el período seleccionado.</td></tr>`;
-    return;
-  }
+      if (!DATA.daily.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94A0B2;padding:28px">No hay movimientos diarios registrados para ${cfg.name} en el período seleccionado.</td></tr>`;
+        return;
+      }
 
-  const cur = DATA.meta.currency;
-  tbody.innerHTML = DATA.daily.map(d => `
+      const cur = DATA.meta.currency;
+      tbody.innerHTML = DATA.daily.map(d => `
     <tr>
       <td><b>${d.label}</b></td>
       <td class="num">${d.moves}</td>
@@ -1238,714 +2369,718 @@ function renderDailyTable() {
       <td class="num ${cls(d.net)}"><b>${money(d.net, cur)}</b></td>
     </tr>
   `).join('');
-}
-
-function renderConsolidation() {
-  const generalKpis = document.getElementById('generalKpis');
-  const generalActions = document.getElementById('generalActions');
-  const generalTable = document.getElementById('generalTable');
-  const regionalKpis = document.getElementById('regionalKpis');
-  const regionalActions = document.getElementById('regionalActions');
-  const regionalTable = document.getElementById('regionalTable');
-  const gtTable = document.getElementById('gtTable');
-  const svTable = document.getElementById('svTable');
-  const review = document.getElementById('consolidationReview');
-  if (!generalKpis || !generalActions || !generalTable || !regionalKpis || !regionalActions || !regionalTable || !gtTable || !svTable || !review) return;
-
-  const gt = BASE_DATA_BY_COUNTRY.GT;
-  const sv = BASE_DATA_BY_COUNTRY.SV;
-  const gtTotal = gt.totals.final;
-  const svTotal = sv.totals.final;
-  const reviewCount = CONSOLIDATION.review.length || Number(CONSOLIDATION.globalTotals.registros_revision || 0);
-
-  generalKpis.innerHTML = [
-    ['Total Guatemala', gt.banks.length ? money(gtTotal, 'GTQ') : 'Sin datos'],
-    ['Total El Salvador', sv.banks.length ? money(svTotal, 'USD') : 'Sin datos'],
-    ['Bancos procesados', String(gt.meta.banks + sv.meta.banks)],
-    ['Cuentas procesadas', String(gt.meta.accounts + sv.meta.accounts)]
-  ].map(([label, value]) => `<div class="kpi"><div class="label">${esc(label)}</div><div class="value neutral">${esc(String(value))}</div></div>`).join('');
-
-  generalTable.innerHTML = [
-    ['Guatemala', gt, 'GTQ'],
-    ['El Salvador', sv, 'USD']
-  ].map(([name, value, currency]) => `<tr><td><b>${name}</b></td><td>${currency}</td><td class="num">${value.meta.movementCount}</td><td class="num">${value.banks.length ? money(value.totals.final, currency) : 'Sin datos'}</td><td><span class="badge">${reviewCount ? 'REVISAR' : 'OK'}</span></td></tr>`).join('');
-
-  const fileItems = [...CONSOLIDATION.files];
-  const downloadButtons = (files, emptyText) => files.length ? files.map((file, index) => {
-      const base64 = file?.data || file?.filedata || '';
-      const name = file?.filename || file?.name || `Reporte_${index + 1}.xlsx`;
-      const href = base64 ? `data:${file?.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};base64,${base64}` : '#';
-      return `<a class="btn-excel" href="${href}" download="${esc(name)}">Descargar ${esc(name)}</a>`;
-    }).join('') : `<span class="desc">${emptyText}</span>`;
-  const generalFiles = fileItems.filter(file => file?._kind === 'general' || /consolidado general|general/i.test(file?.filename || file?.name || ''));
-  const regionalFiles = fileItems.filter(file => /regional|usd/i.test(file?.filename || file?.name || ''));
-  generalActions.innerHTML = downloadButtons(generalFiles, 'Make no devolvió el archivo Consolidado General.');
-  regionalActions.innerHTML = downloadButtons(regionalFiles, 'Make no devolvió el archivo Consolidado Regional USD.');
-
-  regionalKpis.innerHTML = [
-    ['Tasa GTQ / USD', CONSOLIDATION.rate ? Number(CONSOLIDATION.rate).toFixed(4) : 'No disponible'],
-    ['Registros regionales', String(CONSOLIDATION.regional.length)],
-    ['Registros en revisión', String(reviewCount)]
-  ].map(([label, value]) => `<div class="kpi"><div class="label">${esc(label)}</div><div class="value neutral">${esc(String(value))}</div></div>`).join('');
-  regionalTable.innerHTML = CONSOLIDATION.regional.length ? CONSOLIDATION.regional.map(row => `<tr><td>${esc(getField(row, 'Pais', 'pais') || 'Sin país')}</td><td>${esc(getField(row, 'Moneda', 'moneda') || 'Original')}</td><td class="num">${money(getField(row, 'Saldo_Final', 'Saldo_Final_Original', 'saldo_final'))}</td><td class="num">${money(getField(row, 'Saldo_Final_USD', 'saldo_final_usd'))}</td><td><span class="badge">${esc(getField(row, 'Resultado', 'resultado') || 'REVISAR')}</span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Make no devolvió registros regionales.</td></tr>';
-  const renderCountry = (base, currency) => base.accounts.length ? base.accounts.map(account => `<tr><td>${esc(account.bank)}</td><td>${esc(account.account)}</td><td class="num">${money(account.final, currency)}</td><td><span class="badge">${reviewCount ? 'REVISAR' : 'OK'}</span></td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">Sin datos de este país.</td></tr>';
-  gtTable.innerHTML = renderCountry(gt, 'GTQ');
-  svTable.innerHTML = renderCountry(sv, 'USD');
-  review.textContent = reviewCount ? `${reviewCount} registro(s) requieren revisión según la conciliación de Make.com.` : 'No hay registros pendientes de revisión.';
-  document.getElementById('generalStatus').textContent = gt.banks.length || sv.banks.length ? 'Procesado por Make' : 'Sin datos';
-  document.getElementById('regionalStatus').textContent = CONSOLIDATION.regional.length ? 'Procesado por Make' : 'Sin datos';
-}
-
-function renderAll() {
-  renderHeader();
-  renderKpis();
-  renderBankList();
-  renderInsights();
-  renderBankCards();
-  renderAccounts();
-  renderDailyTable();
-  setTimeout(drawAll, 60);
-}
-
-// Configuración de filtro de bancos en Pestaña Cuentas
-const bankFilterSelect = document.getElementById('bankFilter');
-if (bankFilterSelect) {
-  bankFilterSelect.addEventListener('change', renderAccounts);
-}
-
-// Filtro de fechas
-const dateFrom = document.getElementById('dateFrom');
-const dateTo = document.getElementById('dateTo');
-const btnApplyDate = document.getElementById('applyDateFilter');
-const btnResetDate = document.getElementById('resetDateFilter');
-
-function applyCurrentDateFilter(showAlert = true) {
-  const from = dateFrom ? dateFrom.value : '';
-  const to = dateTo ? dateTo.value : '';
-  if (from && to && from > to) {
-    if (showAlert) alert('La fecha inicial no puede ser posterior a la fecha final.');
-    return false;
-  }
-  DATA = buildFiltered(CURRENT_COUNTRY, from, to);
-  renderAll();
-  return true;
-}
-
-if (dateFrom && dateTo) {
-  dateFrom.addEventListener('change', () => applyCurrentDateFilter(false));
-  dateTo.addEventListener('change', () => applyCurrentDateFilter(false));
-}
-if (btnApplyDate) btnApplyDate.addEventListener('click', () => applyCurrentDateFilter(true));
-if (btnResetDate) {
-  btnResetDate.addEventListener('click', () => {
-    initDataEngine();
-  });
-}
-
-// Conectores de Switcher de País
-const btnCountryGt = document.getElementById('btn-country-gt');
-const btnCountrySv = document.getElementById('btn-country-sv');
-const btnQuickToggleCountry = document.getElementById('btn-quick-toggle-country');
-
-if (btnCountryGt) {
-  btnCountryGt.addEventListener('click', () => setCountry('GT'));
-}
-if (btnCountrySv) {
-  btnCountrySv.addEventListener('click', () => setCountry('SV'));
-}
-if (btnQuickToggleCountry) {
-  btnQuickToggleCountry.addEventListener('click', () => {
-    setCountry(CURRENT_COUNTRY === 'GT' ? 'SV' : 'GT');
-  });
-}
-
-// Pestañas y Navegación
-function activateTab(targetName) {
-  const cleanTarget = (targetName || 'resumen').replace('#', '').trim();
-  document.querySelectorAll('.tab').forEach(x => {
-    x.classList.toggle('active', x.dataset.target === cleanTarget);
-  });
-  document.querySelectorAll('.section').forEach(x => {
-    x.classList.toggle('active', x.id === cleanTarget);
-  });
-  setTimeout(() => {
-    drawAll(true);
-  }, 100);
-}
-
-function syncActiveTabFromLocation() {
-  const hash = window.location.hash.replace('#', '').trim();
-  if (hash && document.getElementById(hash)) {
-    activateTab(hash);
-  } else {
-    activateTab('resumen');
-  }
-}
-
-window.addEventListener('hashchange', syncActiveTabFromLocation);
-
-document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
-  const parentViews = {
-    resumen: 'overview',
-    bancos: 'bank-detail',
-    flujo: 'daily-flow',
-    cuentas: 'account-detail'
-  };
-  if (window.parent !== window) {
-    window.parent.postMessage({ type: 'intelfon-navigate', view: parentViews[btn.dataset.target] }, '*');
-    activateTab(btn.dataset.target);
-    return;
-  }
-  activateTab(btn.dataset.target);
-  history.replaceState(null, '', `#${btn.dataset.target}`);
-}));
-
-// ===========================================================================
-// MOTOR DE ANIMACIONES FLUIDAS, EFECTOS VISUALES Y SCROLL-TRIGGER
-// ===========================================================================
-
-const CHART_ANIMATIONS = {};
-let HOVERED_CHART_ITEM = {};
-
-function easeOutQuart(x) {
-  return 1 - Math.pow(1 - x, 4);
-}
-
-function easeOutBack(x) {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
-}
-
-function animateChart(chartId, renderFn, duration = 750) {
-  if (CHART_ANIMATIONS[chartId]) {
-    cancelAnimationFrame(CHART_ANIMATIONS[chartId]);
-  }
-  const startTime = performance.now();
-  function step(now) {
-    const elapsed = now - startTime;
-    const rawProgress = Math.min(elapsed / duration, 1);
-    const progress = easeOutQuart(rawProgress);
-    renderFn(progress);
-    if (rawProgress < 1) {
-      CHART_ANIMATIONS[chartId] = requestAnimationFrame(step);
-    } else {
-      delete CHART_ANIMATIONS[chartId];
     }
-  }
-  CHART_ANIMATIONS[chartId] = requestAnimationFrame(step);
-}
 
-// Canvas Gráficas con Soporte Retina / HiDPI y Protección de Dimensiones Ocultas
-function fitCanvas(canvas) {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth - 40 : 600;
-  const width = rect.width > 50 ? rect.width : (parentWidth > 50 ? parentWidth : 600);
-  const height = rect.height > 50 ? rect.height : 330;
-  canvas.width = Math.max(300, Math.floor(width * dpr));
-  canvas.height = Math.max(200, Math.floor(height * dpr));
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  return { ctx, w: width, h: height };
-}
+    function renderConsolidation() {
+      const generalKpis = document.getElementById('generalKpis');
+      const generalActions = document.getElementById('generalActions');
+      const generalTable = document.getElementById('generalTable');
+      const regionalKpis = document.getElementById('regionalKpis');
+      const regionalActions = document.getElementById('regionalActions');
+      const regionalTable = document.getElementById('regionalTable');
+      const gtTable = document.getElementById('gtTable');
+      const svTable = document.getElementById('svTable');
+      const review = document.getElementById('consolidationReview');
+      if (!generalKpis || !generalActions || !generalTable || !regionalKpis || !regionalActions || !regionalTable || !gtTable || !svTable || !review) return;
 
-function roundedRect(ctx, x, y, w, h, r, fill, glow = null) {
-  ctx.save();
-  if (glow) {
-    ctx.shadowColor = glow.color || fill;
-    ctx.shadowBlur = glow.blur || 12;
-    ctx.shadowOffsetY = glow.offsetY || 0;
-  }
-  ctx.beginPath();
-  ctx.roundRect(x, y, Math.max(w, 2), Math.max(h, 2), r);
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.restore();
-}
+      const gt = BASE_DATA_BY_COUNTRY.GT;
+      const sv = BASE_DATA_BY_COUNTRY.SV;
+      const gtTotal = gt.totals.final;
+      const svTotal = sv.totals.final;
+      const reviewCount = CONSOLIDATION.review.length || Number(CONSOLIDATION.globalTotals.registros_revision || 0);
 
-function text(ctx, t, x, y, opt = {}) {
-  ctx.save();
-  ctx.fillStyle = opt.color || '#D9E1EC';
-  ctx.font = `${opt.weight || 600} ${opt.size || 12}px Inter,Segoe UI,Arial`;
-  ctx.textAlign = opt.align || 'left';
-  ctx.textBaseline = 'middle';
-  if (opt.shadow) {
-    ctx.shadowColor = opt.shadowColor || 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = opt.shadowBlur || 4;
-  }
-  ctx.fillText(t, x, y);
-  ctx.restore();
-}
+      generalKpis.innerHTML = [
+        ['Total Guatemala', gt.banks.length ? money(gtTotal, 'GTQ') : 'Sin datos'],
+        ['Total El Salvador', sv.banks.length ? money(svTotal, 'USD') : 'Sin datos'],
+        ['Bancos procesados', String(gt.meta.banks + sv.meta.banks)],
+        ['Cuentas procesadas', String(gt.meta.accounts + sv.meta.accounts)]
+      ].map(([label, value]) => `<div class="kpi"><div class="label">${esc(label)}</div><div class="value neutral">${esc(String(value))}</div></div>`).join('');
 
-function chartTooltip(canvas, getHit) {
-  let tip = canvas.parentElement.querySelector('.chart-tooltip');
-  if (!tip) {
-    tip = document.createElement('div');
-    tip.className = 'chart-tooltip';
-    canvas.parentElement.appendChild(tip);
-  }
+      generalTable.innerHTML = [
+        ['Guatemala', gt, 'GTQ'],
+        ['El Salvador', sv, 'USD']
+      ].map(([name, value, currency]) => `<tr><td><b>${name}</b></td><td>${currency}</td><td class="num">${value.meta.movementCount}</td><td class="num">${value.banks.length ? money(value.totals.final, currency) : 'Sin datos'}</td><td><span class="badge">${reviewCount ? 'REVISAR' : 'OK'}</span></td></tr>`).join('');
 
-  canvas._chartHitTest = getHit;
-  if (canvas._chartInteractive) return;
-  canvas._chartInteractive = true;
+      const fileItems = [...CONSOLIDATION.files];
+      const downloadButtons = (files, emptyText) => files.length ? files.map((file, index) => {
+        const base64 = file?.data || file?.filedata || '';
+        const name = file?.filename || file?.name || `Reporte_${index + 1}.xlsx`;
+        const href = base64 ? `data:${file?.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};base64,${base64}` : '#';
+        return `<a class="btn-excel" href="${href}" download="${esc(name)}">Descargar ${esc(name)}</a>`;
+      }).join('') : `<span class="desc">${emptyText}</span>`;
+      const generalFiles = fileItems.filter(file => file?._kind === 'general' || /consolidado general|general/i.test(file?.filename || file?.name || ''));
+      const regionalFiles = fileItems.filter(file => /regional|usd/i.test(file?.filename || file?.name || ''));
+      generalActions.innerHTML = downloadButtons(generalFiles, 'Make no devolvió el archivo Consolidado General.');
+      regionalActions.innerHTML = downloadButtons(regionalFiles, 'Make no devolvió el archivo Consolidado Regional USD.');
 
-  canvas.addEventListener('pointermove', event => {
-    const rect = canvas.getBoundingClientRect();
-    const hit = canvas._chartHitTest(event.clientX - rect.left, event.clientY - rect.top);
-    if (!hit) {
-      tip.classList.remove('visible');
-      if (HOVERED_CHART_ITEM[canvas.id] !== null) {
-        HOVERED_CHART_ITEM[canvas.id] = null;
-        drawSingleChart(canvas.id);
+      regionalKpis.innerHTML = [
+        ['Tasa GTQ / USD', CONSOLIDATION.rate ? Number(CONSOLIDATION.rate).toFixed(4) : 'No disponible'],
+        ['Registros regionales', String(CONSOLIDATION.regional.length)],
+        ['Registros en revisión', String(reviewCount)]
+      ].map(([label, value]) => `<div class="kpi"><div class="label">${esc(label)}</div><div class="value neutral">${esc(String(value))}</div></div>`).join('');
+      regionalTable.innerHTML = CONSOLIDATION.regional.length ? CONSOLIDATION.regional.map(row => `<tr><td>${esc(getField(row, 'Pais', 'pais') || 'Sin país')}</td><td>${esc(getField(row, 'Moneda', 'moneda') || 'Original')}</td><td class="num">${money(getField(row, 'Saldo_Final', 'Saldo_Final_Original', 'saldo_final'))}</td><td class="num">${money(getField(row, 'Saldo_Final_USD', 'saldo_final_usd'))}</td><td><span class="badge">${esc(getField(row, 'Resultado', 'resultado') || 'REVISAR')}</span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Make no devolvió registros regionales.</td></tr>';
+      const renderCountry = (base, currency) => base.accounts.length ? base.accounts.map(account => `<tr><td>${esc(account.bank)}</td><td>${esc(account.account)}</td><td class="num">${money(account.final, currency)}</td><td><span class="badge">${reviewCount ? 'REVISAR' : 'OK'}</span></td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">Sin datos de este país.</td></tr>';
+      gtTable.innerHTML = renderCountry(gt, 'GTQ');
+      svTable.innerHTML = renderCountry(sv, 'USD');
+      review.textContent = reviewCount ? `${reviewCount} registro(s) requieren revisión según la conciliación de Make.com.` : 'No hay registros pendientes de revisión.';
+      document.getElementById('generalStatus').textContent = gt.banks.length || sv.banks.length ? 'Procesado por Make' : 'Sin datos';
+      document.getElementById('regionalStatus').textContent = CONSOLIDATION.regional.length ? 'Procesado por Make' : 'Sin datos';
+    }
+
+    function renderAll() {
+      renderHeader();
+      renderKpis();
+      renderBankList();
+      renderInsights();
+      renderBankCards();
+      renderAccounts();
+      renderDailyTable();
+      setTimeout(drawAll, 60);
+    }
+
+    // Configuración de filtro de bancos en Pestaña Cuentas
+    const bankFilterSelect = document.getElementById('bankFilter');
+    if (bankFilterSelect) {
+      bankFilterSelect.addEventListener('change', renderAccounts);
+    }
+
+    // Filtro de fechas
+    const dateFrom = document.getElementById('dateFrom');
+    const dateTo = document.getElementById('dateTo');
+    const btnApplyDate = document.getElementById('applyDateFilter');
+    const btnResetDate = document.getElementById('resetDateFilter');
+
+    function applyCurrentDateFilter(showAlert = true) {
+      const from = dateFrom ? dateFrom.value : '';
+      const to = dateTo ? dateTo.value : '';
+      if (from && to && from > to) {
+        if (showAlert) alert('La fecha inicial no puede ser posterior a la fecha final.');
+        return false;
       }
-      return;
+      DATA = buildFiltered(CURRENT_COUNTRY, from, to);
+      renderAll();
+      return true;
     }
-    if (HOVERED_CHART_ITEM[canvas.id] !== hit.index) {
-      HOVERED_CHART_ITEM[canvas.id] = hit.index;
-      drawSingleChart(canvas.id);
+
+    if (dateFrom && dateTo) {
+      dateFrom.addEventListener('change', () => applyCurrentDateFilter(false));
+      dateTo.addEventListener('change', () => applyCurrentDateFilter(false));
     }
-    tip.innerHTML = hit.html;
-    tip.style.left = `${Math.min(Math.max(hit.x, 8), rect.width - tip.offsetWidth - 8)}px`;
-    tip.style.top = `${Math.max(8, hit.y - tip.offsetHeight - 14)}px`;
-    tip.classList.add('visible');
-  });
-
-  canvas.addEventListener('pointerleave', () => {
-    tip.classList.remove('visible');
-    if (HOVERED_CHART_ITEM[canvas.id] !== null) {
-      HOVERED_CHART_ITEM[canvas.id] = null;
-      drawSingleChart(canvas.id);
-    }
-  });
-}
-
-function createGradient(ctx, x1, y1, x2, y2, colorStart, colorEnd) {
-  const grad = ctx.createLinearGradient(x1, y1, x2, y2);
-  grad.addColorStop(0, colorStart);
-  grad.addColorStop(1, colorEnd);
-  return grad;
-}
-
-function drawGroupedBars(id, labels, s1, s2, c1, c2, progress = 1) {
-  const canvas = document.getElementById(id);
-  if (!canvas || !canvas.offsetParent) return;
-  const { ctx, w, h } = fitCanvas(canvas);
-  ctx.clearRect(0, 0, w, h);
-
-  const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
-
-  if (!labels.length) {
-    text(ctx, 'Sin datos para graficar en este país', w / 2, h / 2, { align: 'center', color: '#64748B' });
-    return;
-  }
-
-  const L = 85, R = 18, T = 25, B = 45, pw = w - L - R, ph = h - T - B;
-  const max = Math.max(...s1, ...s2, 1) * 1.15;
-  const hoveredIdx = HOVERED_CHART_ITEM[id];
-
-  // Líneas guía de fondo suaves
-  ctx.strokeStyle = '#2F3746';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = T + ph * i / 4;
-    ctx.beginPath();
-    ctx.moveTo(L, y);
-    ctx.lineTo(w - R, y);
-    ctx.stroke();
-    text(ctx, money(max * (1 - i / 4), cur), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
-  }
-
-  const group = pw / labels.length, bw = Math.min(32, group * .28);
-
-  labels.forEach((lab, i) => {
-    const cx = L + group * (i + .5);
-    const h1 = ph * Math.max((s1[i] || 0) * progress, 0) / max;
-    const h2 = ph * Math.max((s2[i] || 0) * progress, 0) / max;
-
-    const isHovered = hoveredIdx === i;
-
-    // Colores con degradado profesional
-    const grad1 = createGradient(ctx, 0, T + ph - h1, 0, T + ph, c1, `${c1}88`);
-    const grad2 = createGradient(ctx, 0, T + ph - h2, 0, T + ph, c2, `${c2}88`);
-
-    // Barra 1 (Saldo inicial / Créditos)
-    roundedRect(
-      ctx, cx - bw - 3, T + ph - h1, bw, h1, 6, grad1,
-      isHovered ? { color: c1, blur: 14 } : null
-    );
-
-    // Barra 2 (Saldo final / Débitos)
-    roundedRect(
-      ctx, cx + 3, T + ph - h2, bw, h2, 6, grad2,
-      isHovered ? { color: c2, blur: 14 } : null
-    );
-
-    // Etiqueta del banco con realce si está en hover
-    text(ctx, lab, cx, h - B / 2 + 15, {
-      size: isHovered ? 11 : 10,
-      color: isHovered ? '#FFFFFF' : '#B8C2D1',
-      align: 'center',
-      weight: isHovered ? 800 : 700
-    });
-  });
-
-  chartTooltip(canvas, (px, py) => {
-    const group = pw / labels.length;
-    const index = Math.floor((px - L) / group);
-    if (index < 0 || index >= labels.length || py < T || py > T + ph) return null;
-    return {
-      index,
-      x: L + group * (index + 0.5),
-      y: T + ph - Math.max(ph * Math.max(s1[index] || 0, s2[index] || 0) / max, 8),
-      html: `<strong>${esc(labels[index])}</strong><span style="color:${c1}">Inicial: ${money(s1[index], cur)}</span><span style="color:${c2}">Final: ${money(s2[index], cur)}</span>`
-    };
-  });
-}
-
-function drawNetBars(progress = 1) {
-  const canvas = document.getElementById('netBankChart');
-  if (!canvas || !canvas.offsetParent) return;
-  const { ctx, w, h } = fitCanvas(canvas);
-  ctx.clearRect(0, 0, w, h);
-
-  const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
-
-  if (!DATA.banks.length) {
-    text(ctx, 'Sin datos para graficar en este país', w / 2, h / 2, { align: 'center', color: '#64748B' });
-    return;
-  }
-
-  const vals = DATA.banks.map(b => b.netFlow);
-  const labels = DATA.banks.map(b => b.name.replace('Banco ', ''));
-  const L = 85, R = 20, T = 25, B = 45, pw = w - L - R, ph = h - T - B;
-  const max = Math.max(...vals.map(Math.abs), 1) * 1.15;
-  const mid = T + ph / 2;
-  const hoveredIdx = HOVERED_CHART_ITEM['netBankChart'];
-
-  // Eje central neutral
-  ctx.strokeStyle = '#4B5565';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(L, mid);
-  ctx.lineTo(w - R, mid);
-  ctx.stroke();
-
-  const group = pw / vals.length, bw = Math.min(48, group * .48);
-
-  vals.forEach((v, i) => {
-    const barh = ((ph / 2) * Math.abs(v) / max) * progress;
-    const cx = L + group * (i + .5);
-    const y = v >= 0 ? mid - barh : mid;
-    const isPositive = v >= 0;
-    const isHovered = hoveredIdx === i;
-
-    const barColor = isPositive ? '#34D399' : '#FB7185';
-    const grad = createGradient(
-      ctx, 0, isPositive ? y : y + barh, 0, isPositive ? y + barh : y,
-      barColor,
-      isPositive ? '#059669' : '#E11D48'
-    );
-
-    roundedRect(
-      ctx, cx - bw / 2, y, bw, barh, 7, grad,
-      isHovered ? { color: barColor, blur: 16 } : null
-    );
-
-    text(ctx, labels[i], cx, h - 18, {
-      size: isHovered ? 11 : 10,
-      color: isHovered ? '#FFFFFF' : '#B8C2D1',
-      align: 'center',
-      weight: isHovered ? 800 : 700
-    });
-
-    if (progress > 0.6) {
-      const labelY = isPositive ? Math.max(T + 10, y - 10) : Math.min(h - B - 5, y + barh + 12);
-      text(ctx, money(v, cur), cx, labelY, {
-        size: 10,
-        color: isPositive ? '#6EE7B7' : '#FDA4AF',
-        align: 'center',
-        weight: 750
+    if (btnApplyDate) btnApplyDate.addEventListener('click', () => applyCurrentDateFilter(true));
+    if (btnResetDate) {
+      btnResetDate.addEventListener('click', () => {
+        initDataEngine();
       });
     }
-  });
 
-  chartTooltip(canvas, (px, py) => {
-    const group = pw / vals.length;
-    const index = Math.floor((px - L) / group);
-    if (index < 0 || index >= vals.length || py < T || py > T + ph) return null;
-    return {
-      index,
-      x: L + group * (index + 0.5),
-      y: mid - (ph / 2) * Math.abs(vals[index]) / max,
-      html: `<strong>${esc(labels[index])}</strong><span style="color:${vals[index] >= 0 ? '#6EE7B7' : '#FDA4AF'}">Flujo neto: ${money(vals[index], cur)}</span>`
-    };
-  });
-}
+    // Conectores de Switcher de País
+    const btnCountryGt = document.getElementById('btn-country-gt');
+    const btnCountrySv = document.getElementById('btn-country-sv');
+    const btnQuickToggleCountry = document.getElementById('btn-quick-toggle-country');
 
-function drawDaily(progress = 1) {
-  const canvas = document.getElementById('dailyChart');
-  if (!canvas || !canvas.offsetParent) return;
-  const { ctx, w, h } = fitCanvas(canvas);
-  ctx.clearRect(0, 0, w, h);
-
-  const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
-
-  if (!DATA.daily.length) {
-    text(ctx, 'Sin movimientos diarios en el período seleccionado', w / 2, h / 2, { size: 13, color: '#94A0B2', align: 'center', weight: 650 });
-    return;
-  }
-
-  const L = 80, R = 20, T = 24, B = 48, pw = w - L - R, ph = h - T - B;
-  const vals = [...DATA.daily.map(d => d.credits), ...DATA.daily.map(d => d.debits)];
-  const max = Math.max(...vals, 1) * 1.1;
-  const hoveredIdx = HOVERED_CHART_ITEM['dailyChart'];
-
-  ctx.strokeStyle = '#2F3746';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = T + ph * i / 4;
-    ctx.beginPath();
-    ctx.moveTo(L, y);
-    ctx.lineTo(w - R, y);
-    ctx.stroke();
-    text(ctx, money(max * (1 - i / 4), cur), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
-  }
-
-  const totalPoints = DATA.daily.length;
-  const animatedPointsCount = Math.max(2, Math.floor(totalPoints * progress));
-
-  const x = i => L + pw * (i / (totalPoints - 1 || 1));
-  const y = v => T + ph - (v / max * ph);
-
-  // 1. Áreas con degradado translúcido debajo de las curvas
-  function drawArea(key, colorStart, colorEnd) {
-    if (animatedPointsCount < 2) return;
-    ctx.save();
-    const grad = ctx.createLinearGradient(0, T, 0, T + ph);
-    grad.addColorStop(0, colorStart);
-    grad.addColorStop(1, colorEnd);
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(x(0), T + ph);
-    for (let i = 0; i < animatedPointsCount; i++) {
-      ctx.lineTo(x(i), y(DATA.daily[i][key]));
+    if (btnCountryGt) {
+      btnCountryGt.addEventListener('click', () => setCountry('GT'));
     }
-    ctx.lineTo(x(animatedPointsCount - 1), T + ph);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  drawArea('credits', 'rgba(52, 211, 153, 0.22)', 'rgba(52, 211, 153, 0.0)');
-  drawArea('debits', 'rgba(251, 113, 133, 0.18)', 'rgba(251, 113, 133, 0.0)');
-
-  // 2. Trazado de líneas principales con brillo
-  function line(key, color, glowColor) {
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2.8;
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 8;
-    ctx.beginPath();
-    for (let i = 0; i < animatedPointsCount; i++) {
-      const xx = x(i), yy = y(DATA.daily[i][key]);
-      i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+    if (btnCountrySv) {
+      btnCountrySv.addEventListener('click', () => setCountry('SV'));
     }
-    ctx.stroke();
-    ctx.restore();
+    if (btnQuickToggleCountry) {
+      btnQuickToggleCountry.addEventListener('click', () => {
+        if (CURRENT_COUNTRY === 'GT') {
+          setCountry('SV');
+        } else {
+          setCountry('GT');
+        }
+      });
+    }
 
-    // Puntos (Dots)
-    for (let i = 0; i < animatedPointsCount; i++) {
-      const isHov = hoveredIdx === i;
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x(i), y(DATA.daily[i][key]), isHov ? 5.5 : 3.2, 0, Math.PI * 2);
-      ctx.fill();
-      if (isHov) {
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+    // Pestañas y Navegación
+    function activateTab(targetName) {
+      const cleanTarget = (targetName || 'resumen').replace('#', '').trim();
+      document.querySelectorAll('.tab').forEach(x => {
+        x.classList.toggle('active', x.dataset.target === cleanTarget);
+      });
+      document.querySelectorAll('.section').forEach(x => {
+        x.classList.toggle('active', x.id === cleanTarget);
+      });
+      setTimeout(() => {
+        drawAll(true);
+      }, 100);
+    }
+
+    function syncActiveTabFromLocation() {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash && document.getElementById(hash)) {
+        activateTab(hash);
+      } else {
+        activateTab('resumen');
       }
+    }
+
+    window.addEventListener('hashchange', syncActiveTabFromLocation);
+
+    document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+      const parentViews = {
+        resumen: 'overview',
+        bancos: 'bank-detail',
+        flujo: 'daily-flow',
+        cuentas: 'account-detail'
+      };
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'intelfon-navigate', view: parentViews[btn.dataset.target] }, '*');
+        activateTab(btn.dataset.target);
+        return;
+      }
+      activateTab(btn.dataset.target);
+      history.replaceState(null, '', `#${btn.dataset.target}`);
+    }));
+
+    // ===========================================================================
+    // MOTOR DE ANIMACIONES FLUIDAS, EFECTOS VISUALES Y SCROLL-TRIGGER
+    // ===========================================================================
+
+    const CHART_ANIMATIONS = {};
+    let HOVERED_CHART_ITEM = {};
+
+    function easeOutQuart(x) {
+      return 1 - Math.pow(1 - x, 4);
+    }
+
+    function easeOutBack(x) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+    }
+
+    function animateChart(chartId, renderFn, duration = 750) {
+      if (CHART_ANIMATIONS[chartId]) {
+        cancelAnimationFrame(CHART_ANIMATIONS[chartId]);
+      }
+      const startTime = performance.now();
+      function step(now) {
+        const elapsed = now - startTime;
+        const rawProgress = Math.min(elapsed / duration, 1);
+        const progress = easeOutQuart(rawProgress);
+        renderFn(progress);
+        if (rawProgress < 1) {
+          CHART_ANIMATIONS[chartId] = requestAnimationFrame(step);
+        } else {
+          delete CHART_ANIMATIONS[chartId];
+        }
+      }
+      CHART_ANIMATIONS[chartId] = requestAnimationFrame(step);
+    }
+
+    // Canvas Gráficas con Soporte Retina / HiDPI y Protección de Dimensiones Ocultas
+    function fitCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth - 40 : 600;
+      const width = rect.width > 50 ? rect.width : (parentWidth > 50 ? parentWidth : 600);
+      const height = rect.height > 50 ? rect.height : 330;
+      canvas.width = Math.max(300, Math.floor(width * dpr));
+      canvas.height = Math.max(200, Math.floor(height * dpr));
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: width, h: height };
+    }
+
+    function roundedRect(ctx, x, y, w, h, r, fill, glow = null) {
+      ctx.save();
+      if (glow) {
+        ctx.shadowColor = glow.color || fill;
+        ctx.shadowBlur = glow.blur || 12;
+        ctx.shadowOffsetY = glow.offsetY || 0;
+      }
+      ctx.beginPath();
+      ctx.roundRect(x, y, Math.max(w, 2), Math.max(h, 2), r);
+      ctx.fillStyle = fill;
+      ctx.fill();
       ctx.restore();
     }
-  }
 
-  line('credits', '#34D399', 'rgba(52, 211, 153, 0.6)');
-  line('debits', '#FB7185', 'rgba(251, 113, 133, 0.6)');
-
-  // 3. Guía radar vertical al pasar el cursor
-  if (hoveredIdx !== undefined && hoveredIdx !== null && hoveredIdx < totalPoints) {
-    const hx = x(hoveredIdx);
-    ctx.save();
-    ctx.strokeStyle = 'rgba(96, 165, 250, 0.5)';
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(hx, T);
-    ctx.lineTo(hx, T + ph);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  DATA.daily.forEach((d, i) => {
-    if (i % 2 === 0 || DATA.daily.length < 12) {
-      text(ctx, d.label, x(i), h - 18, { size: 9, color: '#9BA6B6', align: 'center', weight: 600 });
+    function text(ctx, t, x, y, opt = {}) {
+      ctx.save();
+      ctx.fillStyle = opt.color || '#D9E1EC';
+      ctx.font = `${opt.weight || 600} ${opt.size || 12}px Inter,Segoe UI,Arial`;
+      ctx.textAlign = opt.align || 'left';
+      ctx.textBaseline = 'middle';
+      if (opt.shadow) {
+        ctx.shadowColor = opt.shadowColor || 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = opt.shadowBlur || 4;
+      }
+      ctx.fillText(t, x, y);
+      ctx.restore();
     }
-  });
 
-  chartTooltip(canvas, (px, py) => {
-    const index = Math.round((px - L) / (pw / (DATA.daily.length - 1 || 1)));
-    if (index < 0 || index >= DATA.daily.length || py < T || py > T + ph) return null;
-    const day = DATA.daily[index];
-    return {
-      index,
-      x: x(index),
-      y: Math.min(y(day.credits), y(day.debits)),
-      html: `<strong>${esc(day.label)}</strong><span style="color:#34D399">Créditos: ${money(day.credits, cur)}</span><span style="color:#FB7185">Débitos: ${money(day.debits, cur)}</span><span>Flujo neto: ${money(day.net, cur)}</span>`
-    };
-  });
-}
+    function chartTooltip(canvas, getHit) {
+      let tip = canvas.parentElement.querySelector('.chart-tooltip');
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'chart-tooltip';
+        canvas.parentElement.appendChild(tip);
+      }
 
-function drawSingleChart(id) {
-  if (id === 'balancesChart') {
-    drawGroupedBars('balancesChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.initial), DATA.banks.map(b => b.final), '#60A5FA', '#34D399', 1);
-  } else if (id === 'flowBankChart') {
-    drawGroupedBars('flowBankChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.credits), DATA.banks.map(b => b.debits), '#34D399', '#FB7185', 1);
-  } else if (id === 'netBankChart') {
-    drawNetBars(1);
-  } else if (id === 'dailyChart') {
-    drawDaily(1);
-  }
-}
+      canvas._chartHitTest = getHit;
+      if (canvas._chartInteractive) return;
+      canvas._chartInteractive = true;
 
-function triggerChartAnimation(id) {
-  if (id === 'balancesChart') {
-    animateChart('balancesChart', p => drawGroupedBars('balancesChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.initial), DATA.banks.map(b => b.final), '#60A5FA', '#34D399', p), 750);
-  } else if (id === 'flowBankChart') {
-    animateChart('flowBankChart', p => drawGroupedBars('flowBankChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.credits), DATA.banks.map(b => b.debits), '#34D399', '#FB7185', p), 750);
-  } else if (id === 'netBankChart') {
-    animateChart('netBankChart', p => drawNetBars(p), 750);
-  } else if (id === 'dailyChart') {
-    animateChart('dailyChart', p => drawDaily(p), 850);
-  }
-}
+      canvas.addEventListener('pointermove', event => {
+        const rect = canvas.getBoundingClientRect();
+        const hit = canvas._chartHitTest(event.clientX - rect.left, event.clientY - rect.top);
+        if (!hit) {
+          tip.classList.remove('visible');
+          if (HOVERED_CHART_ITEM[canvas.id] !== null) {
+            HOVERED_CHART_ITEM[canvas.id] = null;
+            drawSingleChart(canvas.id);
+          }
+          return;
+        }
+        if (HOVERED_CHART_ITEM[canvas.id] !== hit.index) {
+          HOVERED_CHART_ITEM[canvas.id] = hit.index;
+          drawSingleChart(canvas.id);
+        }
+        tip.innerHTML = hit.html;
+        tip.style.left = `${Math.min(Math.max(hit.x, 8), rect.width - tip.offsetWidth - 8)}px`;
+        tip.style.top = `${Math.max(8, hit.y - tip.offsetHeight - 14)}px`;
+        tip.classList.add('visible');
+      });
 
-function drawAll(animate = true) {
-  if (!DATA) return;
-  if (animate) {
-    if (document.getElementById('balancesChart')) triggerChartAnimation('balancesChart');
-    if (document.getElementById('flowBankChart')) triggerChartAnimation('flowBankChart');
-    if (document.getElementById('netBankChart')) triggerChartAnimation('netBankChart');
-    if (document.getElementById('dailyChart')) triggerChartAnimation('dailyChart');
-  } else {
-    if (document.getElementById('balancesChart')) drawSingleChart('balancesChart');
-    if (document.getElementById('flowBankChart')) drawSingleChart('flowBankChart');
-    if (document.getElementById('netBankChart')) drawSingleChart('netBankChart');
-    if (document.getElementById('dailyChart')) drawSingleChart('dailyChart');
-  }
-}
+      canvas.addEventListener('pointerleave', () => {
+        tip.classList.remove('visible');
+        if (HOVERED_CHART_ITEM[canvas.id] !== null) {
+          HOVERED_CHART_ITEM[canvas.id] = null;
+          drawSingleChart(canvas.id);
+        }
+      });
+    }
 
-// Observador IntersectionObserver para disparar animaciones al scrollear hacia las gráficas
-const chartScrollObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const canvas = entry.target.querySelector('canvas') || (entry.target.tagName === 'CANVAS' ? entry.target : null);
-      if (canvas && canvas.id) {
-        triggerChartAnimation(canvas.id);
+    function createGradient(ctx, x1, y1, x2, y2, colorStart, colorEnd) {
+      const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+      grad.addColorStop(0, colorStart);
+      grad.addColorStop(1, colorEnd);
+      return grad;
+    }
+
+    function drawGroupedBars(id, labels, s1, s2, c1, c2, progress = 1) {
+      const canvas = document.getElementById(id);
+      if (!canvas || !canvas.offsetParent) return;
+      const { ctx, w, h } = fitCanvas(canvas);
+      ctx.clearRect(0, 0, w, h);
+
+      const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
+
+      if (!labels.length) {
+        text(ctx, 'Sin datos para graficar en este país', w / 2, h / 2, { align: 'center', color: '#64748B' });
+        return;
+      }
+
+      const L = 85, R = 18, T = 25, B = 45, pw = w - L - R, ph = h - T - B;
+      const max = Math.max(...s1, ...s2, 1) * 1.15;
+      const hoveredIdx = HOVERED_CHART_ITEM[id];
+
+      // Líneas guía de fondo suaves
+      ctx.strokeStyle = '#2F3746';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = T + ph * i / 4;
+        ctx.beginPath();
+        ctx.moveTo(L, y);
+        ctx.lineTo(w - R, y);
+        ctx.stroke();
+        text(ctx, money(max * (1 - i / 4), cur), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
+      }
+
+      const group = pw / labels.length, bw = Math.min(32, group * .28);
+
+      labels.forEach((lab, i) => {
+        const cx = L + group * (i + .5);
+        const h1 = ph * Math.max((s1[i] || 0) * progress, 0) / max;
+        const h2 = ph * Math.max((s2[i] || 0) * progress, 0) / max;
+
+        const isHovered = hoveredIdx === i;
+
+        // Colores con degradado profesional
+        const grad1 = createGradient(ctx, 0, T + ph - h1, 0, T + ph, c1, `${c1}88`);
+        const grad2 = createGradient(ctx, 0, T + ph - h2, 0, T + ph, c2, `${c2}88`);
+
+        // Barra 1 (Saldo inicial / Créditos)
+        roundedRect(
+          ctx, cx - bw - 3, T + ph - h1, bw, h1, 6, grad1,
+          isHovered ? { color: c1, blur: 14 } : null
+        );
+
+        // Barra 2 (Saldo final / Débitos)
+        roundedRect(
+          ctx, cx + 3, T + ph - h2, bw, h2, 6, grad2,
+          isHovered ? { color: c2, blur: 14 } : null
+        );
+
+        // Etiqueta del banco con realce si está en hover
+        text(ctx, lab, cx, h - B / 2 + 15, {
+          size: isHovered ? 11 : 10,
+          color: isHovered ? '#FFFFFF' : '#B8C2D1',
+          align: 'center',
+          weight: isHovered ? 800 : 700
+        });
+      });
+
+      chartTooltip(canvas, (px, py) => {
+        const group = pw / labels.length;
+        const index = Math.floor((px - L) / group);
+        if (index < 0 || index >= labels.length || py < T || py > T + ph) return null;
+        return {
+          index,
+          x: L + group * (index + 0.5),
+          y: T + ph - Math.max(ph * Math.max(s1[index] || 0, s2[index] || 0) / max, 8),
+          html: `<strong>${esc(labels[index])}</strong><span style="color:${c1}">Inicial: ${money(s1[index], cur)}</span><span style="color:${c2}">Final: ${money(s2[index], cur)}</span>`
+        };
+      });
+    }
+
+    function drawNetBars(progress = 1) {
+      const canvas = document.getElementById('netBankChart');
+      if (!canvas || !canvas.offsetParent) return;
+      const { ctx, w, h } = fitCanvas(canvas);
+      ctx.clearRect(0, 0, w, h);
+
+      const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
+
+      if (!DATA.banks.length) {
+        text(ctx, 'Sin datos para graficar en este país', w / 2, h / 2, { align: 'center', color: '#64748B' });
+        return;
+      }
+
+      const vals = DATA.banks.map(b => b.netFlow);
+      const labels = DATA.banks.map(b => b.name.replace('Banco ', ''));
+      const L = 85, R = 20, T = 25, B = 45, pw = w - L - R, ph = h - T - B;
+      const max = Math.max(...vals.map(Math.abs), 1) * 1.15;
+      const mid = T + ph / 2;
+      const hoveredIdx = HOVERED_CHART_ITEM['netBankChart'];
+
+      // Eje central neutral
+      ctx.strokeStyle = '#4B5565';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(L, mid);
+      ctx.lineTo(w - R, mid);
+      ctx.stroke();
+
+      const group = pw / vals.length, bw = Math.min(48, group * .48);
+
+      vals.forEach((v, i) => {
+        const barh = ((ph / 2) * Math.abs(v) / max) * progress;
+        const cx = L + group * (i + .5);
+        const y = v >= 0 ? mid - barh : mid;
+        const isPositive = v >= 0;
+        const isHovered = hoveredIdx === i;
+
+        const barColor = isPositive ? '#34D399' : '#FB7185';
+        const grad = createGradient(
+          ctx, 0, isPositive ? y : y + barh, 0, isPositive ? y + barh : y,
+          barColor,
+          isPositive ? '#059669' : '#E11D48'
+        );
+
+        roundedRect(
+          ctx, cx - bw / 2, y, bw, barh, 7, grad,
+          isHovered ? { color: barColor, blur: 16 } : null
+        );
+
+        text(ctx, labels[i], cx, h - 18, {
+          size: isHovered ? 11 : 10,
+          color: isHovered ? '#FFFFFF' : '#B8C2D1',
+          align: 'center',
+          weight: isHovered ? 800 : 700
+        });
+
+        if (progress > 0.6) {
+          const labelY = isPositive ? Math.max(T + 10, y - 10) : Math.min(h - B - 5, y + barh + 12);
+          text(ctx, money(v, cur), cx, labelY, {
+            size: 10,
+            color: isPositive ? '#6EE7B7' : '#FDA4AF',
+            align: 'center',
+            weight: 750
+          });
+        }
+      });
+
+      chartTooltip(canvas, (px, py) => {
+        const group = pw / vals.length;
+        const index = Math.floor((px - L) / group);
+        if (index < 0 || index >= vals.length || py < T || py > T + ph) return null;
+        return {
+          index,
+          x: L + group * (index + 0.5),
+          y: mid - (ph / 2) * Math.abs(vals[index]) / max,
+          html: `<strong>${esc(labels[index])}</strong><span style="color:${vals[index] >= 0 ? '#6EE7B7' : '#FDA4AF'}">Flujo neto: ${money(vals[index], cur)}</span>`
+        };
+      });
+    }
+
+    function drawDaily(progress = 1) {
+      const canvas = document.getElementById('dailyChart');
+      if (!canvas || !canvas.offsetParent) return;
+      const { ctx, w, h } = fitCanvas(canvas);
+      ctx.clearRect(0, 0, w, h);
+
+      const cur = DATA?.meta?.currency || (CURRENT_COUNTRY === 'SV' ? 'USD' : 'GTQ');
+
+      if (!DATA.daily.length) {
+        text(ctx, 'Sin movimientos diarios en el período seleccionado', w / 2, h / 2, { size: 13, color: '#94A0B2', align: 'center', weight: 650 });
+        return;
+      }
+
+      const L = 80, R = 20, T = 24, B = 48, pw = w - L - R, ph = h - T - B;
+      const vals = [...DATA.daily.map(d => d.credits), ...DATA.daily.map(d => d.debits)];
+      const max = Math.max(...vals, 1) * 1.1;
+      const hoveredIdx = HOVERED_CHART_ITEM['dailyChart'];
+
+      ctx.strokeStyle = '#2F3746';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = T + ph * i / 4;
+        ctx.beginPath();
+        ctx.moveTo(L, y);
+        ctx.lineTo(w - R, y);
+        ctx.stroke();
+        text(ctx, money(max * (1 - i / 4), cur), L - 8, y, { size: 10, color: '#8F9AAB', align: 'right', weight: 500 });
+      }
+
+      const totalPoints = DATA.daily.length;
+      const animatedPointsCount = Math.max(2, Math.floor(totalPoints * progress));
+
+      const x = i => L + pw * (i / (totalPoints - 1 || 1));
+      const y = v => T + ph - (v / max * ph);
+
+      // 1. Áreas con degradado translúcido debajo de las curvas
+      function drawArea(key, colorStart, colorEnd) {
+        if (animatedPointsCount < 2) return;
+        ctx.save();
+        const grad = ctx.createLinearGradient(0, T, 0, T + ph);
+        grad.addColorStop(0, colorStart);
+        grad.addColorStop(1, colorEnd);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(x(0), T + ph);
+        for (let i = 0; i < animatedPointsCount; i++) {
+          ctx.lineTo(x(i), y(DATA.daily[i][key]));
+        }
+        ctx.lineTo(x(animatedPointsCount - 1), T + ph);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      drawArea('credits', 'rgba(52, 211, 153, 0.22)', 'rgba(52, 211, 153, 0.0)');
+      drawArea('debits', 'rgba(251, 113, 133, 0.18)', 'rgba(251, 113, 133, 0.0)');
+
+      // 2. Trazado de líneas principales con brillo
+      function line(key, color, glowColor) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.8;
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        for (let i = 0; i < animatedPointsCount; i++) {
+          const xx = x(i), yy = y(DATA.daily[i][key]);
+          i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Puntos (Dots)
+        for (let i = 0; i < animatedPointsCount; i++) {
+          const isHov = hoveredIdx === i;
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x(i), y(DATA.daily[i][key]), isHov ? 5.5 : 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          if (isHov) {
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+
+      line('credits', '#34D399', 'rgba(52, 211, 153, 0.6)');
+      line('debits', '#FB7185', 'rgba(251, 113, 133, 0.6)');
+
+      // 3. Guía radar vertical al pasar el cursor
+      if (hoveredIdx !== undefined && hoveredIdx !== null && hoveredIdx < totalPoints) {
+        const hx = x(hoveredIdx);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(96, 165, 250, 0.5)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(hx, T);
+        ctx.lineTo(hx, T + ph);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      DATA.daily.forEach((d, i) => {
+        if (i % 2 === 0 || DATA.daily.length < 12) {
+          text(ctx, d.label, x(i), h - 18, { size: 9, color: '#9BA6B6', align: 'center', weight: 600 });
+        }
+      });
+
+      chartTooltip(canvas, (px, py) => {
+        const index = Math.round((px - L) / (pw / (DATA.daily.length - 1 || 1)));
+        if (index < 0 || index >= DATA.daily.length || py < T || py > T + ph) return null;
+        const day = DATA.daily[index];
+        return {
+          index,
+          x: x(index),
+          y: Math.min(y(day.credits), y(day.debits)),
+          html: `<strong>${esc(day.label)}</strong><span style="color:#34D399">Créditos: ${money(day.credits, cur)}</span><span style="color:#FB7185">Débitos: ${money(day.debits, cur)}</span><span>Flujo neto: ${money(day.net, cur)}</span>`
+        };
+      });
+    }
+
+    function drawSingleChart(id) {
+      if (id === 'balancesChart') {
+        drawGroupedBars('balancesChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.initial), DATA.banks.map(b => b.final), '#60A5FA', '#34D399', 1);
+      } else if (id === 'flowBankChart') {
+        drawGroupedBars('flowBankChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.credits), DATA.banks.map(b => b.debits), '#34D399', '#FB7185', 1);
+      } else if (id === 'netBankChart') {
+        drawNetBars(1);
+      } else if (id === 'dailyChart') {
+        drawDaily(1);
       }
     }
-  });
-}, { threshold: 0.18 });
 
-function registerChartObservers() {
-  document.querySelectorAll('.card').forEach(card => {
-    if (card.querySelector('canvas')) {
-      chartScrollObserver.observe(card);
+    function triggerChartAnimation(id) {
+      if (id === 'balancesChart') {
+        animateChart('balancesChart', p => drawGroupedBars('balancesChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.initial), DATA.banks.map(b => b.final), '#60A5FA', '#34D399', p), 750);
+      } else if (id === 'flowBankChart') {
+        animateChart('flowBankChart', p => drawGroupedBars('flowBankChart', DATA.banks.map(b => b.name.replace('Banco ', '')), DATA.banks.map(b => b.credits), DATA.banks.map(b => b.debits), '#34D399', '#FB7185', p), 750);
+      } else if (id === 'netBankChart') {
+        animateChart('netBankChart', p => drawNetBars(p), 750);
+      } else if (id === 'dailyChart') {
+        animateChart('dailyChart', p => drawDaily(p), 850);
+      }
     }
-  });
-}
 
-window.addEventListener('resize', () => setTimeout(() => drawAll(false), 80));
-setTimeout(registerChartObservers, 200);
-
-window.addEventListener('resize', () => setTimeout(drawAll, 80));
-function toggleFullscreen() { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
-
-// Manejador de descarga de PDF Oficial Directo (html2pdf)
-const btnDownloadPdf = document.getElementById('btn-download-pdf-direct');
-if (btnDownloadPdf) {
-  btnDownloadPdf.addEventListener('click', () => {
-    const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
-    const element = document.getElementById('export-pdf-area');
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `Reporte_Bancario_${cfg.name}_INTELFON.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#171A21' },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-    };
-    html2pdf().set(opt).from(element).save();
-  });
-}
-
-// Manejador de descarga de Excel (.xlsx)
-const btnDownloadXlsx = document.getElementById('btn-download-xlsx-direct');
-if (btnDownloadXlsx) {
-  btnDownloadXlsx.addEventListener('click', () => {
-    if (!downloadExcelUrl || downloadExcelUrl === '#') {
-      alert('El enlace de descarga del archivo Excel no está disponible en esta sesión.');
-      return;
+    function drawAll(animate = true) {
+      if (!DATA) return;
+      if (animate) {
+        if (document.getElementById('balancesChart')) triggerChartAnimation('balancesChart');
+        if (document.getElementById('flowBankChart')) triggerChartAnimation('flowBankChart');
+        if (document.getElementById('netBankChart')) triggerChartAnimation('netBankChart');
+        if (document.getElementById('dailyChart')) triggerChartAnimation('dailyChart');
+      } else {
+        if (document.getElementById('balancesChart')) drawSingleChart('balancesChart');
+        if (document.getElementById('flowBankChart')) drawSingleChart('flowBankChart');
+        if (document.getElementById('netBankChart')) drawSingleChart('netBankChart');
+        if (document.getElementById('dailyChart')) drawSingleChart('dailyChart');
+      }
     }
-    let directUrl = downloadExcelUrl;
-    const driveMatch = downloadExcelUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || downloadExcelUrl.match(/id=([a-zA-Z0-9_-]+)/);
-    if (driveMatch && driveMatch[1]) {
-      directUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+
+    // Observador IntersectionObserver para disparar animaciones al scrollear hacia las gráficas
+    const chartScrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const canvas = entry.target.querySelector('canvas') || (entry.target.tagName === 'CANVAS' ? entry.target : null);
+          if (canvas && canvas.id) {
+            triggerChartAnimation(canvas.id);
+          }
+        }
+      });
+    }, { threshold: 0.18 });
+
+    function registerChartObservers() {
+      document.querySelectorAll('.card').forEach(card => {
+        if (card.querySelector('canvas')) {
+          chartScrollObserver.observe(card);
+        }
+      });
     }
-    window.open(directUrl, '_blank');
-  });
-}
 
-const btnClearDashboard = document.getElementById('btn-clear-dashboard');
-if (btnClearDashboard) {
-  btnClearDashboard.addEventListener('click', () => {
-    if (!confirm('¿Deseas limpiar todos los datos del dashboard? Esta acción no elimina el archivo original.')) return;
-    localStorage.removeItem('intelfon_current_report');
-    sessionStorage.removeItem('intelfon_current_report');
-    localStorage.removeItem('intelfon_processing_id');
-    sessionStorage.removeItem('intelfon_processing_id');
-    window.dispatchEvent(new CustomEvent('intelfon-report-updated', {
-      detail: { key: 'intelfon_current_report', value: null }
-    }));
-    window.parent.postMessage({ type: 'intelfon-report-cleared' }, '*');
-    downloadExcelUrl = '#';
-    initDataEngine();
-  });
-}
+    window.addEventListener('resize', () => setTimeout(() => drawAll(false), 80));
+    setTimeout(registerChartObservers, 200);
 
-// Inicialización dinámica
-document.addEventListener('DOMContentLoaded', () => {
-  if (LOCKED_COUNTRY) {
-    CURRENT_COUNTRY = LOCKED_COUNTRY;
-    const switcher = document.getElementById('countrySwitcher');
-    const quick = document.getElementById('btn-quick-toggle-country');
-    if (switcher) switcher.style.display = 'none';
-    if (quick) quick.style.display = 'none';
-  }
-  if (new URLSearchParams(window.location.search).get('compact') === '1') {
-    document.querySelector('.tabs')?.remove();
-  }
-  initDataEngine();
-  syncActiveTabFromLocation();
-  setInterval(() => {
-    const currentSnapshot = localStorage.getItem('intelfon_current_report');
-    if (currentSnapshot !== loadedReportSnapshot) {
+    window.addEventListener('resize', () => setTimeout(drawAll, 80));
+    function toggleFullscreen() { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+
+    // Manejador de descarga de PDF Oficial Directo (html2pdf)
+    const btnDownloadPdf = document.getElementById('btn-download-pdf-direct');
+    if (btnDownloadPdf) {
+      btnDownloadPdf.addEventListener('click', () => {
+        const cfg = COUNTRY_CONFIG[CURRENT_COUNTRY] || COUNTRY_CONFIG.GT;
+        const element = document.getElementById('export-pdf-area');
+        const opt = {
+          margin: [10, 10, 10, 10],
+          filename: `Reporte_Bancario_${cfg.name}_INTELFON.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#171A21' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+        html2pdf().set(opt).from(element).save();
+      });
+    }
+
+    // Manejador de descarga de Excel (.xlsx)
+    const btnDownloadXlsx = document.getElementById('btn-download-xlsx-direct');
+    if (btnDownloadXlsx) {
+      btnDownloadXlsx.addEventListener('click', () => {
+        if (!downloadExcelUrl || downloadExcelUrl === '#') {
+          alert('El enlace de descarga del archivo Excel no está disponible en esta sesión.');
+          return;
+        }
+        let directUrl = downloadExcelUrl;
+        const driveMatch = downloadExcelUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || downloadExcelUrl.match(/id=([a-zA-Z0-9_-]+)/);
+        if (driveMatch && driveMatch[1]) {
+          directUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+        }
+        window.open(directUrl, '_blank');
+      });
+    }
+
+    const btnClearDashboard = document.getElementById('btn-clear-dashboard');
+    if (btnClearDashboard) {
+      btnClearDashboard.addEventListener('click', () => {
+        if (!confirm('¿Deseas limpiar todos los datos del dashboard? Esta acción no elimina el archivo original.')) return;
+        localStorage.removeItem('intelfon_current_report');
+        sessionStorage.removeItem('intelfon_current_report');
+        localStorage.removeItem('intelfon_processing_id');
+        sessionStorage.removeItem('intelfon_processing_id');
+        window.dispatchEvent(new CustomEvent('intelfon-report-updated', {
+          detail: { key: 'intelfon_current_report', value: null }
+        }));
+        window.parent.postMessage({ type: 'intelfon-report-cleared' }, '*');
+        downloadExcelUrl = '#';
+        initDataEngine();
+      });
+    }
+
+    // Inicialización dinámica
+    document.addEventListener('DOMContentLoaded', () => {
+      if (LOCKED_COUNTRY) {
+        CURRENT_COUNTRY = LOCKED_COUNTRY;
+        const switcher = document.getElementById('countrySwitcher');
+        const quick = document.getElementById('btn-quick-toggle-country');
+        if (switcher) switcher.style.display = 'none';
+        if (quick) quick.style.display = 'none';
+      }
+      if (new URLSearchParams(window.location.search).get('compact') === '1') {
+        document.querySelector('.tabs')?.remove();
+      }
       initDataEngine();
       syncActiveTabFromLocation();
-    }
-  }, 500);
-});
-</script>
+      setInterval(() => {
+        const currentSnapshot = localStorage.getItem('intelfon_current_report');
+        if (currentSnapshot !== loadedReportSnapshot) {
+          initDataEngine();
+          syncActiveTabFromLocation();
+        }
+      }, 500);
+    });
+  </script>
 </body>
-</html>
 
+</html>
