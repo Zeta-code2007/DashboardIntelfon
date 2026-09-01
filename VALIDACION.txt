@@ -1,9 +1,0 @@
-OK _fix/js/app.js 
-OK _fix/js/services/firebaseService.js 
-OK _fix/js/services/makeService.js 
-OK _fix/js/services/syncService.js 
-OK _fix/js/services/regionService.js 
-OK _fix/js/services/authService.js 
-OK _fix/js/views/regionStatusBar.js 
-OK _fix/js/views/reportSection.js 
-OK APLICAR_FIX_TOTAL.mjs 
