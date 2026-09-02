@@ -331,7 +331,9 @@ export function showDashboardScreen(
 
 
 
-    applyPermissions();
+    applyPermissions(
+        currentUser
+    );
 
 
 

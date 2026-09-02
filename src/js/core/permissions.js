@@ -179,17 +179,17 @@ export function canAccess(module, user = null) {
 /**
  * Oculta botones según permisos
  */
-export function applyPermissions() {
-    const user = getCurrentUser();
+export function applyPermissions(user = null) {
+    const currentUser = user || getCurrentUser();
 
-    if (!user) {
+    if (!currentUser) {
         return;
     }
 
     const usersButton = document.querySelector('.nav-btn[data-view="users"]');
 
     if (usersButton) {
-        const allowed = canAccess('users', user);
+        const allowed = canAccess('users', currentUser);
         usersButton.classList.toggle('hidden', !allowed);
         usersButton.style.display = allowed ? 'flex' : 'none';
     }
@@ -197,7 +197,7 @@ export function applyPermissions() {
     const generatorButton = document.querySelector('.nav-btn[data-view="generator"]');
 
     if (generatorButton) {
-        const allowed = canAccess('generator', user);
+        const allowed = canAccess('generator', currentUser);
 
         if (!allowed) {
             generatorButton.remove();
@@ -207,7 +207,7 @@ export function applyPermissions() {
     const consolidatedButton = document.querySelector('.nav-btn[data-view="consolidado-general"]');
 
     if (consolidatedButton) {
-        const allowed = canAccess('consolidado-general', user);
+        const allowed = canAccess('consolidado-general', currentUser);
         consolidatedButton.classList.toggle('hidden', !allowed);
     }
 }
