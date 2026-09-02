@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { AuthService } from './authService.js';
 import { RegionService } from './regionService.js';
 
 /**
@@ -278,6 +279,19 @@ export async function enviarArchivosAMake(
                 `El archivo ${file.name || 'seleccionado'} debe ser un Excel .xlsx.`
             );
         }
+    }
+
+    const currentUser = AuthService.getUser();
+    const userRegion = currentUser
+        ? RegionService.getActiveRegion()
+        : null;
+
+    if (userRegion !== 'GT' && userRegion !== 'SV') {
+        throw new Error(
+            userRegion === 'GLOBAL'
+                ? 'El usuario global no puede ejecutar procesos operativos.'
+                : 'El usuario no tiene una región operativa autorizada para ejecutar procesos.'
+        );
     }
 
     const region = resolveRegion(options);

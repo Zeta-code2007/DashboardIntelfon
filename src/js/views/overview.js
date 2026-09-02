@@ -1,4 +1,5 @@
 import { renderReportSection } from './reportSection.js';
+import { RegionService } from '../services/regionService.js';
 
 export function renderOverview() {
 
@@ -8,7 +9,7 @@ export function renderOverview() {
         {
             compact: false,
             showNavigation: false,
-            region: 'GLOBAL'
+            region: RegionService.getActiveRegion()
         }
     );
 

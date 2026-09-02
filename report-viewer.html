@@ -1859,18 +1859,44 @@
       const gtBase = gtData || createEmptyBaseData('GT');
       const svBase = svData || createEmptyBaseData('SV');
       const cfg = COUNTRY_CONFIG.GLOBAL || COUNTRY_CONFIG.GT;
+      const rate = Number(CONSOLIDATION.rate);
+      const convertGtqToUsd = value =>
+        rate > 0
+          ? round2((Number(value) || 0) / rate)
+          : round2(Number(value) || 0);
+      const convertFinancialFields = record => {
+        if (!record || typeof record !== 'object') return record;
+
+        const converted = { ...record };
+
+        [
+          'initial',
+          'final',
+          'credits',
+          'debits',
+          'change',
+          'netFlow',
+          'net'
+        ].forEach(field => {
+          if (Object.prototype.hasOwnProperty.call(record, field)) {
+            converted[field] = convertGtqToUsd(record[field]);
+          }
+        });
+
+        return converted;
+      };
 
       const banks = [
-        ...(Array.isArray(gtBase.banks) ? gtBase.banks : []),
-        ...(Array.isArray(svBase.banks) ? svBase.banks : [])
+        ...(Array.isArray(gtBase.banks) ? gtBase.banks.map(convertFinancialFields) : []),
+        ...(Array.isArray(svBase.banks) ? svBase.banks.map(bank => ({ ...bank })) : [])
       ];
       const accounts = [
-        ...(Array.isArray(gtBase.accounts) ? gtBase.accounts : []),
-        ...(Array.isArray(svBase.accounts) ? svBase.accounts : [])
+        ...(Array.isArray(gtBase.accounts) ? gtBase.accounts.map(convertFinancialFields) : []),
+        ...(Array.isArray(svBase.accounts) ? svBase.accounts.map(account => ({ ...account })) : [])
       ];
       const daily = [
-        ...(Array.isArray(gtBase.daily) ? gtBase.daily : []),
-        ...(Array.isArray(svBase.daily) ? svBase.daily : [])
+        ...(Array.isArray(gtBase.daily) ? gtBase.daily.map(convertFinancialFields) : []),
+        ...(Array.isArray(svBase.daily) ? svBase.daily.map(day => ({ ...day })) : [])
       ];
 
       const gtMin = gtBase.meta?.minDate || '';
@@ -1896,15 +1922,15 @@
           maxDate
         },
         totals: {
-          initial: round2((Number(gtBase.totals?.initial) || 0) + (Number(svBase.totals?.initial) || 0)),
-          final: round2((Number(gtBase.totals?.final) || 0) + (Number(svBase.totals?.final) || 0)),
-          change: round2((Number(gtBase.totals?.change) || 0) + (Number(svBase.totals?.change) || 0)),
-          changePct: ((Number(gtBase.totals?.initial) || 0) + (Number(svBase.totals?.initial) || 0)) !== 0
-            ? round2((((Number(gtBase.totals?.change) || 0) + (Number(svBase.totals?.change) || 0)) / Math.abs((Number(gtBase.totals?.initial) || 0) + (Number(svBase.totals?.initial) || 0))) * 100)
+          initial: round2(convertGtqToUsd(gtBase.totals?.initial) + (Number(svBase.totals?.initial) || 0)),
+          final: round2(convertGtqToUsd(gtBase.totals?.final) + (Number(svBase.totals?.final) || 0)),
+          change: round2(convertGtqToUsd(gtBase.totals?.change) + (Number(svBase.totals?.change) || 0)),
+          changePct: (convertGtqToUsd(gtBase.totals?.initial) + (Number(svBase.totals?.initial) || 0)) !== 0
+            ? round2(((convertGtqToUsd(gtBase.totals?.change) + (Number(svBase.totals?.change) || 0)) / Math.abs(convertGtqToUsd(gtBase.totals?.initial) + (Number(svBase.totals?.initial) || 0))) * 100)
             : 0,
-          credits: round2((Number(gtBase.totals?.credits) || 0) + (Number(svBase.totals?.credits) || 0)),
-          debits: round2((Number(gtBase.totals?.debits) || 0) + (Number(svBase.totals?.debits) || 0)),
-          netFlow: round2((Number(gtBase.totals?.netFlow) || 0) + (Number(svBase.totals?.netFlow) || 0))
+          credits: round2(convertGtqToUsd(gtBase.totals?.credits) + (Number(svBase.totals?.credits) || 0)),
+          debits: round2(convertGtqToUsd(gtBase.totals?.debits) + (Number(svBase.totals?.debits) || 0)),
+          netFlow: round2(convertGtqToUsd(gtBase.totals?.netFlow) + (Number(svBase.totals?.netFlow) || 0))
         },
         highlights: { maxCredit: null, maxDebit: null, maxNet: null, minNet: null },
         banks,

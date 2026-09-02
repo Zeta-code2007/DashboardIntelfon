@@ -30,6 +30,8 @@ export const RegionService = {
 
         if (
             username === 'intelfon'
+            ||
+            username === 'masterintelfon'
         ) {
 
             return 'GLOBAL';
