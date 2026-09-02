@@ -19,7 +19,12 @@ import { SyncService } from '../services/syncService.js';
 
 import { mountRegionStatusBar } from '../components/regionStatusBar.js';
 
-import { applyPermissions } from './permissions.js';
+import {
+    applyPermissions,
+    canAccess,
+    getUserRole,
+    isGlobalMaster
+} from './permissions.js';
 
 import { renderLogin } from '../auth/login.js';
 
@@ -87,24 +92,113 @@ export function initSession(){
  */
 export function checkAuthentication(){
 
-
     if(
-        AuthService.isAuthenticated()
+        !AuthService.isAuthenticated()
     ){
-
-        showDashboardScreen();
-
-
-    }else{
-
 
         showLoginScreen();
 
+        return;
 
     }
 
 
+    const currentUser =
+        AuthService.getUser();
+
+
+    const username =
+        String(
+            currentUser?.username || ''
+        )
+        .trim();
+
+
+    const detectedRegion =
+        currentUser
+            ? RegionService.getActiveRegion()
+            : null;
+
+
+    const validRegion =
+        ['GLOBAL', 'GT', 'SV'].includes(
+            detectedRegion
+        );
+
+
+    if(
+        !currentUser
+        ||
+        !username
+        ||
+        !validRegion
+    ){
+
+        AuthService.logout();
+        showLoginScreen();
+
+        return;
+
+    }
+
+
+    logSessionDiagnostics(
+        currentUser,
+        detectedRegion
+    );
+
+
+    showDashboardScreen(
+        currentUser
+    );
+
 }
+
+
+
+function logSessionDiagnostics(
+    currentUser,
+    detectedRegion
+){
+
+    console.group(
+        '[Session] Sesión válida detectada'
+    );
+
+    console.log(
+        'Usuario:',
+        currentUser.username
+    );
+
+    console.log(
+        'Región:',
+        detectedRegion
+    );
+
+    console.log(
+        'Rol:',
+        getUserRole(currentUser)
+    );
+
+    console.log(
+        'isGlobalMaster:',
+        isGlobalMaster(currentUser)
+    );
+
+    console.log(
+        'Permisos principales:',
+        {
+            overview: canAccess('overview', currentUser),
+            generator: canAccess('generator', currentUser),
+            history: canAccess('history', currentUser),
+            reports: canAccess('reports', currentUser)
+        }
+    );
+
+    console.groupEnd();
+
+}
+
 
 
 
