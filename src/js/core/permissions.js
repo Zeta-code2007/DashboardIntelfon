@@ -198,9 +198,8 @@ export function applyPermissions() {
 
     if (generatorButton) {
         const allowed = canAccess('generator', user);
-        const isIntelfon = String(user.username || '').toLowerCase() === 'intelfon';
 
-        if (!allowed || isIntelfon) {
+        if (!allowed) {
             generatorButton.remove();
         }
     }

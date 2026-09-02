@@ -290,7 +290,6 @@ function initializeDashboard(
 
 
 
-
     const syncBarContainer =
         document.getElementById(
             'region-sync-bar'
@@ -301,9 +300,25 @@ function initializeDashboard(
     if(syncBarContainer){
 
 
-        mountRegionStatusBar(
-            syncBarContainer
-        );
+        if(
+            activeRegion === 'GT'
+            ||
+            activeRegion === 'SV'
+        ){
+
+
+            mountRegionStatusBar(
+                syncBarContainer
+            );
+
+
+        }else{
+
+
+            syncBarContainer.innerHTML = '';
+
+
+        }
 
 
     }
