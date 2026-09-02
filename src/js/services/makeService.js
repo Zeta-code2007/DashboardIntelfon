@@ -1,4 +1,4 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 import { AuthService } from './authService.js';
 import { RegionService } from './regionService.js';
 

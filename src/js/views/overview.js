@@ -1,4 +1,4 @@
-import { renderReportSection } from './reportSection.js';
+import { renderReportSection } from '../components/reportSection.js';
 import { RegionService } from '../services/regionService.js';
 
 export function renderOverview() {
